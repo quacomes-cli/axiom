@@ -1,0 +1,214 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Geist:wght@300;400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+    --color-base: #1a1a1a;
+    --color-surface: #202020;
+    --color-surface-2: #252525;
+    --color-surface-3: #303030;
+
+    --color-border: rgba(255, 255, 255, 0.06);
+    --color-border-hover: rgba(255, 255, 255, 0.12);
+
+    --color-accent: #ffffff;
+    --color-accent-muted: rgba(255, 255, 255, 0.08);
+    --color-accent-hover: rgba(255, 255, 255, 0.12);
+
+    --color-text: #e5e5e5;
+    --color-text-secondary: #888888;
+    --color-text-faint: #555555;
+
+    --color-success: #4ade80;
+    --color-warn: #fbbf24;
+    --color-danger: #f87171;
+
+    --color-hover: rgba(255, 255, 255, 0.04);
+    --color-hover-strong: rgba(255, 255, 255, 0.07);
+    --color-active: rgba(255, 255, 255, 0.08);
+    --color-kbd: rgba(255, 255, 255, 0.06);
+
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-lg: 16px;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background-color: var(--color-base);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    outline: none;
+}
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+*::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+}
+*::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::selection {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="light"] {
+    --color-base: #f5f5f5;
+    --color-surface: #ebebeb;
+    --color-surface-2: #e5e5e5;
+    --color-surface-3: #d5d5d5;
+
+    --color-border: rgba(0, 0, 0, 0.08);
+    --color-border-hover: rgba(0, 0, 0, 0.15);
+
+    --color-accent: #333333;
+    --color-accent-muted: rgba(0, 0, 0, 0.06);
+    --color-accent-hover: rgba(0, 0, 0, 0.10);
+
+    --color-text: #1a1a1a;
+    --color-text-secondary: #555555;
+    --color-text-faint: #999999;
+
+    --color-success: #16a34a;
+    --color-warn: #d97706;
+    --color-danger: #dc2626;
+
+    --color-hover: rgba(0, 0, 0, 0.04);
+    --color-hover-strong: rgba(0, 0, 0, 0.07);
+    --color-active: rgba(0, 0, 0, 0.08);
+    --color-kbd: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] ::selection {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] *::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.20);
+}
+[data-theme="light"] * {
+    scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+button {
+    cursor: pointer;
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+.prose {
+    --tw-prose-body: var(--color-text-secondary);
+    --tw-prose-headings: var(--color-text);
+    --tw-prose-links: var(--color-text);
+    --tw-prose-bold: var(--color-text);
+    --tw-prose-counters: var(--color-text-faint);
+    --tw-prose-bullets: var(--color-text-faint);
+    --tw-prose-hr: var(--color-border);
+    --tw-prose-quotes: var(--color-text-secondary);
+    --tw-prose-quote-borders: var(--color-border-hover);
+    --tw-prose-captions: var(--color-text-faint);
+    --tw-prose-code: var(--color-text);
+    --tw-prose-pre-code: var(--color-text-secondary);
+    --tw-prose-pre-bg: var(--color-surface-2);
+    --tw-prose-th-borders: var(--color-border-hover);
+    --tw-prose-td-borders: var(--color-border);
+    --tw-prose-invert-body: var(--color-text-secondary);
+    --tw-prose-invert-headings: var(--color-text);
+    --tw-prose-invert-links: var(--color-text);
+    --tw-prose-invert-bold: var(--color-text);
+    --tw-prose-invert-counters: var(--color-text-faint);
+    --tw-prose-invert-bullets: var(--color-text-faint);
+    --tw-prose-invert-hr: var(--color-border);
+    --tw-prose-invert-quotes: var(--color-text-secondary);
+    --tw-prose-invert-quote-borders: var(--color-border-hover);
+    --tw-prose-invert-captions: var(--color-text-faint);
+    --tw-prose-invert-code: var(--color-text);
+    --tw-prose-invert-pre-code: var(--color-text-secondary);
+    --tw-prose-invert-pre-bg: var(--color-surface-2);
+    --tw-prose-invert-th-borders: var(--color-border-hover);
+    --tw-prose-invert-td-borders: var(--color-border);
+}
+
+.prose a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--color-border-hover);
+    transition: text-decoration-color 0.15s;
+    cursor: alias;
+}
+.prose a:hover {
+    text-decoration-color: var(--color-text-faint);
+}
+
+.prose code:not(pre code) {
+    background: var(--color-surface-2);
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: var(--font-mono);
+}
+
+.prose pre {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+.prose blockquote {
+    font-style: normal;
+    border-left-width: 2px;
+}
+
+.prose strong {
+    font-weight: 600;
+}
+
+.prose em {
+    color: var(--color-text-secondary);
+}
+
+.prose li::marker {
+    color: var(--color-text-faint);
+}

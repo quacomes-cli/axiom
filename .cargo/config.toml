@@ -1,0 +1,9 @@
+# Build sırasında otomatik set edilen ortam değişkenleri.
+# `cargo build`, `cargo run`, `tauri dev`, `tauri build` hepsi bunu görür.
+#
+# LIBCLANG_PATH: whisper-rs (bindgen üzerinden) ve clang-sys bağlı diğer
+# build script'leri libclang.dll'i ister. Windows'ta standart LLVM kurulum
+# dizini buradadır. Farklı bir yere kurduysan bu satırı güncelle.
+
+[env]
+LIBCLANG_PATH = { value = "C:\\Program Files\\LLVM\\bin", force = false, relative = false }
