@@ -24,6 +24,11 @@ import {
   buildEnabledAppsPrompt,
 } from "../stores/chatStore";
 import { ipc } from "../lib/ipc";
+import {
+  formatPendingPairs,
+  parseAllowedChatIds,
+  parsePendingPairs,
+} from "../lib/telegramAccess";
 import type { ChatMessage as IpcChatMessage } from "../types";
 
 const POLL_TIMEOUT_SECS = 25;
@@ -151,11 +156,70 @@ Kuralları:
   }
 }
 
+/**
+ * Whitelist dışı bir chat'ten mesaj geldi: modele ASLA iletme. Chat'i pending
+ * listesine ekle, sahibine uygulama içi bildirim düşür ve karşı tarafa tek
+ * seferlik "özel bot" cevabı gönder. Aynı chat tekrar yazarsa sessiz kal.
+ */
+async function handlePairingRequest(
+  token: string,
+  m: NonNullable<TelegramUpdate["message"]>,
+) {
+  const t = useAppStore.getState().apps.find((a) => a.id === "telegram");
+  if (!t) return;
+
+  const cid = String(m.chat.id);
+  const pending = parsePendingPairs(t.config);
+  if (pending.some((p) => p.chatId === cid)) return; // zaten sorulmuş — spam yok
+
+  const name = m.from?.username || m.from?.first_name || "bilinmeyen";
+  useAppStore.getState().updateConfig("telegram", {
+    ...t.config,
+    pending_pairs: formatPendingPairs([...pending, { chatId: cid, name }]),
+  });
+
+  useNotificationStore.getState().add({
+    taskId: `tg-pair-${cid}`,
+    title: "Telegram eşleştirme isteği",
+    content:
+      `"${name}" (chat ${cid}) botunla konuşmak istiyor. ` +
+      `Uygulamalar → Telegram ayarlarından onaylayana kadar mesajları yanıtlanmayacak.`,
+  });
+
+  try {
+    await ipc.httpFetch({
+      url: `https://api.telegram.org/bot${token}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: m.chat.id,
+        text: "Bu bot özel kullanımdadır. Eşleştirme isteğin sahibine iletildi — onaylanırsa yazışabiliriz.",
+      }),
+    });
+  } catch (e) {
+    console.warn("[telegram] eşleştirme cevabı gönderilemedi:", e);
+  }
+}
+
 export function useTelegramAutoMode() {
   const telegram = useAppStore((s) => s.apps.find((a) => a.id === "telegram"));
   const enabled = !!telegram?.enabled;
   const autoOn = telegram?.config?.auto_mode === "true";
   const token = telegram?.config?.bot_token;
+
+  // Geçiş tohumu: whitelist hiç kurulmamışsa (anahtar yok) ve kullanıcı daha
+  // önce bir "Chat ID" girmişse onu onaylı say — mevcut kullanıcının botu
+  // güncelleme sonrası aniden susmasın. Anahtar bir kez yazıldıktan sonra
+  // (boş bile olsa) tekrar tohumlanmaz.
+  useEffect(() => {
+    if (!enabled || !token) return;
+    const t = useAppStore.getState().apps.find((a) => a.id === "telegram");
+    if (!t || t.config.allowed_chat_ids !== undefined) return;
+    useAppStore.getState().updateConfig("telegram", {
+      ...t.config,
+      allowed_chat_ids: (t.config.chat_id ?? "").trim(),
+    });
+  }, [enabled, token]);
 
   useEffect(() => {
     if (!enabled || !autoOn || !token) return;
@@ -197,10 +261,16 @@ export function useTelegramAutoMode() {
 
         const data = JSON.parse(resp.body);
         if (data.ok && Array.isArray(data.result) && data.result.length > 0) {
+          const allowed = parseAllowedChatIds(t.config);
           let maxId = lastId;
           for (const u of data.result as TelegramUpdate[]) {
             if (u.update_id > maxId) maxId = u.update_id;
-            if (u.message) await handleTelegramMessage(tk, u.message);
+            if (!u.message) continue;
+            if (allowed.has(String(u.message.chat.id))) {
+              await handleTelegramMessage(tk, u.message);
+            } else {
+              await handlePairingRequest(tk, u.message);
+            }
           }
           // Offset'i ilerletmek "okundu" işareti
           const cur = useAppStore.getState().apps.find((a) => a.id === "telegram");

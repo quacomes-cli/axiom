@@ -7,6 +7,12 @@ import {
   type AppIntegration,
   type AppConnectionType,
 } from "../../stores/appStore";
+import {
+  formatAllowedChatIds,
+  formatPendingPairs,
+  parseAllowedChatIds,
+  parsePendingPairs,
+} from "../../lib/telegramAccess";
 import { FaChrome, FaDiscord, FaGithub, FaSpotify, FaTelegram, FaWikipediaW, FaReddit, FaHackerNews, FaGoogle } from "react-icons/fa6";
 import { VscVscode } from "react-icons/vsc";
 import { RiNotionFill } from "react-icons/ri";
@@ -153,6 +159,137 @@ function DeviceCodePanel({ userCode, verificationUri, onCancel }: {
   );
 }
 
+/**
+ * Telegram erişim kontrolü: onay bekleyen eşleştirme istekleri + onaylı chat
+ * listesi. Store'daki CANLI config üzerinden çalışır ki onay, dialog'daki
+ * "Kaydet"e basılmadan anında etkili olsun (bot o anda poll ediyor olabilir).
+ */
+function TelegramAccessSection() {
+  const liveApp = useAppStore((s) => s.apps.find((a) => a.id === "telegram"));
+  const updateConfig = useAppStore((s) => s.updateConfig);
+  const [manualId, setManualId] = useState("");
+
+  if (!liveApp) return null;
+  const config = liveApp.config;
+  const allowed = Array.from(parseAllowedChatIds(config));
+  const pending = parsePendingPairs(config);
+
+  function write(next: { allowed?: string[]; pending?: typeof pending }) {
+    const cfg = useAppStore.getState().apps.find((a) => a.id === "telegram")?.config ?? {};
+    updateConfig("telegram", {
+      ...cfg,
+      ...(next.allowed !== undefined ? { allowed_chat_ids: formatAllowedChatIds(next.allowed) } : {}),
+      ...(next.pending !== undefined ? { pending_pairs: formatPendingPairs(next.pending) } : {}),
+    });
+  }
+
+  function approve(chatId: string) {
+    write({
+      allowed: [...allowed, chatId],
+      pending: pending.filter((p) => p.chatId !== chatId),
+    });
+  }
+
+  function deny(chatId: string) {
+    write({ pending: pending.filter((p) => p.chatId !== chatId) });
+  }
+
+  function removeAllowed(chatId: string) {
+    write({ allowed: allowed.filter((id) => id !== chatId) });
+  }
+
+  function addManual() {
+    const id = manualId.trim();
+    if (!/^-?\d+$/.test(id)) return;
+    write({ allowed: [...allowed, id] });
+    setManualId("");
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">
+        Erişim kontrolü
+      </div>
+      <div className="mb-2 rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
+        Otomatik mod yalnızca onaylı chat'lere cevap verir. Yabancı biri bota
+        yazarsa burada onay isteği belirir.
+      </div>
+
+      {pending.length > 0 && (
+        <div className="mb-2 space-y-1.5">
+          {pending.map((p) => (
+            <div
+              key={p.chatId}
+              className="flex items-center gap-2 rounded-lg bg-warn/10 px-2.5 py-1.5 text-xs"
+            >
+              <AlertCircle size={11} className="shrink-0 text-warn" />
+              <span className="min-w-0 truncate text-text-secondary">
+                {p.name || "bilinmeyen"} <span className="text-text-faint">({p.chatId})</span>
+              </span>
+              <div className="ml-auto flex shrink-0 gap-1.5">
+                <button
+                  onClick={() => approve(p.chatId)}
+                  className="rounded-md bg-success/15 px-2 py-0.5 text-success transition-colors hover:bg-success/25"
+                >
+                  İzin ver
+                </button>
+                <button
+                  onClick={() => deny(p.chatId)}
+                  className="rounded-md bg-surface-3 px-2 py-0.5 text-text-faint transition-colors hover:text-text-secondary"
+                >
+                  Reddet
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {allowed.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {allowed.map((id) => (
+            <span
+              key={id}
+              className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-1 text-xs text-text-secondary"
+            >
+              {id}
+              <button
+                onClick={() => removeAllowed(id)}
+                title="Erişimi kaldır"
+                className="text-text-faint transition-colors hover:text-red-400"
+              >
+                <X size={10} strokeWidth={2} />
+              </button>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-warn">
+          Onaylı chat yok — bot şu an kimseye cevap vermiyor. Botuna Telegram'dan
+          bir mesaj at, ardından buradan onayla.
+        </div>
+      )}
+
+      <div className="mt-2 flex gap-1.5">
+        <input
+          value={manualId}
+          onChange={(e) => setManualId(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }}
+          placeholder="Chat ID'yi elle ekle"
+          className="w-full rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-text outline-none placeholder:text-text-faint focus:bg-surface-3"
+        />
+        <button
+          onClick={addManual}
+          disabled={!/^-?\d+$/.test(manualId.trim())}
+          className="shrink-0 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-3 disabled:opacity-40"
+        >
+          Ekle
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AppConfigDialog({
   app,
   onClose,
@@ -177,13 +314,23 @@ function AppConfigDialog({
     };
   }, []);
 
+  // Canlı config ile birleştirerek yazar: dialog açıkken store'a yazılan
+  // alanlar (OAuth token'ları, Telegram whitelist onayları) buradaki bayat
+  // `values` kopyası tarafından ezilmesin. Whitelist anahtarları yalnızca
+  // TelegramAccessSection üzerinden yönetilir — values'tan ayıklanır.
+  function applyValues() {
+    const { allowed_chat_ids: _a, pending_pairs: _p, ...rest } = values;
+    const live = useAppStore.getState().apps.find((a) => a.id === app.id)?.config ?? {};
+    updateConfig(app.id, { ...live, ...rest });
+  }
+
   function save() {
-    updateConfig(app.id, values);
+    applyValues();
     onClose();
   }
 
   async function handleTest() {
-    updateConfig(app.id, values);
+    applyValues();
     setTesting(true);
     await testConnection(app.id);
     setTesting(false);
@@ -194,7 +341,7 @@ function AppConfigDialog({
   async function handleOAuth() {
     setOauthBusy(true);
     try {
-      updateConfig(app.id, values);
+      applyValues();
       const result = await oauthConnect(app.id);
       // GitHub Device Flow ise pop-up göster + polling
       if (result?.userCode && result.deviceCode) {
@@ -349,6 +496,8 @@ function AppConfigDialog({
                 Google hesabınla giriş yapman yeterli — başka yapılandırma gerekmez.
               </div>
             )}
+
+            {app.id === "telegram" && <TelegramAccessSection />}
 
             {liveApp.connectionStatus === "error" && liveApp.lastError && (
               <div className="mt-3 rounded-lg bg-error/10 px-3 py-2 text-xs text-error">
