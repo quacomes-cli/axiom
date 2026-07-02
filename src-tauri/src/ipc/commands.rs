@@ -298,6 +298,12 @@ pub fn cloud_providers_set(
     registry.set_cloud_configs(configs.clone());
 
     let mut settings = settings_state.settings.write().unwrap();
+    // Silinen provider'ların keyring kayıtları yetim kalmasın
+    for old in &settings.model_config.cloud_providers {
+        if !configs.iter().any(|c| c.name == old.name) {
+            crate::settings::delete_provider_key(&old.name);
+        }
+    }
     settings.model_config.cloud_providers = configs;
     crate::settings::save(&settings_state.config_path, &settings)
 }
@@ -1020,37 +1026,9 @@ pub async fn memory_estimate(
     ))
 }
 
-// ---- Alarm Audio -------------------------------------------------------
-
-#[tauri::command]
-pub fn read_alarm_audio(app: tauri::AppHandle) -> Result<String, String> {
-    let settings_state = app.state::<SettingsState>();
-    let settings = settings_state.settings.read().unwrap();
-    let cached = settings.alarm_sound.cached_path.as_deref()
-        .ok_or_else(|| "Önbelleğe alınmış ses dosyası yok".to_string())?;
-
-    let path = std::path::Path::new(cached);
-    if !path.exists() {
-        return Err(format!("Dosya bulunamadı: {cached}"));
-    }
-
-    let bytes = std::fs::read(path)
-        .map_err(|e| format!("Dosya okunamadı: {e}"))?;
-
-    let ext = path.extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("mp3");
-    let mime = match ext {
-        "wav" => "audio/wav",
-        "ogg" => "audio/ogg",
-        "m4a" => "audio/mp4",
-        _ => "audio/mpeg",
-    };
-
-    Ok(format!("data:{mime};base64,{}", base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes)))
-}
-
 // ---- Alarm Audio Cache -------------------------------------------------------
+// Not: alarm sesi frontend'e base64 data URL olarak DEĞİL, asset protokolü
+// (convertFileSrc) üzerinden verilir — büyük dosyalar IPC'de kopyalanmasın.
 
 async fn ensure_ytdlp(cache_dir: &std::path::Path) -> Result<std::path::PathBuf, String> {
     // Check PATH first
@@ -1443,7 +1421,6 @@ pub fn screen_capture(monitor_index: Option<u32>) -> Result<ScreenshotResult, St
     };
 
     let bytes = png.len();
-    // Decode header to learn dimensions (cheap — only reads first chunk).
     let (width, height) = match image::load_from_memory_with_format(&png, image::ImageFormat::Png) {
         Ok(img) => (img.width(), img.height()),
         Err(_) => (0, 0),

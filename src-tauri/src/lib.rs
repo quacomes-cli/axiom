@@ -61,6 +61,13 @@ pub fn run() {
 
             let settings_path = config_dir.join("settings.json");
             let app_settings = settings::load_or_default(&settings_path);
+            // Diskte düz metin API anahtarı kaldıysa ilk açılışta keyring'e taşı
+            // (save, anahtarları stash'leyip json'a sentinel yazar).
+            if settings::disk_has_plaintext_keys(&settings_path) {
+                if let Err(e) = settings::save(&settings_path, &app_settings) {
+                    eprintln!("[secrets] açılış göçü başarısız: {e}");
+                }
+            }
             let registry = ModelRegistry::new(
                 app_settings.model_config.ollama_base_url.clone(),
                 app_settings.model_config.cloud_providers.clone(),
@@ -163,6 +170,7 @@ pub fn run() {
                     _ => {}
                 })
                 .build(app)?;
+            
 
             Ok(())
         })
@@ -233,7 +241,6 @@ pub fn run() {
             ipc::commands::memory_estimate,
             ipc::commands::ollama_library,
             ipc::commands::ollama_registry_tags,
-            ipc::commands::read_alarm_audio,
             ipc::commands::cache_alarm_audio,
             ipc::commands::audio_start_recording,
             ipc::commands::audio_cancel_recording,

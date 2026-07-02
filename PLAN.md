@@ -48,19 +48,22 @@ Dosya: `src/lib/telegramAccess.ts` (yeni), `src/hooks/useTelegramAutoMode.ts`, `
       ediyor — dialog açıkken yazılan OAuth token/whitelist onayları ezilmiyor.
 - Kabul kriteri karşılandı: whitelist dışı mesaj `handleTelegramMessage`'a hiç ulaşmıyor.
 
-### 0.3 Sırların şifrelenmesi + cloud sync'ten çıkarılması
-Dosyalar: `src-tauri/src/settings/*`, `src/lib/syncService.ts`, `src/hooks/useCloudSync.ts`
-- [ ] Rust: `keyring` crate (Windows Credential Manager) ekle. Yeni komutlar:
-      `secret_set(name, value)`, `secret_get(name)`, `secret_delete(name)`.
-      Service adı: `com.axiom.app`, kullanıcı adı: anahtar adı (örn `cloud.gemini.apiKey`).
-- [ ] Ayar yükleme: `settings.json`'da `apiKey` doluysa → keyring'e taşı, json'daki
-      değeri `"__keyring__"` sentineli ile değiştir (tek seferlik göç).
-- [ ] `cloud_providers_get` keyring'den çözerek döner; `cloud_providers_set` keyring'e yazar.
-- [ ] `uploadSettings` (syncService): `modelConfig.cloudProviders[*].apiKey` ve
-      Telegram `bot_token` gibi sırları upload'dan AYIKLA (sanitize fonksiyonu).
-      İndirirken mevcut lokal sırları koru.
-- Kabul: settings.json'da ve Firebase dokümanında hiçbir anahtar düz metin değil;
-  uygulama yeniden başlatınca model listesi hâlâ çalışıyor.
+### 0.3 Sırların şifrelenmesi + cloud sync'ten çıkarılması — TAMAMLANDI (2026-07-02)
+Dosyalar: `src-tauri/src/settings/secrets.rs` (yeni), `settings/store.rs`, `settings/mod.rs`,
+`src-tauri/src/lib.rs`, `src-tauri/src/ipc/commands.rs`, `src/lib/syncService.ts`
+- [x] `keyring` crate (windows-native) eklendi. Ayrı IPC komutu yerine save/load
+      sınırında şeffaf entegrasyon tercih edildi: `save()` anahtarları keyring'e
+      stash'leyip json'a `__keyring__` sentineli yazar; `load_or_default()` sentineli
+      keyring'den çözer. Bellekteki AppSettings hep gerçek anahtarı taşır — registry
+      ve UI değişmeden çalışır. Keyring yazılamazsa anahtar düz metin bırakılır
+      (anahtar kaybı > sızıntı riski trade-off'u, log'a düşer).
+- [x] Açılışta tek seferlik göç: `disk_has_plaintext_keys()` true ise save tetiklenir.
+- [x] `cloud_providers_set`: silinen provider'ın keyring kaydını temizler.
+- [x] `uploadSettings` sanitize: `cloudProviders[*].apiKey` Firebase'e boş gider.
+      (Telegram bot_token appStore/localStorage'da, cloud sync'e zaten girmiyor —
+      onun keyring'e taşınması Faz 1 sonrası ayrı küçük iş olarak kaldı.)
+- Kabul doğrulandı: settings.json'da `"apiKey": "__keyring__"`, Credential Manager'da
+  `cloud.gemini.apiKey.com.axiom.app` kaydı, ikinci açılış sorunsuz.
 
 ### 0.4 Tehlikeli tool'lara onay kapısı — TAMAMLANDI (2026-07-02)
 Dosyalar: `src/stores/approvalStore.ts` (yeni), `src/components/shared/ApprovalPrompt.tsx` (yeni),

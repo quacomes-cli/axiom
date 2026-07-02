@@ -151,8 +151,28 @@ export async function migrateAllChats(uid: string, chats: Chat[]): Promise<void>
 
 // ── Settings sync ──
 
+/**
+ * Buluta çıkmadan önce sırları ayıkla. API anahtarları cihaza aittir
+ * (Windows Credential Manager'da durur) — Firebase dokümanına ASLA yazılmaz.
+ * İleride settings indirme eklenirse anahtar alanları boş gelir ve lokal
+ * keyring değerleri geçerli kalır.
+ */
+function sanitizeSettingsForCloud(settings: Record<string, unknown>): Record<string, unknown> {
+  const clone = JSON.parse(JSON.stringify(settings)) as Record<string, unknown>;
+  const modelConfig = clone.modelConfig as { cloudProviders?: { apiKey?: string }[] } | undefined;
+  if (modelConfig?.cloudProviders) {
+    for (const p of modelConfig.cloudProviders) {
+      if (p.apiKey) p.apiKey = "";
+    }
+  }
+  return clone;
+}
+
 export async function uploadSettings(uid: string, settings: Record<string, unknown>): Promise<void> {
-  await setDoc(userDoc(uid, SETTINGS_DOC), { ...settings, updatedAt: serverTimestamp() });
+  await setDoc(userDoc(uid, SETTINGS_DOC), {
+    ...sanitizeSettingsForCloud(settings),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function downloadSettings(uid: string): Promise<Record<string, unknown> | null> {

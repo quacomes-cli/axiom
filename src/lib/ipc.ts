@@ -338,10 +338,6 @@ export const ipc = {
 
   // ---- Alarm Audio Cache -------------------------------------------------------
 
-  readAlarmAudio(): Promise<string> {
-    return invoke<string>("read_alarm_audio");
-  },
-
   cacheAlarmAudio(source: "youtube" | "local", urlOrPath: string): Promise<string> {
     return invoke<string>("cache_alarm_audio", { source, urlOrPath });
   },

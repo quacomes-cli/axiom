@@ -52,8 +52,11 @@ $pkg.version = $Version
 Write-Utf8NoBom $pkgPath ($pkg | ConvertTo-Json -Depth 10)
 
 # Cargo.toml
+# NOT: PS 5.1'de Get-Content, BOM'suz UTF-8 dosyayi ANSI olarak okur ve Turkce
+# karakterler her calistirmada katlanarak bozulur (bkz: 330MB'lik description
+# vakasi). Bu yuzden encoding'i acikca UTF-8 vererek okuyoruz.
 $cargoPath = Join-Path $root "src-tauri\Cargo.toml"
-$cargo = Get-Content $cargoPath -Raw
+$cargo = [System.IO.File]::ReadAllText($cargoPath, [System.Text.Encoding]::UTF8)
 $cargo = $cargo -replace '(?m)^version = "\d+\.\d+\.\d+"', "version = `"$Version`""
 Write-Utf8NoBom $cargoPath $cargo
 
