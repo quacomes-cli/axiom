@@ -161,7 +161,10 @@ export function ToolBlock({
             style={{ maxHeight: 300, overflowY: "auto" }}
           >
             <code
-              className="hljs p-3 block w-full font-mono"
+              className="hljs p-3 block w-full font-mono !bg-surface-2"
+              style={{
+                userSelect: "text"
+              }}
               dangerouslySetInnerHTML={{ __html: isDiff ? renderDiff(action.content) : getHighlightedContent() }}
             />
           </motion.pre>

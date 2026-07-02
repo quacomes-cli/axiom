@@ -181,7 +181,7 @@ function ReplyComposer({ onSend }: { onSend: (text: string) => void | Promise<vo
               submit();
             }
           }}
-          className="flex-1 resize-none rounded-lg bg-surface-2 px-3 py-2 text-[0.9286rem] text-text outline-none placeholder:text-text-faint focus:ring-1 focus:ring-accent"
+          className="flex-1 resize-none rounded-lg bg-surface-2 px-3 py-2 text-[0.9286rem] text-text outline-none placeholder:text-text-faint focus:bg-surface-3"
         />
         <button
           type="button"

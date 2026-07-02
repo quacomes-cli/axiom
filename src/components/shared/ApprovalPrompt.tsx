@@ -20,10 +20,10 @@ export function ApprovalPrompt() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.15 }}
-            className="pointer-events-auto rounded-xl border border-warn/30 bg-surface p-3 shadow-2xl"
+            className="pointer-events-auto rounded-xl border border-text/7 bg-surface p-3 shadow-2xl"
           >
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-warn/15 text-warn">
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-text">
                 <ShieldAlert size={14} strokeWidth={1.8} />
               </span>
               <div className="min-w-0 flex-1">
@@ -34,13 +34,13 @@ export function ApprovalPrompt() {
                 <div className="mt-2 flex justify-end gap-1.5">
                   <button
                     onClick={() => decide(r.id, false)}
-                    className="rounded-lg bg-surface-2 px-3 py-1 text-xs text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary"
+                    className="rounded-md bg-surface-2 px-3 py-1 text-xs text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary"
                   >
                     Reddet
                   </button>
                   <button
                     onClick={() => decide(r.id, true)}
-                    className="rounded-lg bg-warn/15 px-3 py-1 text-xs font-medium text-warn transition-colors hover:bg-warn/25"
+                    className="rounded-md bg-accent/15 px-3 py-1 text-xs font-medium text-text transition-colors hover:bg-accent/25"
                   >
                     İzin ver
                   </button>
