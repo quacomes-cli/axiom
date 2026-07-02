@@ -4,6 +4,13 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ipc } from "../lib/ipc";
 import * as chatDb from "../lib/chatDb";
 import { buildNativeTools } from "../lib/toolRegistry";
+import { envPromptBlock } from "../lib/envInfo";
+import {
+  applyAlwaysAllow,
+  alwaysHintFor,
+  scopeDirOf,
+  type PermissionQueryLike,
+} from "../lib/permissionUpdates";
 import { useModelStore } from "./modelStore";
 import { useDocumentStore } from "./documentStore";
 import { useSkillStore } from "./skillStore";
@@ -240,6 +247,11 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
 
   if (toolUseEnabled) {
     parts.push(TOOL_SYSTEM_PROMPT);
+
+    // Gerçek ev dizini/özel klasörler — model kullanıcı adını görünen addan
+    // tahmin edip var olmayan yollara (C:/Users/Fırat Tuna Arslan/...) gitmesin.
+    const envBlock = envPromptBlock();
+    if (envBlock) parts.push(envBlock);
 
     const currentTasks = useTaskStore.getState().tasks;
     if (currentTasks.length > 0) {
@@ -660,12 +672,14 @@ export async function executeToolBlock(
 
   // İzin kontrolü: deny → engelle; confirm → kullanıcıya sor (interaktifse);
   // allow → geç. Dönen msg, model'e tool sonucu olarak iletilir.
+  // "Her zaman izin ver" kararı kalıcı kurala çevrilir (permissionUpdates) —
+  // İzinler sayfası aynı config'i okuduğu için karar orada da görünür.
   async function checkPermission(
-    query: Record<string, unknown>,
-    prompt: { title: string; detail: string },
+    query: PermissionQueryLike,
+    prompt: { title: string; detail: string; scopeDir?: string },
   ): Promise<{ ok: boolean; msg: string }> {
     try {
-      const decision = await ipc.permissionsCheck(query);
+      const decision = await ipc.permissionsCheck(query as unknown as Record<string, unknown>);
       if (decision.kind === "allow") return { ok: true, msg: "" };
       if (decision.kind === "deny") {
         return { ok: false, msg: `İzin reddedildi: ${decision.reason}` };
@@ -677,12 +691,14 @@ export async function executeToolBlock(
           msg: "İzin gerekli: bu işlem arka planda onaysız çalıştırılamaz. Kullanıcıdan uygulama içinden çalıştırmasını iste.",
         };
       }
-      const approved = await useApprovalStore
+      const choice = await useApprovalStore
         .getState()
-        .request(prompt.title, prompt.detail);
-      return approved
-        ? { ok: true, msg: "" }
-        : { ok: false, msg: "Kullanıcı bu işlemi reddetti." };
+        .request(prompt.title, prompt.detail, {
+          alwaysHint: alwaysHintFor(query, prompt.scopeDir),
+        });
+      if (choice === "deny") return { ok: false, msg: "Kullanıcı bu işlemi reddetti." };
+      if (choice === "always") await applyAlwaysAllow(query, prompt.scopeDir);
+      return { ok: true, msg: "" };
     } catch {
       return { ok: false, msg: "İzin kontrolü yapılamadı; işlem engellendi." };
     }
@@ -693,7 +709,7 @@ export async function executeToolBlock(
       case "read_file": {
         const perm = await checkPermission(
           { action: "fs_read", path: block.path! },
-          { title: "Dosya okuma izni", detail: block.path! },
+          { title: "Dosya okuma izni", detail: block.path!, scopeDir: scopeDirOf(block.path!, false) },
         );
         if (!perm.ok) return { kind: "read_file", path: block.path, content: perm.msg, collapsed: false };
         const dir = block.path!.replace(/\\/g, "/").split("/").slice(0, -1).join("/") || "/";
@@ -703,7 +719,7 @@ export async function executeToolBlock(
       case "write_file": {
         const perm = await checkPermission(
           { action: "fs_write", path: block.path! },
-          { title: "Dosya yazma izni", detail: block.path! },
+          { title: "Dosya yazma izni", detail: block.path!, scopeDir: scopeDirOf(block.path!, false) },
         );
         if (!perm.ok) return { kind: "write_file", path: block.path, content: perm.msg, collapsed: false };
         const dir = block.path!.replace(/\\/g, "/").split("/").slice(0, -1).join("/") || "/";
@@ -713,7 +729,7 @@ export async function executeToolBlock(
       case "list_dir": {
         const perm = await checkPermission(
           { action: "fs_read", path: block.path! },
-          { title: "Dizin okuma izni", detail: block.path! },
+          { title: "Dizin okuma izni", detail: block.path!, scopeDir: scopeDirOf(block.path!, true) },
         );
         if (!perm.ok) return { kind: "list_dir", path: block.path, content: perm.msg, collapsed: false };
         const entries = await ipc.fsReadDir(block.path!, block.path!, 2);
@@ -723,7 +739,7 @@ export async function executeToolBlock(
       case "create_dir": {
         const perm = await checkPermission(
           { action: "fs_write", path: block.path! },
-          { title: "Dizin oluşturma izni", detail: block.path! },
+          { title: "Dizin oluşturma izni", detail: block.path!, scopeDir: scopeDirOf(block.path!, true) },
         );
         if (!perm.ok) return { kind: "create_dir", path: block.path, content: perm.msg, collapsed: false };
         await ipc.fsCreateDir(block.path!, block.path!);

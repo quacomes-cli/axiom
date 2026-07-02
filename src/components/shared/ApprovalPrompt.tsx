@@ -1,6 +1,6 @@
 // Tool onay kartları — approvalStore'daki bekleyen istekleri sağ altta,
-// hangi sekmede olursa olsun gösterir. Onayla/Reddet kararı ilgili tool
-// yürütmesinin promise'ini çözer.
+// hangi sekmede olursa olsun gösterir. Üç karar: Reddet / Bu sefer izin ver /
+// Her zaman izin ver (kalıcı kural — İzinler sayfasına işlenir).
 
 import { ShieldAlert } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -31,18 +31,30 @@ export function ApprovalPrompt() {
                 <pre className="mt-1 max-h-28 overflow-y-auto whitespace-pre-wrap break-all rounded-md bg-surface-2 px-2 py-1.5 font-mono text-[0.75rem] leading-relaxed text-text-secondary">
                   {r.detail}
                 </pre>
+                {r.alwaysHint && (
+                  <div className="mt-1 text-[0.7143rem] leading-snug text-text-faint">
+                    "Her zaman": {r.alwaysHint}
+                  </div>
+                )}
                 <div className="mt-2 flex justify-end gap-1.5">
                   <button
-                    onClick={() => decide(r.id, false)}
-                    className="rounded-md bg-surface-2 px-3 py-1 text-xs text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary"
+                    onClick={() => decide(r.id, "deny")}
+                    className="rounded-md bg-surface-2 px-2.5 py-1 text-xs text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary"
                   >
                     Reddet
                   </button>
                   <button
-                    onClick={() => decide(r.id, true)}
-                    className="rounded-md bg-accent/15 px-3 py-1 text-xs font-medium text-text transition-colors hover:bg-accent/25"
+                    onClick={() => decide(r.id, "once")}
+                    className="rounded-md bg-accent/15 px-2.5 py-1 text-xs font-medium text-text transition-colors hover:bg-accent/25"
                   >
-                    İzin ver
+                    Bu sefer
+                  </button>
+                  <button
+                    onClick={() => decide(r.id, "always")}
+                    title={r.alwaysHint ?? "Bu izin türü kalıcı olarak açılır (İzinler sayfasından değiştirilebilir)"}
+                    className="rounded-md bg-accent/25 px-2.5 py-1 text-xs font-medium text-text transition-colors hover:bg-accent/35"
+                  >
+                    Her zaman
                   </button>
                 </div>
               </div>

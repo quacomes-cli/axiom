@@ -167,15 +167,17 @@ fn level_decision(level: PermissionLevel, what: &str) -> Decision {
 }
 
 /// Maps a path-scoped rule to a decision, enforcing the allowed roots.
+///
+/// Kapsam dışı yol = otomatik RED değil, KULLANICIYA SOR. Kullanıcı onay
+/// kartından "her zaman izin ver" derse frontend dizini kapsama ekler;
+/// böylece izinler sayfası ile onay akışı aynı gerçeği paylaşır. Sert red
+/// yalnızca `Blocked` seviyesinde.
 fn scoped_decision(rule: &ScopedRule, path: &Path, what: &str) -> Decision {
     if rule.level == PermissionLevel::Blocked {
         return Decision::deny(format!("{what} engelli"));
     }
     if !path_in_scope(path, &rule.paths) {
-        return Decision::deny(format!(
-            "{what} izinli dizinlerin dışında: {}",
-            path.display()
-        ));
+        return Decision::Confirm;
     }
     level_decision(rule.level, what)
 }
@@ -269,14 +271,15 @@ mod tests {
     }
 
     #[test]
-    fn out_of_scope_denies() {
+    fn out_of_scope_confirms_instead_of_denying() {
+        // Kapsam dışı = kullanıcıya sor (onay kartı) — sert red değil.
         let rule = ScopedRule {
             level: PermissionLevel::Allowed,
             paths: roots(&["C:/Users/x"]),
         };
         assert!(matches!(
             scoped_decision(&rule, Path::new("C:/Windows/system32"), "x"),
-            Decision::Deny { .. }
+            Decision::Confirm
         ));
     }
 }

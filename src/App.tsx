@@ -18,6 +18,7 @@ import { useTaskScheduler } from "./hooks/useTaskScheduler";
 import { useTelegramAutoMode } from "./hooks/useTelegramAutoMode";
 import { usePriceTracker } from "./hooks/usePriceTracker";
 import { useBackgroundUpdater } from "./hooks/useBackgroundUpdater";
+import { initEnvInfo } from "./lib/envInfo";
 
 function matchesShortcut(e: KeyboardEvent, combo: string): boolean {
   const parts = combo.split("+").map((p) => p.trim().toLowerCase());
@@ -108,6 +109,8 @@ export default function App() {
       // saniyeler alabilir; UI'yı splash'te takılı bırakmasın diye
       // paralel ve timeout'lu yürütüyoruz.
       await useSettingsStore.getState().load();
+      // Gerçek ev dizini/yollar — model yol tahmin etmesin diye prompt'a girer
+      void initEnvInfo();
       // Sohbetler SQLite'tan gelir (gerekirse eski localStorage verisi göç eder)
       await useChatStore.getState().loadFromDb();
       void useOptimizationStore.getState().loadConfig();
