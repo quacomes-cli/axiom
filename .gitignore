@@ -27,3 +27,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Release notlari — imzalama sifresi icerebilir, asla commit'leme
+güncelleme
