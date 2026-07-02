@@ -159,11 +159,23 @@ impl OllamaProvider {
             options,
             think: Some(false),
             keep_alive,
+            tools: req.tools,
         };
 
         let resp = self.client.chat(ollama_req).await?;
+        // Native tool çağrılarını ```tool:...``` blok metnine çevir — non-stream
+        // yol (agent görevleri, Telegram) da native calling'den yararlansın.
+        let mut content = resp.message.content;
+        if let Some(calls) = &resp.message.tool_calls {
+            for call in calls {
+                content.push_str(&client::tool_call_to_block(
+                    &call.function.name,
+                    &call.function.arguments,
+                ));
+            }
+        }
         Ok(InferenceResponse {
-            content: resp.message.content,
+            content,
             tokens_used: resp.eval_count,
             model_id: req.model_id,
         })
@@ -230,6 +242,7 @@ impl OllamaProvider {
             options,
             think,
             keep_alive,
+            tools: req.tools,
         };
 
         self.client.chat_stream(ollama_req, on_token).await

@@ -4,6 +4,47 @@ use reqwest::Client;
 use super::types::*;
 use crate::runtime::error::RuntimeError;
 
+/// Native tool çağrısını frontend'in anladığı ```tool:...``` blok metnine çevirir.
+/// Gövde biçimi, chatStore.parseToolBlocks'un kind başına beklediği formatla
+/// eşleşmek zorunda: web_search/run_command ham satır, write_file `path` + `---`
+/// ayracı, geri kalanı `anahtar: değer` satırları.
+pub(super) fn tool_call_to_block(name: &str, args: &serde_json::Value) -> String {
+    fn arg_str(args: &serde_json::Value, key: &str) -> String {
+        match args.get(key) {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            Some(v) if !v.is_null() => v.to_string(),
+            _ => String::new(),
+        }
+    }
+
+    let body = match name {
+        "web_search" => arg_str(args, "query"),
+        "run_command" => arg_str(args, "command"),
+        "write_file" => format!("path: {}\n---\n{}", arg_str(args, "path"), arg_str(args, "content")),
+        _ => args
+            .as_object()
+            .map(|o| {
+                o.iter()
+                    .map(|(k, v)| {
+                        let val = match v {
+                            serde_json::Value::String(s) => s.clone(),
+                            other => other.to_string(),
+                        };
+                        format!("{k}: {val}")
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
+            .unwrap_or_default(),
+    };
+
+    if body.trim().is_empty() {
+        format!("\n```tool:{name}\n```\n")
+    } else {
+        format!("\n```tool:{name}\n{body}\n```\n")
+    }
+}
+
 pub struct OllamaClient {
     client: Client,
     base_url: String,
@@ -263,7 +304,19 @@ impl OllamaClient {
 
                 if let Ok(parsed) = serde_json::from_str::<OllamaChatResponse>(&line) {
                     let done = parsed.done.unwrap_or(false);
-                    let token = parsed.message.content;
+                    let mut token = parsed.message.content;
+                    // Native tool çağrılarını mevcut ```tool:...``` blok formatına
+                    // çevirip metin olarak akıt — üst katmanların (event zinciri,
+                    // frontend regex parser) hiçbiri değişmeden native calling
+                    // devreye girer.
+                    if let Some(calls) = &parsed.message.tool_calls {
+                        for call in calls {
+                            token.push_str(&tool_call_to_block(
+                                &call.function.name,
+                                &call.function.arguments,
+                            ));
+                        }
+                    }
                     let thinking = parsed.message.thinking;
                     let done_reason = if done { parsed.done_reason } else { None };
                     if !token.is_empty() || thinking.is_some() || done {

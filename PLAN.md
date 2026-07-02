@@ -125,18 +125,31 @@ CREATE TABLE chat_images(
 
 ---
 
-## FAZ 2 — Native function calling (1 gün)
+## FAZ 2 — Native function calling
 
-- [ ] Ollama: `/api/chat` isteğine `tools:[...]` şeması ekle (`src-tauri/src/runtime/ollama/client.rs`,
-      `types.rs`); yanıttaki `message.tool_calls`'u stream event'ine taşı (`StreamTokenEvent`'e
-      `tool_calls_json: Option<String>` alanı).
-- [ ] Gemini (`src-tauri/src/runtime/cloud/gemini.rs`): `functionDeclarations` + `functionCall` parse.
-- [ ] Frontend: `chatStore.send` döngüsünde önce native `tool_calls`'a bak; yoksa ve model
-      tool-capable değilse mevcut regex fallback'i KORU (küçük modeller için).
-- [ ] Tool tanımlarını tek kaynaktan üret: `TOOL_SYSTEM_PROMPT` metnini ve JSON şemayı
-      aynı registry'den derle (`src/lib/toolRegistry.ts` — yeni dosya).
-- Kabul: gemini-2.5-flash ile "İstanbul hava durumu" tek turda functionCall üretiyor;
-  tool destekli Ollama modeli (örn. llama3.1) native çalışıyor; eski yol bozulmadı.
+### 2a — Ollama native tools — TAMAMLANDI (2026-07-03)
+Tasarım kararı (plandakinden sapma, bilinçli): stream callback zincirine yeni alan
+eklemek 9+ çağrı noktasına yayılıyordu. Bunun yerine Rust, native `tool_calls`'u
+mevcut ` ```tool:...``` ` blok METNİNE çevirip token akışına enjekte ediyor
+(`ollama/client.rs tool_call_to_block`) — event zinciri, frontend parser ve yürütme
+yolu SIFIR değişiklikle native calling kazandı.
+- [x] `InferenceRequest.tools` (opak JSON) → `OllamaChatRequest.tools`; hem stream
+      hem non-stream (agent/Telegram) yolda tool_calls → blok dönüşümü.
+- [x] `src/lib/toolRegistry.ts`: built-in araç şemaları + etkin app araçları
+      (app tool adları rewriteAppToolBlocks ile app_tool bloğuna zaten dönüşüyor).
+      DİKKAT: parametre adları Rust dönüştürücü ve parseToolBlocks ile kilitli
+      (web_search→query, run_command→command, write_file→path+content).
+- [x] chatStore.send + useTaskScheduler + useTelegramAutoMode `tools` gönderiyor
+      (yalnız model "tools" yeteneğine sahipse; değilse alan yok, regex yolu aynen).
+- [x] Protokol doğrulandı: gemma4:12b, registry şemasıyla "İstanbulda hava nasıl?" →
+      `tool_calls:[{name:"weather", arguments:{city:"Istanbul"}}]` döndürdü.
+- UI uçtan uca test: kullanıcı gemma4:12b ile hava durumu sorup tool kartının
+  çıktığını görmeli.
+
+### 2b — Gemini functionDeclarations — YAPILMADI
+Gemini regex-prompt yoluyla zaten güvenilir çalışıyor (talimat takibi güçlü);
+native'e geçiş düşük öncelik. Yapılacaksa: `cloud/gemini.rs`'de `tools` →
+`functionDeclarations` çevirisi + yanıt `functionCall` → aynı blok-metin enjeksiyonu.
 
 ## FAZ 3 — MCP client (2-3 gün, ayrı branch)
 

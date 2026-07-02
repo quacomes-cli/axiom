@@ -215,6 +215,8 @@ export interface InferenceRequest {
   maxTokens?: number;
   think?: boolean;
   numCtx?: number;
+  /** Native function-calling şemaları (src/lib/toolRegistry.ts üretir). */
+  tools?: unknown;
 }
 
 export interface InferenceResponse {

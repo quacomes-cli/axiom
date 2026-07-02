@@ -24,6 +24,7 @@ import {
   buildEnabledAppsPrompt,
 } from "../stores/chatStore";
 import { ipc } from "../lib/ipc";
+import { buildNativeTools } from "../lib/toolRegistry";
 import {
   formatPendingPairs,
   parseAllowedChatIds,
@@ -97,6 +98,7 @@ Kuralları:
         messages: history,
         temperature: 0.5,
         maxTokens: 1536,
+        tools: hasTools ? buildNativeTools(active) : undefined,
       });
     } catch (e) {
       console.error("[telegram] model chat hatası:", e);

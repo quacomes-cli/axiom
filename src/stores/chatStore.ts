@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ipc } from "../lib/ipc";
 import * as chatDb from "../lib/chatDb";
+import { buildNativeTools } from "../lib/toolRegistry";
 import { useModelStore } from "./modelStore";
 import { useDocumentStore } from "./documentStore";
 import { useSkillStore } from "./skillStore";
@@ -1496,6 +1497,10 @@ export const useChatStore = create<ChatState>()(
               messages: conversationHistory,
               maxTokens: 4096,
               think: currentMode === "thinking" ? true : undefined,
+              // Native function calling: model "tools" yeteneğine sahipse
+              // yapısal şema gönder (Rust, tool_calls'u blok metnine çevirir;
+              // regex fallback yeteneksiz modeller için aynen çalışır).
+              tools: effectiveToolUse ? buildNativeTools(active) : undefined,
             }, streamId);
             await streamDone;
             currentStreamResolve = null;

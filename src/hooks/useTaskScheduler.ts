@@ -18,6 +18,7 @@ import {
 } from "../stores/chatStore";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { ipc } from "../lib/ipc";
+import { buildNativeTools } from "../lib/toolRegistry";
 import type { AlarmSoundConfig, ChatMessage as IpcChatMessage } from "../types";
 
 let notifReady: boolean | null = null;
@@ -197,6 +198,7 @@ async function executeAgentTask(task: Task) {
         messages: history,
         temperature: 0.5,
         maxTokens: 2048,
+        tools: hasTools ? buildNativeTools(active) : undefined,
       });
       const out = resp.content.trim();
       console.log(`[agent] step ${step} model output:`, out.slice(0, 400));

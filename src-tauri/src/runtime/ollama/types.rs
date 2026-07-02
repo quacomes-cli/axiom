@@ -30,6 +30,9 @@ pub struct OllamaChatRequest {
     pub think: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub keep_alive: Option<String>,
+    /// Native function-calling şemaları (frontend toolRegistry'den, opak JSON).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -73,6 +76,21 @@ pub struct OllamaChatResponseMessage {
     pub content: String,
     #[serde(default)]
     pub thinking: Option<String>,
+    /// Native tool çağrıları: [{function: {name, arguments: {...}}}]
+    #[serde(default)]
+    pub tool_calls: Option<Vec<OllamaToolCall>>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OllamaToolCall {
+    pub function: OllamaToolCallFunction,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OllamaToolCallFunction {
+    pub name: String,
+    #[serde(default)]
+    pub arguments: serde_json::Value,
 }
 
 #[derive(Debug, Serialize)]

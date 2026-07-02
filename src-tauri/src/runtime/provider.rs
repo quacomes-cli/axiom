@@ -47,6 +47,11 @@ pub struct InferenceRequest {
     /// tam bağlamını kullanabilsin diye; None ise optimizasyon profili geçerli.
     #[serde(default)]
     pub num_ctx: Option<u32>,
+    /// Native function-calling şemaları (Ollama `tools` formatı:
+    /// [{type:"function", function:{name, description, parameters}}]).
+    /// Frontend'deki toolRegistry üretir; Rust içeriğini yorumlamaz.
+    #[serde(default)]
+    pub tools: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
