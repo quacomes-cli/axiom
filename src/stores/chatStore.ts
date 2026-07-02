@@ -245,6 +245,12 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
     parts.push(modePrompt);
   }
 
+  parts.push(
+    "# İnteraktif Yanıtlar\n" +
+    "Görsel veya etkileşimli anlatım konuyu daha iyi aktaracaksa (hesaplayıcı, mini demo, grafik, form, animasyonlu şema, karşılaştırma tablosu vb.) yanıtına TEK bir ```html kod bloğu ekleyebilirsin — uygulama bunu sandbox içinde canlı, tıklanabilir olarak render eder.\n" +
+    "Kurallar: tamamen self-contained tek parça HTML (stil <style>, davranış <script> içinde inline); harici CDN/kaynak yok; koyu zemine uyumlu renkler kullan; gereksiz yere kullanma — sade metnin yeterli olduğu yerde metin kal."
+  );
+
   if (toolUseEnabled) {
     parts.push(TOOL_SYSTEM_PROMPT);
 

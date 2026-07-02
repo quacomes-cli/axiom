@@ -38,6 +38,23 @@ import { useUiStore } from "../../stores/uiStore";
 import { useOptimizationStore } from "../../stores/optimizationStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { AppVersion } from "../../stores/appStore";
+import { InteractiveHtml, extractNodeText } from "./InteractiveHtml";
+
+/**
+ * ReactMarkdown pre override'ı: ```html blokları sandbox'lı canlı önizleme
+ * kartına dönüşür; diğer diller normal kod bloğu kalır. Yalnızca streaming
+ * BİTMİŞ mesajlarda kullanılır — yarım HTML her token'da yeniden çalışmasın.
+ */
+const interactiveMarkdownComponents = {
+  pre(props: React.HTMLAttributes<HTMLPreElement> & { children?: React.ReactNode }) {
+    const child = props.children as { props?: { className?: string; children?: unknown } } | undefined;
+    const cls = child?.props?.className ?? "";
+    if (/language-html\b/.test(cls)) {
+      return <InteractiveHtml code={extractNodeText(child?.props?.children).trimEnd()} />;
+    }
+    return <pre {...props} />;
+  },
+};
 import { useFileDrop, isImagePath } from "../../hooks/useFileDrop";
 import { AttachmentPreviews } from "../shared/AttachmentPreviews";
 import { MicButton } from "../shared/MicButton";
@@ -885,7 +902,11 @@ const MessageBubble = memo(function MessageBubble({
           {isStreaming ? (
             <StreamingMarkdown text={displayText} />
           ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}>{displayText}</ReactMarkdown>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[[rehypeHighlight, { detect: true, ignoreMissing: true }]]}
+              components={interactiveMarkdownComponents}
+            >{displayText}</ReactMarkdown>
           )}
         </div>
       )}
