@@ -16,12 +16,11 @@ import {
   modelSupportsTools,
   buildEnabledAppsPrompt,
 } from "../stores/chatStore";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { ipc } from "../lib/ipc";
 import type { AlarmSoundConfig, ChatMessage as IpcChatMessage } from "../types";
 
 let notifReady: boolean | null = null;
-let cachedAudioDataUrl: string | null = null;
-let cachedAudioPath: string | null = null;
 
 async function ensureNotifPermission(): Promise<boolean> {
   if (notifReady === true) return true;
@@ -60,29 +59,29 @@ function playDefaultBeep(durationMs: number) {
   } catch { /* AudioContext not available */ }
 }
 
-async function ensureAudioCached(config: AlarmSoundConfig): Promise<string | null> {
+// Ses dosyasını base64 data URL olarak IPC'den GEÇİRME. 70MB'lık bir wav,
+// base64 + JSON + IPC katmanlarında her süreçte yüzlerce MB kopya üretir
+// (axiom.exe + WebView2 browser/network süreçleri şişer). Asset protokolü
+// dosyayı range-request'lerle diskten stream eder — bellek maliyeti ~0.
+function alarmAudioUrl(config: AlarmSoundConfig): string | null {
   if (config.source === "default" || !config.cachedPath) return null;
-
-  if (cachedAudioDataUrl && cachedAudioPath === config.cachedPath) {
-    return cachedAudioDataUrl;
-  }
-
   try {
-    cachedAudioDataUrl = await ipc.readAlarmAudio();
-    cachedAudioPath = config.cachedPath;
-    return cachedAudioDataUrl;
+    return convertFileSrc(config.cachedPath);
   } catch {
     return null;
   }
 }
 
-function playAudioFromDataUrl(dataUrl: string, durationMs: number) {
-  const audio = new Audio(dataUrl);
+function playAudioFromUrl(url: string, durationMs: number) {
+  const audio = new Audio(url);
   audio.volume = 1;
   audio.play().catch(() => playDefaultBeep(durationMs));
   setTimeout(() => {
     audio.pause();
     audio.currentTime = 0;
+    // Medya kaynağını bırak — decode buffer'ları bekletilmesin
+    audio.src = "";
+    audio.load();
   }, durationMs);
 }
 
@@ -94,9 +93,9 @@ async function playAlarmSound(config: AlarmSoundConfig) {
     return;
   }
 
-  const dataUrl = await ensureAudioCached(config);
-  if (dataUrl) {
-    playAudioFromDataUrl(dataUrl, duration);
+  const url = alarmAudioUrl(config);
+  if (url) {
+    playAudioFromUrl(url, duration);
   } else {
     playDefaultBeep(duration);
   }
@@ -215,10 +214,11 @@ async function executeAgentTask(task: Task) {
         break;
       }
 
-      // Tool'ları sırayla yürüt.
+      // Tool'ları sırayla yürüt. Arka plan bağlamı: onay gerektiren izinler
+      // sorulmaz, otomatik reddedilir (kullanıcı başında değil).
       const actions = [];
       for (const b of blocks) {
-        actions.push(await executeToolBlock(b));
+        actions.push(await executeToolBlock(b, { interactive: false }));
       }
       const resultText = buildToolResultText(actions);
       console.log(`[agent] step ${step} tool results:`, resultText.slice(0, 400));
@@ -270,12 +270,6 @@ export function useTaskScheduler() {
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   useEffect(() => {
-    // Pre-cache alarm audio on mount
-    const config = useSettingsStore.getState().settings?.alarmSound;
-    if (config && config.source !== "default" && config.cachedPath) {
-      ensureAudioCached(config);
-    }
-
     intervalRef.current = setInterval(() => {
       const now = Date.now();
       const tasks = useTaskStore.getState().tasks;

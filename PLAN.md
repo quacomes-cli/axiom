@@ -62,17 +62,20 @@ Dosyalar: `src-tauri/src/settings/*`, `src/lib/syncService.ts`, `src/hooks/useCl
 - Kabul: settings.json'da ve Firebase dokümanında hiçbir anahtar düz metin değil;
   uygulama yeniden başlatınca model listesi hâlâ çalışıyor.
 
-### 0.4 Tehlikeli tool'lara onay kapısı
-Dosyalar: `src/stores/chatStore.ts` (`executeToolBlock`), `src/components/chat/ChatPanel.tsx`
-- [ ] `shell`, `fs_write`, `fs_delete`, `fs_rename`, `fs_apply_edit` tool'ları çalışmadan
-      önce mevcut permission engine'e sor (`ipc.permissionsCheck`); karar `confirm` ise
-      chat içinde inline onay kartı göster (komut/yol görünür), kullanıcı onaylarsa yürüt.
-- [ ] Onay kartı: ChatPanel'de `toolActions`'a `pending` durumu; Onayla/Reddet butonları.
-      Reddedilirse tool sonucu "Kullanıcı reddetti" olarak history'e girer (model görür).
-- [ ] Zamanlanmış agent görevleri ve Telegram akışında (kullanıcı başında yok):
-      `confirm` gerektiren tool'lar OTOMATİK REDDEDİLİR (asla sessizce çalışmaz).
-- Kabul: "şu komutu çalıştır: del ..." mesajı onay kartı üretiyor; Telegram'dan
-  gelen aynı istek "izin gerekli" cevabıyla dönüyor.
+### 0.4 Tehlikeli tool'lara onay kapısı — TAMAMLANDI (2026-07-02)
+Dosyalar: `src/stores/approvalStore.ts` (yeni), `src/components/shared/ApprovalPrompt.tsx` (yeni),
+`src/stores/chatStore.ts`, `src/hooks/useTaskScheduler.ts`, `src/hooks/useTelegramAutoMode.ts`, `src/App.tsx`
+- [x] KÖK HATA düzeltildi: eski `checkPermission`, `confirm` kararını izin sayıyordu
+      (`kind !== "deny"`) — "her seferinde sor" ayarı hiç sormuyordu.
+- [x] `approvalStore.request()` promise'i kullanıcı kararına kadar bekletir; 120sn
+      cevapsız kalırsa otomatik RED. `stopGeneration` bekleyenleri reddeder.
+- [x] UI: `ApprovalPrompt` — sağ altta global kart (hangi sekmede olunursa olunsun görünür;
+      plandaki "chat içi inline kart" yerine bilinçli tercih). App.tsx'e mount edildi.
+- [x] Tüm izin kapıları (fs read/write/dir, shell, network) confirm akışına bağlandı;
+      deny artık engine'in `reason`'ını model'e iletiyor.
+- [x] Arka plan bağlamları (`useTaskScheduler`, `useTelegramAutoMode`) `interactive:false`
+      geçer → confirm gerektiren işlem sorulmadan reddedilir, model'e açıklama döner.
+- [x] send döngüsündeki araç zaman aşımı 30sn → 150sn (onay bekleme süresini kapsasın).
 
 ---
 

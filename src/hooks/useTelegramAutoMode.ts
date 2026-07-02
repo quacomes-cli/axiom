@@ -109,8 +109,9 @@ Kuralları:
     const blocks = parseToolBlocks(out);
     if (blocks.length === 0) { final = out; break; }
 
+    // Uzaktan gelen istek: onay gerektiren izinler SORULMAZ, otomatik reddedilir.
     const actions = [];
-    for (const b of blocks) actions.push(await executeToolBlock(b));
+    for (const b of blocks) actions.push(await executeToolBlock(b, { interactive: false }));
     history.push({ role: "user", content: `[Araç çıktıları]\n${buildToolResultText(actions)}` });
 
     if (step === MAX_TOOL_STEPS - 1) final = out;

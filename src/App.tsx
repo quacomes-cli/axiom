@@ -4,6 +4,7 @@ import { Sidebar } from "./components/shared/Sidebar";
 import { TitleBar } from "./components/shared/TitleBar";
 import { AnimatedView } from "./components/shared/AnimatedView";
 import { SearchModal } from "./components/shared/SearchModal";
+import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
 import { MigrationModal } from "./components/auth/MigrationModal";
 import { useUiStore } from "./stores/uiStore";
@@ -73,6 +74,28 @@ export default function App() {
   const [migrationModalOpen, setMigrationModalOpen] = useState(false);
   const appReady = settingsLoaded && modelsLoaded;
 
+  // Tarayıcı kısayollarını yakala (context menu, Ctrl+P/S/U/F, Ctrl+Shift+I/C/J)
+  useEffect(() => {
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        const k = e.key.toLowerCase();
+        if (k === "p" || k === "s" || k === "u" || k === "f") {
+          e.preventDefault();
+        }
+        if (e.shiftKey && (k === "i" || k === "c" || k === "j")) {
+          e.preventDefault();
+        }
+      }
+    };
+    document.addEventListener("contextmenu", onContextMenu);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   // Firebase auth listener
   useEffect(() => {
     const unsubscribe = authInit();
@@ -81,10 +104,16 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
+      // Settings hızlı — dosya okuma. loadModels Ollama'ya bağlıyorsa
+      // saniyeler alabilir; UI'yı splash'te takılı bırakmasın diye
+      // paralel ve timeout'lu yürütüyoruz.
       await useSettingsStore.getState().load();
       void useOptimizationStore.getState().loadConfig();
       void useModelStore.getState().checkOllamaLifecycle();
-      await useModelStore.getState().loadModels().catch(() => { });
+
+      const modelsPromise = useModelStore.getState().loadModels().catch(() => { });
+      const timeout = new Promise<void>((resolve) => setTimeout(resolve, 3000));
+      await Promise.race([modelsPromise, timeout]);
       setModelsLoaded(true);
     }
     init();
@@ -132,6 +161,7 @@ export default function App() {
         </main>
       </div>
       <SearchModal />
+      <ApprovalPrompt />
 
       <AnimatePresence>
         {authModalOpen && (

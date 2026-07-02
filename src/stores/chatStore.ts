@@ -7,6 +7,7 @@ import { useDocumentStore } from "./documentStore";
 import { useSkillStore } from "./skillStore";
 import { useUserProfileStore } from "./userProfileStore";
 import { useAppStore, executeAppTool } from "./appStore";
+import { useApprovalStore } from "./approvalStore";
 import { useSettingsStore } from "./settingsStore";
 import { useOptimizationStore } from "./optimizationStore";
 import { useTaskStore, type TaskStatus } from "./taskStore";
@@ -374,7 +375,6 @@ interface StreamTokenPayload {
   doneReason?: string;
 }
 
-const UTILITY_MODEL = "llama3.2:1b";
 const MAX_TOOL_STEPS = 5;
 
 export function modelSupportsTools(model: { capabilities?: string[] | null } | null | undefined): boolean {
@@ -673,49 +673,100 @@ export function parseToolBlocks(text: string): ToolBlock[] {
   return blocks;
 }
 
-export async function executeToolBlock(block: ToolBlock): Promise<ToolAction> {
-  // Permission check helper
-  async function checkPermission(query: Record<string, unknown>): Promise<boolean> {
+export interface ToolExecOptions {
+  /**
+   * Kullanıcı başında mı? Sohbet penceresi = true (varsayılan).
+   * Zamanlanmış agent görevleri ve Telegram auto-mode = false — bu bağlamlarda
+   * "confirm" gerektiren izinler SORULMAZ, otomatik reddedilir; aksi halde
+   * kullanıcının haberi olmadan onay kartı asılı kalır ya da (daha kötüsü)
+   * uzaktan gelen bir istek sessizce sistem erişimi kazanır.
+   */
+  interactive?: boolean;
+}
+
+export async function executeToolBlock(
+  block: ToolBlock,
+  opts: ToolExecOptions = {},
+): Promise<ToolAction> {
+  const interactive = opts.interactive ?? true;
+
+  // İzin kontrolü: deny → engelle; confirm → kullanıcıya sor (interaktifse);
+  // allow → geç. Dönen msg, model'e tool sonucu olarak iletilir.
+  async function checkPermission(
+    query: Record<string, unknown>,
+    prompt: { title: string; detail: string },
+  ): Promise<{ ok: boolean; msg: string }> {
     try {
       const decision = await ipc.permissionsCheck(query);
-      return decision.kind !== "deny";
+      if (decision.kind === "allow") return { ok: true, msg: "" };
+      if (decision.kind === "deny") {
+        return { ok: false, msg: `İzin reddedildi: ${decision.reason}` };
+      }
+      // confirm
+      if (!interactive) {
+        return {
+          ok: false,
+          msg: "İzin gerekli: bu işlem arka planda onaysız çalıştırılamaz. Kullanıcıdan uygulama içinden çalıştırmasını iste.",
+        };
+      }
+      const approved = await useApprovalStore
+        .getState()
+        .request(prompt.title, prompt.detail);
+      return approved
+        ? { ok: true, msg: "" }
+        : { ok: false, msg: "Kullanıcı bu işlemi reddetti." };
     } catch {
-      return false;
+      return { ok: false, msg: "İzin kontrolü yapılamadı; işlem engellendi." };
     }
   }
 
   try {
     switch (block.kind) {
       case "read_file": {
-        const allowed = await checkPermission({ action: "fs_read", path: block.path! });
-        if (!allowed) return { kind: "read_file", path: block.path, content: "İzin reddedildi: dosya okuma izni yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "fs_read", path: block.path! },
+          { title: "Dosya okuma izni", detail: block.path! },
+        );
+        if (!perm.ok) return { kind: "read_file", path: block.path, content: perm.msg, collapsed: false };
         const dir = block.path!.replace(/\\/g, "/").split("/").slice(0, -1).join("/") || "/";
         const result = await ipc.fsReadFile(block.path!, dir);
         return { kind: "read_file", path: block.path, content: result.content, collapsed: true };
       }
       case "write_file": {
-        const allowed = await checkPermission({ action: "fs_write", path: block.path! });
-        if (!allowed) return { kind: "write_file", path: block.path, content: "İzin reddedildi: dosya yazma izni yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "fs_write", path: block.path! },
+          { title: "Dosya yazma izni", detail: block.path! },
+        );
+        if (!perm.ok) return { kind: "write_file", path: block.path, content: perm.msg, collapsed: false };
         const dir = block.path!.replace(/\\/g, "/").split("/").slice(0, -1).join("/") || "/";
         await ipc.fsWriteFile(block.path!, block.content!, dir);
         return { kind: "write_file", path: block.path, content: block.content, collapsed: true };
       }
       case "list_dir": {
-        const allowed = await checkPermission({ action: "fs_read", path: block.path! });
-        if (!allowed) return { kind: "list_dir", path: block.path, content: "İzin reddedildi: dizin okuma izni yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "fs_read", path: block.path! },
+          { title: "Dizin okuma izni", detail: block.path! },
+        );
+        if (!perm.ok) return { kind: "list_dir", path: block.path, content: perm.msg, collapsed: false };
         const entries = await ipc.fsReadDir(block.path!, block.path!, 2);
         const tree = entries.map((e) => `${e.isDir ? "📁" : "📄"} ${e.name}`).join("\n");
         return { kind: "list_dir", path: block.path, content: tree || "(boş dizin)", collapsed: true };
       }
       case "create_dir": {
-        const allowed = await checkPermission({ action: "fs_write", path: block.path! });
-        if (!allowed) return { kind: "create_dir", path: block.path, content: "İzin reddedildi: dizin oluşturma izni yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "fs_write", path: block.path! },
+          { title: "Dizin oluşturma izni", detail: block.path! },
+        );
+        if (!perm.ok) return { kind: "create_dir", path: block.path, content: perm.msg, collapsed: false };
         await ipc.fsCreateDir(block.path!, block.path!);
         return { kind: "create_dir", path: block.path, content: `Dizin oluşturuldu: ${block.path}`, collapsed: true };
       }
       case "run_command": {
-        const allowed = await checkPermission({ action: "shell_execute", command: block.command! });
-        if (!allowed) return { kind: "run_command", command: block.command, content: "İzin reddedildi: komut çalıştırma izni yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "shell_execute", command: block.command! },
+          { title: "Komut çalıştırma izni", detail: block.command! },
+        );
+        if (!perm.ok) return { kind: "run_command", command: block.command, content: perm.msg, collapsed: false };
         const output = await ipc.shellExec(block.command!);
         return {
           kind: "run_command",
@@ -726,22 +777,31 @@ export async function executeToolBlock(block: ToolBlock): Promise<ToolAction> {
         };
       }
       case "web_search": {
-        const allowed = await checkPermission({ action: "network_outbound", host: "search" });
-        if (!allowed) return { kind: "web_search", command: block.query, content: "İzin reddedildi: ağ erişimi yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "network_outbound", host: "search" },
+          { title: "Web araması izni", detail: block.query! },
+        );
+        if (!perm.ok) return { kind: "web_search", command: block.query, content: perm.msg, collapsed: false };
         const results = await ipc.webSearch(block.query!, 5);
         const formatted = results.map((r, i) => `${i + 1}. ${r.title}\n   ${r.url}\n   ${r.snippet}`).join("\n\n");
         return { kind: "web_search", command: block.query, content: formatted || "Sonuç bulunamadı.", collapsed: true };
       }
       case "weather": {
-        const allowed = await checkPermission({ action: "network_outbound", host: "weather" });
-        if (!allowed) return { kind: "weather", command: block.city, content: "İzin reddedildi: ağ erişimi yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "network_outbound", host: "weather" },
+          { title: "Hava durumu sorgusu izni", detail: block.city || "Istanbul" },
+        );
+        if (!perm.ok) return { kind: "weather", command: block.city, content: perm.msg, collapsed: false };
         const data = await ipc.weatherFetch(block.city || "Istanbul");
         const summary = `${data.city}: ${Math.round(data.tempC)}°C (hissedilen ${Math.round(data.feelsLikeC)}°C), ${data.description}, nem %${data.humidity}, rüzgar ${Math.round(data.windKph)} km/s`;
         return { kind: "weather", command: block.city, content: summary, collapsed: true, cardType: "weather", cardData: data };
       }
       case "currency": {
-        const allowed = await checkPermission({ action: "network_outbound", host: "currency" });
-        if (!allowed) return { kind: "currency", content: "İzin reddedildi: ağ erişimi yok.", collapsed: false };
+        const perm = await checkPermission(
+          { action: "network_outbound", host: "currency" },
+          { title: "Döviz kuru sorgusu izni", detail: "exchangerate API" },
+        );
+        if (!perm.ok) return { kind: "currency", content: perm.msg, collapsed: false };
         const data = await ipc.currencyFetch();
         const summary = data.rates
           .map((r) => `${r.code}: ${r.rate} TRY`)
@@ -967,15 +1027,17 @@ let currentStreamResolve: (() => void) | null = null;
 function generateTitle(chat: Chat) {
   const firstUser = chat.messages.find((m) => m.role === "user");
   if (!firstUser) return;
+  const active = useModelStore.getState().models.find((m) => m.isActive);
+  if (!active) return;
 
-  const prompt = `Give a short title (3-5 words) for this message. Reply with ONLY the title, nothing else.
+  const prompt = `Aşağıdaki mesaj için 3-5 kelimelik kısa bir sohbet başlığı üret. SADECE başlığı yaz — başka hiçbir metin yazma, tırnak veya noktalama işareti koyma.
 
-"${firstUser.text.slice(0, 150)}"`;
+"${firstUser.text.slice(0, 300)}"`;
 
   ipc
     .modelsChat({
-      modelId: UTILITY_MODEL,
-      provider: "ollama",
+      modelId: active.id,
+      provider: active.provider,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.3,
       maxTokens: 30,
@@ -983,7 +1045,7 @@ function generateTitle(chat: Chat) {
     .then((resp) => {
       const title = resp.content
         .split("\n")[0]
-        .replace(/^(title\s*:\s*)/i, "")
+        .replace(/^(title\s*:\s*|başlık\s*:\s*)/i, "")
         .replace(/^["'`*]+|["'`*]+$/g, "")
         .trim();
       if (title && title.length > 0 && title.length < 60) {
@@ -1112,6 +1174,8 @@ export const useChatStore = create<ChatState>()(
 
       stopGeneration: () => {
         stopRequested = true;
+        // Bekleyen tool onay kartları varsa reddet — döngü onları beklemesin
+        useApprovalStore.getState().denyAll();
         if (streamUnlisten) { streamUnlisten(); streamUnlisten = null; }
         // Bekleyen stream promise'ini çöz ki send döngüsü askıda kalmasın
         if (currentStreamResolve) { currentStreamResolve(); currentStreamResolve = null; }
@@ -1510,9 +1574,13 @@ export const useChatStore = create<ChatState>()(
           const actions: ToolAction[] = [];
           for (const block of toolBlocks) {
             try {
+              // Zaman aşımı onay bekleme süresini de kapsar: onay kartının
+              // kendi zaman aşımı 120sn olduğundan buradaki üst sınır onun
+              // üzerinde olmalı — yoksa kart ekranda dururken araç "zaman
+              // aşımı" ile düşer.
               const action = await Promise.race([
                 executeToolBlock(block),
-                new Promise<ToolAction>((_, reject) => setTimeout(() => reject(new Error("Araç zaman aşımı")), 30000)),
+                new Promise<ToolAction>((_, reject) => setTimeout(() => reject(new Error("Araç zaman aşımı")), 150000)),
               ]);
               actions.push(action);
             } catch (e) {
