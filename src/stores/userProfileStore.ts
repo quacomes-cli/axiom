@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { ipc } from "../lib/ipc";
 import type { UserProfile } from "../types";
-import { useAuthStore } from "./authStore";
 
 const UTILITY_MODEL = "llama3.2:1b";
 const MIN_USER_MSG_LENGTH = 20;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUp, Loader2, Globe, ExternalLink, ChevronDown, ChevronUp, Droplets, Wind,
+  ArrowUp, Globe, ExternalLink, ChevronDown, ChevronUp, Droplets, Wind,
   Sun, CloudSun, Cloud, CloudRain, CloudDrizzle, CloudLightning, CloudFog, Snowflake,
   ArrowLeftRight,
   MessageCircle,

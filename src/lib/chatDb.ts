@@ -146,10 +146,10 @@ async function migrateFromLocalStorage(): Promise<Chat[]> {
 /** Açılışta çağrılır: gerekirse göç eder, sonra tüm sohbetleri yükler. */
 export async function loadAllChats(): Promise<Chat[]> {
   try {
-    let stored = await ipc.chatsLoad();
+    let stored = await ipc.chatsLoad<StoredChat>();
     if (stored.length === 0) {
       const migrated = await migrateFromLocalStorage();
-      if (migrated.length > 0) stored = await ipc.chatsLoad();
+      if (migrated.length > 0) stored = await ipc.chatsLoad<StoredChat>();
     }
     const chats = stored.map(fromStored);
     // DB'de resmi olan mesajları işaretle — saveChat onları tekrar göndermesin

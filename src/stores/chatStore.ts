@@ -1,7 +1,8 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { persist } from "zustand/middleware";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { ipc } from "../lib/ipc";
+import * as chatDb from "../lib/chatDb";
 import { useModelStore } from "./modelStore";
 import { useDocumentStore } from "./documentStore";
 import { useSkillStore } from "./skillStore";
@@ -302,40 +303,6 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
   }
   return prompt;
 }
-
-const throttledLocalStorage = (() => {
-  let timer: ReturnType<typeof setTimeout> | null = null;
-  let pendingName: string | null = null;
-  let latest: string;
-
-  function flush() {
-    if (pendingName) {
-      localStorage.setItem(pendingName, latest);
-      pendingName = null;
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-    }
-  }
-
-  window.addEventListener("beforeunload", flush);
-
-  return {
-    getItem: (name: string) => localStorage.getItem(name),
-    setItem: (name: string, value: string) => {
-      latest = value;
-      pendingName = name;
-      if (!timer) {
-        timer = setTimeout(() => {
-          flush();
-          timer = null;
-        }, 2000);
-      }
-    },
-    removeItem: (name: string) => localStorage.removeItem(name),
-  };
-})();
 
 export interface SearchResult {
   title: string;
@@ -1002,8 +969,12 @@ interface ChatState {
   toolUseEnabled: boolean;
   chatMode: ChatMode;
   contextUsage: ContextUsage;
+  /** SQLite'tan yükleme tamamlandı mı (App açılışında beklenir). */
+  hydrated: boolean;
 
   activeChat: () => Chat | undefined;
+  /** Açılışta: gerekirse localStorage'dan göç eder, sohbetleri SQLite'tan yükler. */
+  loadFromDb: () => Promise<void>;
   newChat: () => void;
   /** Aktif sohbete asistan rolünde bir mesaj ekle (gönderim olmadan). */
   injectAssistantMessage: (text: string, title?: string) => void;
@@ -1055,6 +1026,50 @@ function generateTitle(chat: Chat) {
     .catch(() => {});
 }
 
+/**
+ * Kaydedilen son sohbet nesneleri (referans karşılaştırması). Zustand her
+ * mutasyonda yeni nesne ürettiği için "referans aynıysa değişmemiştir"
+ * güvenli — gereksiz DB yazımlarını eler.
+ */
+const lastPersisted = new Map<string, Chat>();
+
+function persistChatObj(chat: Chat) {
+  if (lastPersisted.get(chat.id) === chat) return;
+  lastPersisted.set(chat.id, chat);
+  void chatDb.saveChat(chat);
+}
+
+/** Sohbetin güncel halini SQLite'a yaz (fire-and-forget; hatalar loglanır). */
+function persistById(chatId: string | null | undefined) {
+  if (!chatId) return;
+  const chat = useChatStore.getState().chats.find((c) => c.id === chatId);
+  if (chat) persistChatObj(chat);
+}
+
+/**
+ * Sohbetin resimlerini DB'den store'a doldur. Mesajlar diskte resimsiz
+ * (imageCount ile) durur; resim verisi sohbete geçildiğinde bir kez yüklenir.
+ */
+async function hydrateImages(chatId: string) {
+  const chat = useChatStore.getState().chats.find((c) => c.id === chatId);
+  if (!chat) return;
+  if (!chat.messages.some((m) => m.imageCount && !m.images?.length)) return;
+  const map = await chatDb.loadChatImages(chatId);
+  if (Object.keys(map).length === 0) return;
+  useChatStore.setState((s) => ({
+    chats: s.chats.map((c) =>
+      c.id === chatId
+        ? {
+            ...c,
+            messages: c.messages.map((m) =>
+              map[m.id] ? { ...m, images: map[m.id] } : m,
+            ),
+          }
+        : c,
+    ),
+  }));
+}
+
 export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
@@ -1065,10 +1080,23 @@ export const useChatStore = create<ChatState>()(
       toolUseEnabled: true,
       chatMode: "balanced" as ChatMode,
       contextUsage: { used: 0, total: 4096 },
+      hydrated: false,
 
       activeChat: () => {
         const { chats, activeChatId } = get();
         return chats.find((c) => c.id === activeChatId);
+      },
+
+      loadFromDb: async () => {
+        const chats = await chatDb.loadAllChats();
+        // Yeni yüklenenler zaten diskte — açılışta geri yazılmasınlar
+        for (const c of chats) lastPersisted.set(c.id, c);
+        set({ chats, activeChatId: chats[0]?.id ?? null, hydrated: true });
+        // Açılış her zaman boş bir sohbette başlar (eski onRehydrate davranışı):
+        // ilk sohbet boşsa onu kullan, doluysa yeni oluştur.
+        get().newChat();
+        const activeId = get().activeChatId;
+        if (activeId) void hydrateImages(activeId);
       },
 
       newChat: () => {
@@ -1090,6 +1118,7 @@ export const useChatStore = create<ChatState>()(
           activeChatId: id,
           thinking: false,
         }));
+        void chatDb.saveChat(chat);
         if (streamUnlisten) {
           streamUnlisten();
           streamUnlisten = null;
@@ -1115,6 +1144,7 @@ export const useChatStore = create<ChatState>()(
               : c,
           ),
         }));
+        persistById(activeChatId);
       },
 
       switchChat: (id) => {
@@ -1123,6 +1153,7 @@ export const useChatStore = create<ChatState>()(
           streamUnlisten = null;
         }
         set({ activeChatId: id, thinking: false });
+        void hydrateImages(id);
       },
 
       deleteChat: (id) => {
@@ -1136,7 +1167,8 @@ export const useChatStore = create<ChatState>()(
               : s.activeChatId,
           };
         });
-        // Sohbet silinince FTS ve bellek kayıtlarını da temizle.
+        // Sohbet silinince kalıcı kopya, FTS ve bellek kayıtları da temizlenir.
+        void chatDb.deleteChat(id);
         void ipc.chatHistoryClear(id).catch(() => {});
         void ipc.memoryClearChat(id).catch(() => {});
       },
@@ -1145,6 +1177,7 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({
           chats: s.chats.map((c) => (c.id === id ? { ...c, title } : c)),
         }));
+        persistById(id);
       },
 
       toggleToolCollapse: (chatId, msgId, actionIdx) => {
@@ -1221,6 +1254,9 @@ export const useChatStore = create<ChatState>()(
           thinking: true,
           thinkingStatus: "Düşünüyor...",
         }));
+        // Kullanıcı mesajını (resimleriyle) hemen kalıcılaştır — üretim
+        // sırasında uygulama kapanırsa mesaj kaybolmasın.
+        persistById(activeChatId);
 
         // App command: /github, /telegram vb. → check early
         if (appCommand) {
@@ -1752,6 +1788,7 @@ export const useChatStore = create<ChatState>()(
             ),
             thinking: false,
           }));
+          persistById(activeChatId);
         } catch (e) {
           const errMsg: ChatMessage = {
             id: crypto.randomUUID(),
@@ -1766,6 +1803,7 @@ export const useChatStore = create<ChatState>()(
             ),
             thinking: false,
           }));
+          persistById(activeChatId);
         }
       },
 
@@ -1783,6 +1821,7 @@ export const useChatStore = create<ChatState>()(
               : c
           ),
         }));
+        persistById(chatId);
 
         await get().send(newText);
       },
@@ -1795,34 +1834,29 @@ export const useChatStore = create<ChatState>()(
               : c
           ),
         }));
+        persistById(chatId);
       },
 
     }),
     {
-      name: "axiom-chats",
-      storage: createJSONStorage(() => throttledLocalStorage),
+      // Sohbet verisi artık SQLite'ta (src/lib/chatDb.ts) — localStorage'da
+      // yalnızca küçük UI tercihleri kalır.
+      name: "axiom-chat-prefs",
       partialize: (state) =>
         ({
-          chats: state.chats.map((c) => ({
-            ...c,
-            messages: c.messages.map((m) => {
-              if (!m.images || m.images.length === 0) return m;
-              const { images, ...rest } = m;
-              return { ...rest, imageCount: images.length };
-            }),
-          })),
           toolUseEnabled: state.toolUseEnabled,
           chatMode: state.chatMode,
         }) as unknown as ChatState,
-      onRehydrateStorage: () => (state) => {
-        if (!state) return;
-        const first = state.chats[0];
-        if (first && first.messages.length === 0) {
-          state.activeChatId = first.id;
-        } else {
-          state.newChat();
-        }
-      },
     }
   )
 );
+
+// Güvenlik ağı: send() içindeki tüm bitiş/hata yollarını tek tek kovalamak
+// yerine, üretim bittiğinde (thinking=false) aktif sohbet değiştiyse kaydet.
+// Referans karşılaştırması gereksiz yazımı engeller; stream sırasındaki
+// token-başına set'ler thinking=true olduğu için elenir.
+useChatStore.subscribe((state) => {
+  if (state.thinking || !state.hydrated) return;
+  const chat = state.chats.find((c) => c.id === state.activeChatId);
+  if (chat) persistChatObj(chat);
+});

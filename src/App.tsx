@@ -108,6 +108,8 @@ export default function App() {
       // saniyeler alabilir; UI'yı splash'te takılı bırakmasın diye
       // paralel ve timeout'lu yürütüyoruz.
       await useSettingsStore.getState().load();
+      // Sohbetler SQLite'tan gelir (gerekirse eski localStorage verisi göç eder)
+      await useChatStore.getState().loadFromDb();
       void useOptimizationStore.getState().loadConfig();
       void useModelStore.getState().checkOllamaLifecycle();
 

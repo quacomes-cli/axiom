@@ -15,7 +15,6 @@ import {
   LogOut,
   LogIn,
   ChevronRight,
-  Rocket,
   Send,
   TrendingDown,
 } from "lucide-react";

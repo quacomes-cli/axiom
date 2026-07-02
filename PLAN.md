@@ -176,4 +176,15 @@ CREATE TABLE chat_images(
 - 2026-07-02: Faz 0.3 (keyring + sync sanitize) tamamlandı — commit df38afa.
 - 2026-07-02: Faz 0.1 kod tarafı: 'güncelleme' dosyası repodan çıkarıldı — commit 9983e41.
   KALAN (kullanıcı aksiyonu): anahtar rotasyonu — parola git geçmişinde hâlâ mevcut!
-- Sıradaki: FAZ 1 (sohbet depolama → SQLite).
+- 2026-07-02: FAZ 1 tamamlandı. Tasarım plandakinden bilinçli sapma: UI'yı kırmamak
+  için store bellekte tam kalır (sayfalı yükleme YOK), yalnızca kalıcılık katmanı
+  değişti — `chat_save` sohbet başına full-replace (mesaj finalize'ında, token başına
+  değil), resimler `chat_images` tablosunda BLOB (IPC'den mesaj başına bir kez geçer,
+  `persistedImageMsgIds` ile). localStorage persist'te sadece toolUseEnabled/chatMode
+  kaldı (axiom-chat-prefs). Güvenlik ağı: store subscription thinking=false'ken aktif
+  sohbeti referans-karşılaştırmalı kaydeder. Göç doğrulandı: 13 sohbet/121 mesaj
+  SQLite'a taşındı, ikinci açılışta duplikasyon 0, UTF-8 sağlam, eski localStorage
+  verisi `axiom-chats.migrated-*` olarak korunuyor.
+  TEST EDİLMEDİ (manuel doğrula): resimli mesajın restart sonrası geri gelmesi
+  (chat_images_put/load yolu) — resimli bir sohbet gönderip app'i yeniden başlat.
+- Sıradaki: FAZ 2 (native function calling).
