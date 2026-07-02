@@ -12,6 +12,7 @@ import {
   Gauge,
   ChevronRight,
   Download,
+  ArrowLeft,
 } from "lucide-react";
 import { PageHeader } from "../shared/PageHeader";
 import { ModalOverlay } from "../shared/ModalOverlay";
@@ -19,6 +20,7 @@ import { useModelStore } from "../../stores/modelStore";
 import { useOptimizationStore } from "../../stores/optimizationStore";
 import { ipc } from "../../lib/ipc";
 import type { ModelInfo } from "../../types";
+import { useUiStore } from "../../stores/uiStore";
 
 // Quantization hedefleri (kaynak F16/F32 olmalı)
 const QUANT_TARGETS = [
@@ -237,8 +239,21 @@ export function AcceleratePage() {
     }
   }
 
+  const setView = useUiStore((s) => s.setView);
+
   return (
     <div className="h-full overflow-y-auto p-6" style={{ scrollbarWidth: "none" }}>
+      <div className="mb-2 flex items-center gap-3">
+        <button
+          onClick={() => setView("models")}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-text-faint transition-colors hover:bg-hover-strong hover:text-text"
+        >
+          <ArrowLeft size={16} strokeWidth={1.4} />
+        </button>
+        <div>
+          <h1 className="text-lg font-semibold text-text">Model Hızlandırma</h1>
+        </div>
+      </div>
       <PageHeader
         title="Hızlandır"
         subtitle="Yüklü modelleri quantization, KV-cache ve flash attention ile hızlandır."
@@ -273,9 +288,8 @@ export function AcceleratePage() {
                 <button
                   key={m.id}
                   onClick={() => { setSelectedId(m.id); setErr(null); }}
-                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${
-                    active ? "bg-accent/15 ring-1 ring-accent/30" : "bg-surface-2 hover:bg-surface-3"
-                  }`}
+                  className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors ${active ? "bg-accent/15 ring-1 ring-accent/30" : "bg-surface-2 hover:bg-surface-3"
+                    }`}
                 >
                   <Box size={14} strokeWidth={1.5} className={active ? "text-accent" : "text-text-faint"} />
                   <div className="min-w-0">
@@ -307,9 +321,8 @@ export function AcceleratePage() {
                     key={q.id}
                     onClick={() => setTargetQuant(q.id)}
                     title={q.desc}
-                    className={`rounded-lg px-2 py-2 text-center transition-colors ${
-                      on ? "bg-accent/15 text-accent ring-1 ring-accent/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
-                    }`}
+                    className={`rounded-lg px-2 py-2 text-center transition-colors ${on ? "bg-accent/15 text-accent ring-1 ring-accent/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
+                      }`}
                   >
                     <div className="text-[0.8571rem] font-medium">{q.label}</div>
                   </button>
@@ -348,9 +361,8 @@ export function AcceleratePage() {
                     key={k.id}
                     onClick={() => setKvTarget(k.id)}
                     title={k.desc}
-                    className={`rounded-lg px-2 py-2 text-center transition-colors ${
-                      on ? "bg-purple-500/15 text-purple-300 ring-1 ring-purple-400/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
-                    }`}
+                    className={`rounded-lg px-2 py-2 text-center transition-colors ${on ? "bg-purple-500/15 text-purple-300 ring-1 ring-purple-400/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
+                      }`}
                   >
                     <div className="text-[0.8571rem] font-medium">{k.label}</div>
                   </button>
@@ -452,11 +464,10 @@ export function AcceleratePage() {
                     <button
                       key={t}
                       onClick={() => setF16Tag(t)}
-                      className={`rounded-lg px-2.5 py-1 text-[0.7857rem] transition-colors ${
-                        f16Tag === t
+                      className={`rounded-lg px-2.5 py-1 text-[0.7857rem] transition-colors ${f16Tag === t
                           ? "bg-accent/20 text-accent"
                           : "bg-surface-3 text-text-secondary hover:bg-hover"
-                      }`}
+                        }`}
                     >
                       {t}
                     </button>

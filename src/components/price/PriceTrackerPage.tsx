@@ -300,9 +300,11 @@ function AddForm() {
             {busy ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Plus size={13} strokeWidth={2} />
+              <Plus size={13} strokeWidth={3} />
             )}
-            Ekle
+            <span style={{
+              height: 20
+            }}>Ekle</span>
           </button>
         </div>
       </div>

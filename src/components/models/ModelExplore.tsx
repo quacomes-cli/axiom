@@ -15,6 +15,7 @@ import {
   Sparkles,
   MessageSquare,
   AlignLeft,
+  Rocket,
 } from "lucide-react";
 import { useModelStore } from "../../stores/modelStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -78,7 +79,7 @@ export function ModelExplore() {
   useEffect(() => {
     void checkLifecycle();
     void loadModels();
-    ipc.hardwareProfile().then(setHw).catch(() => {});
+    ipc.hardwareProfile().then(setHw).catch(() => { });
     setCatalogLoading(true);
     ipc
       .ollamaLibrary()
@@ -156,13 +157,28 @@ export function ModelExplore() {
             Keşfet, indir ve yerel olarak çalıştır
           </p>
         </div>
-        <button
-          onClick={() => setView("models-manage" as any)}
-          className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-[0.9286rem] text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
-        >
-          <Settings2 size={14} strokeWidth={1.4} />
-          Düzenle
-        </button>
+        <div style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: ".5rem",
+          alignItems: "center",
+          justifyContent: "center"
+        }}>
+          <button
+            onClick={() => setView("accelerate" as any)}
+            className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-[0.9286rem] text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
+          >
+            <Rocket size={14} strokeWidth={1.4} />
+            Hızlandır
+          </button>
+          <button
+            onClick={() => setView("models-manage" as any)}
+            className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-[0.9286rem] text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
+          >
+            <Settings2 size={14} strokeWidth={1.4} />
+            Düzenle
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -185,11 +201,10 @@ export function ModelExplore() {
               <button
                 key={cap}
                 onClick={() => toggleCap(cap)}
-                className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[0.7857rem] font-medium transition-colors ${
-                  active
+                className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[0.7857rem] font-medium transition-colors ${active
                     ? CAP_COLORS[cap] ?? "bg-surface-3 text-text"
                     : "bg-surface-2 text-text-faint hover:bg-surface-3 hover:text-text-secondary"
-                }`}
+                  }`}
               >
                 {capabilityIcon(cap)}
                 {CAP_LABELS[cap] ?? cap}

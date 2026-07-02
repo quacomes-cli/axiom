@@ -123,10 +123,10 @@ export function ToolBlock({
       <button
         type="button"
         onClick={() => { setExpanded((v) => !v); onToggle(); }}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
+        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
       >
         <Wrench size={12} strokeWidth={1.6} />
-        <span style={{ height: "14.25px" }}>
+        <span style={{ height: "17.5px" }}>
           {prefix}: <span className="font-medium text-text-secondary">{value}</span>
         </span>
 
@@ -157,7 +157,7 @@ export function ToolBlock({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="mt-1 overflow-hidden rounded-lg border border-border/30 bg-surface-2 text-xs leading-relaxed"
+            className="mt-1 overflow-hidden rounded-md border border-border/30 bg-surface-2 text-xs leading-relaxed"
             style={{ maxHeight: 300, overflowY: "auto" }}
           >
             <code

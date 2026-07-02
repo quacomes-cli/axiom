@@ -43,7 +43,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProvider> = {
     authUrlBase: "https://accounts.google.com/o/oauth2/v2/auth",
     tokenUrl: "https://oauth2.googleapis.com/token",
     scopes:
-      "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose",
+      "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/gmail.send",
     needsClientSecret: false,
     builtinClientId: GOOGLE_CLIENT_ID,
     builtinClientSecret: GOOGLE_CLIENT_SECRET,

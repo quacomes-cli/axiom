@@ -12,7 +12,7 @@ import {
   resolveClientSecret,
 } from "../lib/oauthProviders";
 
-export const AppVersion : string = "v0.1.5"
+export const AppVersion: string = "v0.1.5"
 
 export type AppConnectionType = "api" | "webhook" | "oauth" | "local";
 export type AppConnectionStatus = "disconnected" | "checking" | "connected" | "error";
@@ -143,6 +143,8 @@ const DEFAULT_APPS: AppIntegration[] = [
       { name: "gmail_recent", description: "Son N mesajın özetini getir", parameters: "limit (varsayılan 10)" },
       { name: "gmail_search", description: "Gmail araması (örn. from:x OR subject:y)", parameters: "query, limit (varsayılan 10)" },
       { name: "gmail_draft", description: "Yeni taslak oluştur (gönderilmez)", parameters: "to, subject, body" },
+      { name: "gmail_send", description: "Doğrudan e-posta gönder", parameters: "to, subject, body" },
+      { name: "gmail_mark_as_read", description: "Maili okundu olarak işaretle veya arşivle", parameters: "messageId, action ('read' veya 'archive')" },
     ],
   },
   {
@@ -998,7 +1000,61 @@ export async function executeAppTool(
           body: JSON.stringify({ message: { raw: encoded } }),
         });
         if (resp.status >= 400) return googleApiError(resp);
-        return `📝 Taslak oluşturuldu (${to}).`;
+        return `Taslak oluşturuldu (${to}).`;
+      }
+      case "gmail_mark_as_read": {
+        const token = await getValidAccessToken("gmail", app.config, useAppStore.getState().updateConfig);
+        const messageId = params.messageId;
+        const action = params.action || "read";
+
+        if (!messageId) return "Hata: messageId gerekli.";
+
+        const removeLabels = action === "archive" ? ["UNREAD", "INBOX"] : ["UNREAD"];
+
+        const resp = await ipc.httpFetch({
+          url: `https://gmail.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`,
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ removeLabelIds: removeLabels }),
+        });
+
+        if (resp.status >= 400) return googleApiError(resp);
+        return `Mesaj ${action === "archive" ? "arşivlendi" : "okundu olarak işaretlendi"} (${messageId}).`;
+      }
+
+      case "gmail_send": {
+        const token = await getValidAccessToken("gmail", app.config, useAppStore.getState().updateConfig);
+        const to = params.to;
+        const subject = params.subject;
+        const body = params.body;
+
+        if (!to || !subject || !body) return "Hata: to, subject ve body gerekli.";
+
+        const raw = [
+          `To: ${to}`,
+          `Subject: =?utf-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`,
+          "Content-Type: text/plain; charset=utf-8",
+          "",
+          body,
+        ].join("\r\n");
+
+        const encoded = btoa(unescape(encodeURIComponent(raw)))
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=+$/, "");
+
+        const resp = await ipc.httpFetch({
+          url: "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ raw: encoded }),
+        });
+
+        if (resp.status >= 400) return googleApiError(resp);
+        return `🚀 Mail başarıyla gönderildi (${to}).`;
       }
 
       // ---- Google Calendar ----

@@ -24,6 +24,7 @@ import {
   Volume2,
   VolumeX,
   AlertTriangle,
+  Loader,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -500,7 +501,7 @@ function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming:
         className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
       >
         {isStreaming ? (
-          <Loader2 size={12} strokeWidth={1.4} className="animate-spin" />
+          <Loader size={12} strokeWidth={1.4} className="animate-spin" />
         ) : (
           <Brain size={12} strokeWidth={1.6} />
         )}
@@ -788,7 +789,9 @@ const MessageBubble = memo(function MessageBubble({
   const extractedLinks = displayText ? extractLinksFromText(displayText) : [];
 
   return (
-    <div className="group">
+    <div className="group" style={{
+      marginBottom: "1rem"
+    }}>
       {msg.thinkingContent && (
         <ThinkingBlock content={msg.thinkingContent} isStreaming={isStreaming && !msg.text} />
       )}
@@ -1421,7 +1424,7 @@ export function ChatPanel() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-0 mb-1.5 w-full overflow-hidden rounded-xl border border-border bg-surface-2 shadow-lg"
+            className="absolute bottom-full left-0 mb-1.5 w-full h-max-[50vh] overflow-hidden rounded-xl border border-border bg-surface-2 shadow-lg"
           >
             {filteredCommands.map((cmd, i) => (
               <button
@@ -1720,8 +1723,8 @@ export function ChatPanel() {
 
                 {thinking && messages[messages.length - 1]?.text === "" && !messages[messages.length - 1]?.thinkingContent && (
                   <div className="flex items-center gap-2 text-sm text-text-faint">
-                    <Loader2
-                      size={14}
+                    <Loader
+                      size={16}
                       strokeWidth={1.4}
                       className="animate-spin"
                     />

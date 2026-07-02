@@ -34,12 +34,11 @@ const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: "chat", label: "Sohbet", icon: MessageCircle },
   // { id: "code", label: "Kod", icon: Terminal },
   { id: "models", label: "Modeller", icon: Box },
-  { id: "accelerate", label: "Hızlandır", icon: Rocket },
   { id: "apps", label: "Uygulamalar", icon: LayoutGrid },
   { id: "skills", label: "Yetenekler", icon: Sparkles },
+  { id: "tasks", label: "Görevler", icon: SquareCheckBig },
   { id: "telegram", label: "Telegram", icon: Send },
   { id: "price-tracker", label: "Fiyat Takibi", icon: TrendingDown },
-  { id: "tasks", label: "Görevler", icon: SquareCheckBig },
 ];
 
 const textVariants = {

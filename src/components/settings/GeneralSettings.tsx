@@ -663,7 +663,7 @@ export function GeneralSettings() {
           Görünüm
         </div>
         <div className="space-y-1">
-          {/* <SettingRow label="Tema">
+          <SettingRow label="Tema">
             <SegmentedControl<Theme>
               layoutId="seg-theme"
               options={[
@@ -673,7 +673,7 @@ export function GeneralSettings() {
               value={settings.theme}
               onChange={(v) => update({ theme: v })}
             />
-          </SettingRow> */}
+          </SettingRow>
 
           <SettingRow label="Font boyutu" hint={`${settings.fontSize}px`}>
             <div className="flex items-center gap-2">
