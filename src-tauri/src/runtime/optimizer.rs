@@ -199,7 +199,9 @@ pub fn auto_configure_with_preset(
                 num_batch: Some(512),
                 mmap: Some(true),
                 use_mlock: Some(false),
-                keep_alive: Some("-1".to_string()),
+                // Dikkat: Ollama birimsiz "-1" kabul etmiyor ("missing unit in
+                // duration" → 400). Negatif süre = model bellekte kalıcı.
+                keep_alive: Some("-1m".to_string()),
                 flash_attention: has_gpu,
                 kv_cache_type: None,
             }

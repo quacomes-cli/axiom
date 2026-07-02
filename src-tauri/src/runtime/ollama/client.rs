@@ -76,15 +76,29 @@ impl OllamaClient {
             .ok_or_else(|| RuntimeError::Ollama("boş embedding cevabı".into()))
     }
 
+    /// Hata durumunda Ollama'nın yanıt gövdesini de mesaja taşır — 400'lerde
+    /// asıl neden ("missing unit in duration", "does not support images"…)
+    /// gövdede yazar; salt status ile teşhis imkânsız.
+    async fn error_with_body(resp: reqwest::Response) -> RuntimeError {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        let detail = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|v| v.get("error").and_then(|e| e.as_str()).map(String::from))
+            .unwrap_or(body);
+        RuntimeError::Ollama(format!("HTTP {status}: {}", detail.trim()))
+    }
+
     pub async fn chat(&self, req: OllamaChatRequest) -> Result<OllamaChatResponse, RuntimeError> {
         let resp = self
             .client
             .post(format!("{}/api/chat", self.base_url))
             .json(&req)
             .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| RuntimeError::Ollama(e.to_string()))?;
+            .await?;
+        if !resp.status().is_success() {
+            return Err(Self::error_with_body(resp).await);
+        }
 
         resp.json::<OllamaChatResponse>()
             .await
@@ -227,9 +241,10 @@ impl OllamaClient {
             .post(format!("{}/api/chat", self.base_url))
             .json(&req)
             .send()
-            .await?
-            .error_for_status()
-            .map_err(|e| RuntimeError::Ollama(e.to_string()))?;
+            .await?;
+        if !resp.status().is_success() {
+            return Err(Self::error_with_body(resp).await);
+        }
 
         let mut stream = resp.bytes_stream();
         let mut buf = String::new();

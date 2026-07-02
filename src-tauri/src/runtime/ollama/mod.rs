@@ -122,6 +122,19 @@ impl ModelProvider for OllamaProvider {
     }
 }
 
+/// Ollama, birimsiz süre string'ini reddeder ("-1" → 400 "missing unit in
+/// duration"). Kayıtlı ayarlarda çıplak sayı kalmış olabilir — burada
+/// normalize edilir: negatif → "-1m" (kalıcı), diğer çıplak sayılar dakika.
+fn normalize_keep_alive(v: Option<String>) -> Option<String> {
+    let s = v?;
+    let t = s.trim();
+    match t.parse::<i64>() {
+        Ok(n) if n < 0 => Some("-1m".to_string()),
+        Ok(n) => Some(format!("{n}m")),
+        Err(_) => Some(s),
+    }
+}
+
 impl OllamaProvider {
     pub async fn chat_with_opts(
         &self,
@@ -129,7 +142,7 @@ impl OllamaProvider {
         opt: Option<&OptimizationConfig>,
     ) -> Result<InferenceResponse, RuntimeError> {
         let options = Self::build_options(req.temperature, req.max_tokens, req.num_ctx, opt);
-        let keep_alive = opt.and_then(|o| o.keep_alive.clone());
+        let keep_alive = normalize_keep_alive(opt.and_then(|o| o.keep_alive.clone()));
 
         let ollama_req = OllamaChatRequest {
             model: req.model_id.clone(),
@@ -199,7 +212,7 @@ impl OllamaProvider {
         F: FnMut(String, bool, Option<String>, Option<String>),
     {
         let options = Self::build_options(req.temperature, req.max_tokens, req.num_ctx, opt);
-        let keep_alive = opt.and_then(|o| o.keep_alive.clone());
+        let keep_alive = normalize_keep_alive(opt.and_then(|o| o.keep_alive.clone()));
         let think = if req.think.unwrap_or(false) { Some(true) } else { None };
 
         let ollama_req = OllamaChatRequest {
