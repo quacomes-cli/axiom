@@ -83,6 +83,9 @@ export interface Shortcuts {
   search: string;
   toggleScreenVision: string;
   newChat: string;
+  clipboard: string;
+  /** Hızlı palet penceresi — GLOBAL kısayol (uygulama arka plandayken de çalışır). */
+  palette: string;
 }
 
 export type AlarmSoundSource = "default" | "youtube" | "local";

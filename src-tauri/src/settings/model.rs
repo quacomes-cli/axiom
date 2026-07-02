@@ -197,6 +197,9 @@ pub struct Shortcuts {
     pub new_chat: String,
     #[serde(default = "default_clipboard_shortcut")]
     pub clipboard: String,
+    /// Hızlı palet penceresi (Spotlight benzeri) global kısayolu.
+    #[serde(default = "default_palette_shortcut")]
+    pub palette: String,
 }
 
 impl Default for AppSettings {
@@ -228,10 +231,15 @@ impl Default for Shortcuts {
             toggle_screen_vision: "Ctrl+Shift+V".to_string(),
             new_chat: "Ctrl+N".to_string(),
             clipboard: default_clipboard_shortcut(),
+            palette: default_palette_shortcut(),
         }
     }
 }
 
 fn default_clipboard_shortcut() -> String {
     "Ctrl+Alt+V".to_string()
+}
+
+fn default_palette_shortcut() -> String {
+    "Ctrl+Shift+Space".to_string()
 }

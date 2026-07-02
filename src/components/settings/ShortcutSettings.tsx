@@ -16,6 +16,11 @@ const SHORTCUT_LABELS: { key: keyof Shortcuts; label: string; hint: string }[] =
       hint: "Screen Vision'ı aç/kapat",
     },
     { key: "newChat", label: "Yeni sohbet", hint: "Yeni bir sohbet başlat" },
+    {
+      key: "palette",
+      label: "Hızlı palet",
+      hint: "Global kısayol — uygulama arka plandayken bile mini asistanı açar",
+    },
   ];
 
 function formatKeyCombo(e: KeyboardEvent): string {

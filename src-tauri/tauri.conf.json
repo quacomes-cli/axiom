@@ -21,6 +21,20 @@
                 "theme": "Dark",
                 "decorations": false,
                 "center": true
+            },
+            {
+                "label": "palette",
+                "title": "Axiom Palet",
+                "width": 640,
+                "height": 420,
+                "resizable": false,
+                "decorations": false,
+                "transparent": true,
+                "alwaysOnTop": true,
+                "skipTaskbar": true,
+                "visible": false,
+                "center": true,
+                "theme": "Dark"
             }
         ],
         "security": {

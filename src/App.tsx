@@ -19,6 +19,7 @@ import { useTelegramAutoMode } from "./hooks/useTelegramAutoMode";
 import { usePriceTracker } from "./hooks/usePriceTracker";
 import { useBackgroundUpdater } from "./hooks/useBackgroundUpdater";
 import { initEnvInfo } from "./lib/envInfo";
+import { usePaletteBridge } from "./hooks/usePaletteBridge";
 
 function matchesShortcut(e: KeyboardEvent, combo: string): boolean {
   const parts = combo.split("+").map((p) => p.trim().toLowerCase());
@@ -69,6 +70,7 @@ export default function App() {
   useTelegramAutoMode();
   usePriceTracker();
   useBackgroundUpdater();
+  usePaletteBridge();
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);

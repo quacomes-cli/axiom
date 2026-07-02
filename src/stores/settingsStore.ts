@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     search: "Ctrl+K",
     toggleScreenVision: "Ctrl+Shift+V",
     newChat: "Ctrl+N",
+    clipboard: "Ctrl+Alt+V",
+    palette: "Ctrl+Shift+Space",
   },
   modelConfig: {
     ollamaBaseUrl: "http://localhost:11434",

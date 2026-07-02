@@ -102,21 +102,21 @@ pub fn run() {
                 }
             }
 
-            // --- CLIPBOARD PENCERESİ: Windows Acrylic blur ---
+            // --- PALET PENCERESİ: Windows Acrylic blur ---
             // CSS backdrop-filter Tauri'de çalışmadığı için OS düzeyinde
             // Acrylic (Win 10+) / Mica (Win 11) efekti uyguluyoruz.
-            if let Some(clipboard_win) = app.get_webview_window("clipboard") {
+            if let Some(palette_win) = app.get_webview_window("palette") {
                 #[cfg(target_os = "windows")]
                 {
                     use window_vibrancy::apply_acrylic;
                     // RGB tint + alpha — şeffaflığı CSS bg ile değil OS ile veriyoruz
-                    let _ = apply_acrylic(&clipboard_win, Some((18, 18, 22, 160)));
+                    let _ = apply_acrylic(&palette_win, Some((14, 14, 16, 190)));
                 }
                 #[cfg(target_os = "macos")]
                 {
                     use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
                     let _ = apply_vibrancy(
-                        &clipboard_win,
+                        &palette_win,
                         NSVisualEffectMaterial::HudWindow,
                         None,
                         None,
