@@ -325,6 +325,13 @@ export interface SearchResult {
 
 export type ChatMode = "fast" | "balanced" | "thinking";
 
+/** Bir agent mesajının tek bir üretim sürümü (yeniden oluşturma geçmişi). */
+export interface MessageVersion {
+  text: string;
+  thinkingContent?: string;
+  toolActions?: ToolAction[];
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "agent" | "search" | "card";
@@ -337,6 +344,11 @@ export interface ChatMessage {
   thinkingContent?: string;
   images?: string[];
   imageCount?: number;
+  /** Yeniden oluşturulan cevap sürümleri (eski→yeni). text/toolActions daima
+      görüntülenen sürümü yansıtır; bu liste arşivdir. */
+  alternates?: MessageVersion[];
+  /** Görüntülenen sürümün alternates içindeki indeksi. */
+  versionIndex?: number;
 }
 
 export interface Chat {
@@ -1001,16 +1013,24 @@ interface ChatState {
   toggleToolCollapse: (chatId: string, msgId: string, actionIdx: number) => void;
   setToolUseEnabled: (v: boolean) => void;
   setChatMode: (mode: ChatMode) => void;
-  send: (text: string) => Promise<void>;
+  send: (text: string, opts?: { skipUserMessage?: boolean }) => Promise<void>;
   stopGeneration: () => void;
   compactChat: () => Promise<void>;
   editMessage: (chatId: string, msgId: string, newText: string) => Promise<void>;
   deleteMessage: (chatId: string, msgId: string) => void;
+  /** Agent mesajını yeniden üretir; eski cevap sürüm arşivine düşer. */
+  regenerateMessage: (chatId: string, msgId: string) => Promise<void>;
+  /** Sürümler arasında geçiş (dir: -1 önceki, +1 sonraki). */
+  switchMessageVersion: (chatId: string, msgId: string, dir: 1 | -1) => void;
 }
 
 let streamUnlisten: UnlistenFn | null = null;
 let stopRequested = false;
 let currentStreamResolve: (() => void) | null = null;
+
+/** Aktif regenerate işleminin taşıdığı eski sürüm arşivi. send() bitişinde
+    yeni üretilen agent mesajına iliştirilir ve temizlenir. */
+let regenerateStash: MessageVersion[] | null = null;
 
 function generateTitle(chat: Chat) {
   const firstUser = chat.messages.find((m) => m.role === "user");
@@ -1224,6 +1244,7 @@ export const useChatStore = create<ChatState>()(
 
       stopGeneration: () => {
         stopRequested = true;
+        regenerateStash = null;
         // Bekleyen tool onay kartları varsa reddet — döngü onları beklemesin
         useApprovalStore.getState().denyAll();
         if (streamUnlisten) { streamUnlisten(); streamUnlisten = null; }
@@ -1232,8 +1253,10 @@ export const useChatStore = create<ChatState>()(
         set({ thinking: false, thinkingStatus: "" });
       },
 
-      send: async (text) => {
+      send: async (text, opts = {}) => {
         stopRequested = false;
+        // Normal gönderim, yarım kalmış bir regenerate arşivini devralmasın
+        if (!opts.skipUserMessage) regenerateStash = null;
         let { activeChatId } = get();
 
         if (!activeChatId) {
@@ -1262,18 +1285,24 @@ export const useChatStore = create<ChatState>()(
           ...(snapshotImages.length > 0 ? { images: snapshotImages } : {}),
         };
 
-        set((s) => ({
-          chats: s.chats.map((c) =>
-            c.id === activeChatId
-              ? { ...c, messages: [...c.messages, userMsg] }
-              : c
-          ),
-          thinking: true,
-          thinkingStatus: "Düşünüyor...",
-        }));
-        // Kullanıcı mesajını (resimleriyle) hemen kalıcılaştır — üretim
-        // sırasında uygulama kapanırsa mesaj kaybolmasın.
-        persistById(activeChatId);
+        // Regenerate akışı kullanıcı mesajını YENİDEN eklemez — mevcut soru
+        // için yalnızca yeni bir cevap üretilir.
+        if (!opts.skipUserMessage) {
+          set((s) => ({
+            chats: s.chats.map((c) =>
+              c.id === activeChatId
+                ? { ...c, messages: [...c.messages, userMsg] }
+                : c
+            ),
+            thinking: true,
+            thinkingStatus: "Düşünüyor...",
+          }));
+          // Kullanıcı mesajını (resimleriyle) hemen kalıcılaştır — üretim
+          // sırasında uygulama kapanırsa mesaj kaybolmasın.
+          persistById(activeChatId);
+        } else {
+          set({ thinking: true, thinkingStatus: "Yeniden oluşturuluyor..." });
+        }
 
         // App command: /github, /telegram vb. → check early
         if (appCommand) {
@@ -1663,6 +1692,34 @@ export const useChatStore = create<ChatState>()(
           conversationHistory.push({ role: "user", content: "Araç sonuçları:\n" + buildToolResultText(actions) });
         }
 
+        // Regenerate: eski sürüm arşivini yeni üretilen mesaja iliştir
+        if (regenerateStash && lastAgentMsgId) {
+          const stash = regenerateStash;
+          regenerateStash = null;
+          set((s) => ({
+            chats: s.chats.map((c) =>
+              c.id === activeChatId
+                ? {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === lastAgentMsgId
+                        ? {
+                            ...m,
+                            alternates: [
+                              ...stash,
+                              { text: m.text, thinkingContent: m.thinkingContent, toolActions: m.toolActions },
+                            ],
+                            versionIndex: stash.length,
+                          }
+                        : m
+                    ),
+                  }
+                : c
+            ),
+          }));
+        }
+        regenerateStash = null;
+
         set({ thinking: false });
         void notifyResponseComplete(lastAgentText?.slice(0, 100));
 
@@ -1678,15 +1735,18 @@ export const useChatStore = create<ChatState>()(
         // Errors are silenced — a missing embedding model shouldn't poison UX.
         const memCfgStore = useSettingsStore.getState().settings?.memory;
         if (memCfgStore?.enabled && activeChatId) {
-          void ipc
-            .memoryStore({
-              chatId: activeChatId,
-              messageId: userMsg.id,
-              role: "user",
-              text,
-              embeddingModel: memCfgStore.embeddingModel,
-            })
-            .catch((e) => console.warn("memory store user failed:", e));
+          // Regenerate'te kullanıcı mesajı zaten ilk gönderimde kaydedildi
+          if (!opts.skipUserMessage) {
+            void ipc
+              .memoryStore({
+                chatId: activeChatId,
+                messageId: userMsg.id,
+                role: "user",
+                text,
+                embeddingModel: memCfgStore.embeddingModel,
+              })
+              .catch((e) => console.warn("memory store user failed:", e));
+          }
           if (lastAgentText && lastAgentMsgId) {
             void ipc
               .memoryStore({
@@ -1721,15 +1781,17 @@ export const useChatStore = create<ChatState>()(
         if (activeChatId) {
           const indexedChat = get().chats.find((c) => c.id === activeChatId);
           const chatTitle = indexedChat?.title ?? null;
-          void ipc
-            .chatHistoryIndex({
-              chatId: activeChatId,
-              chatTitle,
-              messageId: userMsg.id,
-              role: "user",
-              text,
-            })
-            .catch((e) => console.warn("chat history index user failed:", e));
+          if (!opts.skipUserMessage) {
+            void ipc
+              .chatHistoryIndex({
+                chatId: activeChatId,
+                chatTitle,
+                messageId: userMsg.id,
+                role: "user",
+                text,
+              })
+              .catch((e) => console.warn("chat history index user failed:", e));
+          }
           if (lastAgentText && lastAgentMsgId) {
             void ipc
               .chatHistoryIndex({
@@ -1854,6 +1916,63 @@ export const useChatStore = create<ChatState>()(
               ? { ...c, messages: c.messages.filter((m) => m.id !== msgId) }
               : c
           ),
+        }));
+        persistById(chatId);
+      },
+
+      regenerateMessage: async (chatId, msgId) => {
+        if (get().thinking) return;
+        const chat = get().chats.find((c) => c.id === chatId);
+        if (!chat) return;
+        const idx = chat.messages.findIndex((m) => m.id === msgId);
+        if (idx === -1 || chat.messages[idx].role !== "agent") return;
+
+        // Bu cevabı üreten kullanıcı mesajını bul (geriye doğru ilk user)
+        const userMsg = [...chat.messages.slice(0, idx)]
+          .reverse()
+          .find((m) => m.role === "user");
+        if (!userMsg) return;
+
+        const target = chat.messages[idx];
+        // Mevcut sürümleri arşive al: alternates zaten varsa görüntülenen
+        // sürüm dahil hepsi korunur; yoksa tek sürüm mevcut cevaptır.
+        regenerateStash = target.alternates?.length
+          ? target.alternates
+          : [{ text: target.text, thinkingContent: target.thinkingContent, toolActions: target.toolActions }];
+
+        // Hedef agent mesajını (ve varsa sonrasını) kaldır — send yeni mesaj üretir
+        set((s) => ({
+          activeChatId: chatId,
+          chats: s.chats.map((c) =>
+            c.id === chatId ? { ...c, messages: c.messages.slice(0, idx) } : c
+          ),
+        }));
+
+        await get().send(userMsg.text, { skipUserMessage: true });
+      },
+
+      switchMessageVersion: (chatId, msgId, dir) => {
+        set((s) => ({
+          chats: s.chats.map((c) => {
+            if (c.id !== chatId) return c;
+            return {
+              ...c,
+              messages: c.messages.map((m) => {
+                if (m.id !== msgId || !m.alternates?.length) return m;
+                const cur = m.versionIndex ?? m.alternates.length - 1;
+                const next = Math.max(0, Math.min(m.alternates.length - 1, cur + dir));
+                if (next === cur) return m;
+                const v = m.alternates[next];
+                return {
+                  ...m,
+                  text: v.text,
+                  thinkingContent: v.thinkingContent,
+                  toolActions: v.toolActions,
+                  versionIndex: next,
+                };
+              }),
+            };
+          }),
         }));
         persistById(chatId);
       },

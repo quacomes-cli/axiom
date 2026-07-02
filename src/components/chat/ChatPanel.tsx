@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUp, Globe, ExternalLink, ChevronDown, ChevronUp, Droplets, Wind,
+  ArrowUp, Globe, ExternalLink, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  RotateCcw, Flag, Droplets, Wind,
   Sun, CloudSun, Cloud, CloudRain, CloudDrizzle, CloudLightning, CloudFog, Snowflake,
   ArrowLeftRight,
   MessageCircle,
@@ -9,7 +10,6 @@ import {
   X,
   Wrench,
   Check,
-  ChevronRight,
   Cpu,
   Square,
   Zap,
@@ -36,6 +36,8 @@ import { useModelStore, modelSupportsVision, modelWeakAtTools } from "../../stor
 import { useDocumentStore } from "../../stores/documentStore";
 import { useUiStore } from "../../stores/uiStore";
 import { useOptimizationStore } from "../../stores/optimizationStore";
+import { useNotificationStore } from "../../stores/notificationStore";
+import { AppVersion } from "../../stores/appStore";
 import { useFileDrop, isImagePath } from "../../hooks/useFileDrop";
 import { AttachmentPreviews } from "../shared/AttachmentPreviews";
 import { MicButton } from "../shared/MicButton";
@@ -557,7 +559,11 @@ function StreamingMarkdown({ text }: { text: string }) {
 
 function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: string; onEdit: () => void }) {
   const [copied, setCopied] = useState(false);
+  const [reported, setReported] = useState(false);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
+  const regenerateMessage = useChatStore((s) => s.regenerateMessage);
+  const switchMessageVersion = useChatStore((s) => s.switchMessageVersion);
+  const thinking = useChatStore((s) => s.thinking);
   const { speak, speakingId, supported: ttsSupported } = useTTS();
   const ttsEnabled = useSettingsStore((s) => s.settings?.tts?.enabled) ?? true;
 
@@ -567,11 +573,75 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
     setTimeout(() => setCopied(false), 1500);
   }, [msg.text]);
 
+  // Rapor: teşhis şablonunu panoya kopyalar + bildirim merkezine kayıt düşer.
+  const handleReport = useCallback(() => {
+    const model = useModelStore.getState().models.find((m) => m.isActive);
+    const report = [
+      "## Axiom Yanıt Raporu",
+      `Tarih: ${new Date().toLocaleString("tr-TR")}`,
+      `Model: ${model ? `${model.id} (${model.provider})` : "bilinmiyor"}`,
+      `Uygulama: v${AppVersion}`,
+      "",
+      "### Sorunlu yanıt",
+      msg.text,
+    ].join("\n");
+    navigator.clipboard.writeText(report);
+    useNotificationStore.getState().add({
+      taskId: `report-${msg.id}`,
+      title: "Yanıt raporlandı",
+      content: "Rapor şablonu panoya kopyalandı — geliştiriciye iletebilirsin.",
+    });
+    setReported(true);
+    setTimeout(() => setReported(false), 1500);
+  }, [msg]);
+
   const showTtsBtn = ttsSupported && ttsEnabled && msg.role === "agent" && msg.text.trim().length > 0;
   const isSpeakingThis = speakingId === msg.id;
+  const versionCount = msg.alternates?.length ?? 0;
+  const versionIdx = msg.versionIndex ?? Math.max(0, versionCount - 1);
 
   return (
     <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+      {msg.role === "agent" && versionCount > 1 && (
+        <span className="mr-1 flex items-center gap-0.5 text-[0.7143rem] tabular-nums text-text-faint">
+          <button
+            onClick={() => switchMessageVersion(chatId, msg.id, -1)}
+            disabled={versionIdx === 0}
+            className="rounded-md p-0.5 hover:bg-hover hover:text-text-secondary disabled:opacity-30"
+            title="Önceki sürüm"
+          >
+            <ChevronLeft size={12} strokeWidth={1.8} />
+          </button>
+          {versionIdx + 1}/{versionCount}
+          <button
+            onClick={() => switchMessageVersion(chatId, msg.id, 1)}
+            disabled={versionIdx >= versionCount - 1}
+            className="rounded-md p-0.5 hover:bg-hover hover:text-text-secondary disabled:opacity-30"
+            title="Sonraki sürüm"
+          >
+            <ChevronRight size={12} strokeWidth={1.8} />
+          </button>
+        </span>
+      )}
+      {msg.role === "agent" && (
+        <button
+          onClick={() => void regenerateMessage(chatId, msg.id)}
+          disabled={thinking}
+          className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary disabled:opacity-40"
+          title="Yeniden oluştur"
+        >
+          <RotateCcw size={13} strokeWidth={1.6} />
+        </button>
+      )}
+      {msg.role === "agent" && (
+        <button
+          onClick={handleReport}
+          className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
+          title="Yanıtı raporla"
+        >
+          {reported ? <Check size={13} strokeWidth={1.6} /> : <Flag size={13} strokeWidth={1.6} />}
+        </button>
+      )}
       {showTtsBtn && (
         <button
           onClick={() => speak(msg.id, msg.text)}
