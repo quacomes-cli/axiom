@@ -187,4 +187,12 @@ CREATE TABLE chat_images(
   verisi `axiom-chats.migrated-*` olarak korunuyor.
   TEST EDİLMEDİ (manuel doğrula): resimli mesajın restart sonrası geri gelmesi
   (chat_images_put/load yolu) — resimli bir sohbet gönderip app'i yeniden başlat.
-- Sıradaki: FAZ 2 (native function calling).
+- Sıradaki: FAZ 2 (native function calling). BAŞLAMADAN OKU: Bu faz canlı model
+  testi gerektirir (tool-capable bir Ollama modeli veya Gemini kotası) — kullanıcı
+  başındayken yapılmalı, çünkü chat çekirdeğine dokunuyor ve kabul kriteri ancak
+  UI'dan mesaj atarak doğrulanabilir. Uygulama sırası: (1) `src/lib/toolRegistry.ts`
+  tek kaynak (isim + açıklama + JSON şema); (2) Rust `InferenceRequest`'e
+  `tools: Option<serde_json::Value>` + `StreamTokenEvent`'e `tool_calls_json`;
+  (3) Ollama `/api/chat` `tools` paramı + yanıttaki `message.tool_calls` parse;
+  (4) Gemini `functionDeclarations`/`functionCall`; (5) chatStore send döngüsü önce
+  native tool_calls'a bakar, yoksa regex fallback AYNEN kalır (küçük modeller için).
