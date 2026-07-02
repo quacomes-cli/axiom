@@ -1629,11 +1629,11 @@ export function ChatPanel() {
           <ModelSelector />
         </div>
       </form>
-      <p className="mt-1 mx-auto text-accent/50" style={{
+      <p className="mt-1 mx-auto text-accent/35" style={{
         textAlign: "center",
         width: "fit-content",
         fontSize: 13
-      }}>Geliştirme aşamasındadır, hata yapabilir...</p>
+      }}>(Deneysel Sürüm) Geliştirme aşamasındadır, hata yapabilir...</p>
     </div>
   );
 
@@ -1659,21 +1659,7 @@ export function ChatPanel() {
             className="flex flex-1 flex-col items-center justify-center px-6"
           >
             <div className="mb-10 flex flex-row items-center justify-center gap-3 select-none">
-              <div
-                className="w-[45px] h-[45px] opacity-90 animate-pulse bg-accent"
-                title={profile?.name ? renderedAuthText : renderedUnauthText}
-                style={{
-                  WebkitMaskImage: "url('/logo.svg')",
-                  maskImage: "url('/logo.svg')",
-                  WebkitMaskSize: "contain",
-                  maskSize: "contain",
-                  WebkitMaskRepeat: "no-repeat",
-                  maskRepeat: "no-repeat",
-                  WebkitMaskPosition: "center",
-                  maskPosition: "center",
-                }}
-                aria-label="Axiom"
-              />
+              
 
               <h1 className="text-xl md:text-3xl tracking-tight flex items-center justify-center text-center gap-3 w-full">
                 {activeModel ? (

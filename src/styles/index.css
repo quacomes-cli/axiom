@@ -4,30 +4,30 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-    --color-base: #1a1a1a;
-    --color-surface: #202020;
-    --color-surface-2: #252525;
-    --color-surface-3: #303030;
+    --color-base: #0e0e10;
+    --color-surface: #17171a;
+    --color-surface-2: #1e1e22;
+    --color-surface-3: #2a2a30;
 
-    --color-border: rgba(255, 255, 255, 0.06);
-    --color-border-hover: rgba(255, 255, 255, 0.12);
+    --color-border: rgba(255, 255, 255, 0.08);
+    --color-border-hover: rgba(255, 255, 255, 0.16);
 
     --color-accent: #ffffff;
-    --color-accent-muted: rgba(255, 255, 255, 0.08);
-    --color-accent-hover: rgba(255, 255, 255, 0.12);
+    --color-accent-muted: rgba(255, 255, 255, 0.10);
+    --color-accent-hover: rgba(255, 255, 255, 0.16);
 
-    --color-text: #e5e5e5;
-    --color-text-secondary: #888888;
-    --color-text-faint: #555555;
+    --color-text: #f5f5f7;
+    --color-text-secondary: #a8a8ae;
+    --color-text-faint: #6a6a72;
 
     --color-success: #4ade80;
     --color-warn: #fbbf24;
     --color-danger: #f87171;
 
-    --color-hover: rgba(255, 255, 255, 0.04);
-    --color-hover-strong: rgba(255, 255, 255, 0.07);
-    --color-active: rgba(255, 255, 255, 0.08);
-    --color-kbd: rgba(255, 255, 255, 0.06);
+    --color-hover: rgba(255, 255, 255, 0.05);
+    --color-hover-strong: rgba(255, 255, 255, 0.09);
+    --color-active: rgba(255, 255, 255, 0.11);
+    --color-kbd: rgba(255, 255, 255, 0.08);
 
     --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
     --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;

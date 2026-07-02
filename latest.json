@@ -1,11 +1,11 @@
 {
-  "version": "0.1.4",
+  "version": "0.1.77",
   "notes": "Yenilikler...",
-  "pub_date": "2026-06-30T12:35:04Z",
+  "pub_date": "2026-06-30T17:49:52Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUY0pZYjRuSVpCN1czSlNzdTNUK3BydUZmQmZ4QUx5RTBMTEhaQWlnTFQxZE1PMHZCZ3M0SE94c2VUMkZ4bkQvV3MvUWhROEUyb3hNR2hEUER2WHlXc0xQc2NrUlFqUHc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODEyMTA0CWZpbGU6QXhpb21fMC4xLjRfeDY0LXNldHVwLmV4ZQpqd2I0YWpIYXA0VlVtZmZVdTNYQ1IxVEc4ckdjbGJUNVdueXNnbFVydXBSK2E1ejhHTmVlcWE5ZTRIeHZMNHVlWkRiSWg2bGlOeVhDTFhyUzlGSzFDUT09Cg==",
-      "url": "https://github.com/quacomes-cli/axiom/releases/download/v0.1.4/Axiom_0.1.4_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUY0pZYjRuSVpCN2Q5MnZoWVB6UVVmS3ZXZHRyV1dMTWtHQVJkUVc3bnRqcnppaXN4NUpiN3QycmVzYU1OVXFZU2VvRXlIWTA4cy9paFpTMDJEcGxweWtqUXZielM3cXdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyODMwOTkxCWZpbGU6QXhpb21fMC4xLjc3X3g2NC1zZXR1cC5leGUKcnRRNTdqTWRicEVabGw2U2oydGlJMTFhWlQ1Rm9lUEVmK2lQSHZ0akpUWlp1eHFmbTZDb1p1NEIrNGRIVUhJd1huamhDY3BpSy9KRmp3bWsvbTBrQWc9PQo=",
+      "url": "https://github.com/quacomes-cli/axiom/releases/download/v0.1.77/Axiom_0.1.77_x64-setup.exe"
     }
   }
 }

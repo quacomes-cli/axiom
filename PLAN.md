@@ -171,4 +171,9 @@ CREATE TABLE chat_images(
 ## NOTLAR / İLERLEME GÜNLÜĞÜ
 
 - 2026-07-02: Plan oluşturuldu (Fable 5).
-- 2026-07-02: Faz 0.2 (Telegram whitelist) tamamlandı. Sıradaki: 0.3 (keyring) veya 0.4 (tool onay kapısı).
+- 2026-07-02: Faz 0.2 (Telegram whitelist) tamamlandı — commit 01fa528.
+- 2026-07-02: Faz 0.4 (tool onay kapısı) tamamlandı — commit e2e022a.
+- 2026-07-02: Faz 0.3 (keyring + sync sanitize) tamamlandı — commit df38afa.
+- 2026-07-02: Faz 0.1 kod tarafı: 'güncelleme' dosyası repodan çıkarıldı — commit 9983e41.
+  KALAN (kullanıcı aksiyonu): anahtar rotasyonu — parola git geçmişinde hâlâ mevcut!
+- Sıradaki: FAZ 1 (sohbet depolama → SQLite).

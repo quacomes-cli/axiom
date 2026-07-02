@@ -29,6 +29,16 @@ export async function notifyModelDownloaded(modelName: string) {
   });
 }
 
+export async function notifyUpdateReady(version: string | null) {
+  if (!(await ensurePermission())) return;
+  sendNotification({
+    title: "Axiom güncellendi",
+    body: version
+      ? `v${version} indirildi. Yeniden başlatınca devreye girer.`
+      : "Yeni sürüm indirildi. Yeniden başlatınca devreye girer.",
+  });
+}
+
 export async function notifyResponseComplete(preview?: string) {
   if (document.hasFocus()) return;
   const settings = useSettingsStore.getState().settings;

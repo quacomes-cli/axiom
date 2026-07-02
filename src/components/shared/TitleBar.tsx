@@ -119,6 +119,7 @@ export function TitleBar() {
     }
   }
 
+
   return (
     <header
       data-tauri-drag-region

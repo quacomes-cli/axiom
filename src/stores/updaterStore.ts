@@ -12,6 +12,7 @@ export type UpdaterStatus =
   | "available"
   | "downloading"
   | "ready"
+  | "install_failed"
   | "none"
   | "error";
 

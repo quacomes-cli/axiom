@@ -1549,6 +1549,51 @@ pub fn chat_history_clear(
         .map_err(|e| e.to_string())
 }
 
+// ---- Chat Persistence (SQLite) ---------------------------------------------
+
+use crate::memory::StoredChat;
+
+#[tauri::command]
+pub fn chat_save(memory: State<'_, MemoryState>, chat: StoredChat) -> Result<(), String> {
+    memory.store.chat_save(&chat).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn chats_load(memory: State<'_, MemoryState>) -> Result<Vec<StoredChat>, String> {
+    memory.store.chats_load().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn chat_delete(memory: State<'_, MemoryState>, chat_id: String) -> Result<(), String> {
+    memory.store.chat_delete(&chat_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn chat_images_put(
+    memory: State<'_, MemoryState>,
+    chat_id: String,
+    message_id: String,
+    images: Vec<String>,
+) -> Result<(), String> {
+    memory
+        .store
+        .chat_images_put(&chat_id, &message_id, &images)
+        .map_err(|e| e.to_string())
+}
+
+/// Sohbetin tüm resimlerini `{messageId: [base64…]}` olarak döner.
+#[tauri::command]
+pub fn chat_images_load(
+    memory: State<'_, MemoryState>,
+    chat_id: String,
+) -> Result<std::collections::HashMap<String, Vec<String>>, String> {
+    memory
+        .store
+        .chat_images_load(&chat_id)
+        .map(|pairs| pairs.into_iter().collect())
+        .map_err(|e| e.to_string())
+}
+
 // ---- Active Window --------------------------------------------------------
 
 #[derive(Debug, Serialize)]

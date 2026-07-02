@@ -332,6 +332,28 @@ export const ipc = {
     return invoke<number>("chat_history_clear", { chatId });
   },
 
+  // ---- Chat persistence (SQLite) — tipler src/lib/chatDb.ts'de ----
+
+  chatSave(chat: unknown): Promise<void> {
+    return invoke("chat_save", { chat });
+  },
+
+  chatsLoad<T>(): Promise<T[]> {
+    return invoke<T[]>("chats_load");
+  },
+
+  chatDelete(chatId: string): Promise<void> {
+    return invoke("chat_delete", { chatId });
+  },
+
+  chatImagesPut(chatId: string, messageId: string, images: string[]): Promise<void> {
+    return invoke("chat_images_put", { chatId, messageId, images });
+  },
+
+  chatImagesLoad(chatId: string): Promise<Record<string, string[]>> {
+    return invoke("chat_images_load", { chatId });
+  },
+
   activeWindow(): Promise<{ title: string; processName: string }> {
     return invoke("active_window");
   },

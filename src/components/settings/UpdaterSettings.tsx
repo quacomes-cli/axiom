@@ -1,25 +1,35 @@
 // Güncelleme yönetim paneli.
 //
-// "Şimdi kontrol et" + indirme progress'i + restart butonu.
-// İlk açılışta otomatik kontrol etmiyoruz — kullanıcı bilinçli tetiklesin
-// (LSP'leri/dev'i bozacak otomatik prompt'ları sevmiyoruz).
+// Tek "morfik" buton mantığı:
+//   idle/none/error  →  "Şimdi kontrol et"
+//   checking         →  "Kontrol ediliyor…"
+//   downloading      →  "%X indiriliyor…"
+//   ready            →  "Yeniden başlat"
+//   install_failed   →  "Elle indir" (release sayfasına yönlendirir)
+//
+// autoDownload açıksa arka plan tamamlar; kapalıysa kullanıcı bu butonla
+// hem check hem download işlemini tek tıkla tetikler.
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, CheckCircle2, RefreshCw, AlertCircle, Sparkles } from "lucide-react";
+import { CheckCircle2, RefreshCw, AlertCircle, Sparkles, Download, Rocket, ExternalLink } from "lucide-react";
 import { useUpdater } from "../../hooks/useUpdater";
 
 const EASE = [0.32, 0.72, 0, 1] as const;
 
 export function UpdaterSettings() {
-  const { state, checkForUpdate, downloadAndInstall, restartNow } = useUpdater(); // , autoDownload, setAutoDownload
+  const {
+    state,
+    autoDownload,
+    setAutoDownload,
+    checkAndDownload,
+    restartNow,
+    openManual,
+  } = useUpdater();
 
   useEffect(() => {
     // Sayfaya girince otomatik kontrol etme — kullanıcı butona bassın.
   }, []);
-
-  const isChecking = state.status === "checking";
-  const canCheck = state.status === "idle" || state.status === "none" || state.status === "error";
 
   return (
     <div className="space-y-4">
@@ -43,12 +53,12 @@ export function UpdaterSettings() {
         </div>
       </div>
 
-      {/* <div className="rounded-lg border border-border bg-surface-1 p-4">
+      <div className="rounded-lg border border-border bg-surface-1 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-medium text-text">Otomatik indir</h3>
             <p className="mt-0.5 text-[0.8571rem] text-text-faint">
-              Yeni sürüm bulunduğunda arka planda otomatik indirilsin, kenar çubuğunda "Yeniden başlat" butonu gösterilsin.
+              Yeni sürüm bulunduğunda arka planda sessizce indirilir; kenar çubuğunda "Yeniden başlat" butonu belirir.
             </p>
           </div>
           <button
@@ -66,42 +76,47 @@ export function UpdaterSettings() {
             />
           </button>
         </div>
-      </div> */}
+      </div>
 
       <div className="rounded-lg border border-border bg-surface-1 p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h3 className="text-sm font-medium text-text">Güncellemeler</h3>
             <p className="mt-0.5 text-[0.8571rem] text-text-faint">
-              Yeni sürüm var mı diye kontrol et
+              {state.status === "ready"
+                ? "Yeni sürüm indirildi. Yeniden başlatınca devreye girer."
+                : state.status === "downloading"
+                  ? "Yeni sürüm sessizce indiriliyor…"
+                  : "Yeni sürüm var mı diye kontrol et"}
             </p>
           </div>
 
-          <div className="relative">
+          <div className="relative shrink-0">
             <AnimatePresence mode="wait" initial={false}>
-              {canCheck && (
-                <CheckButton
-                  key="check"
-                  onClick={checkForUpdate}
-                />
-              )}
-              {isChecking && <CheckingChip key="checking" />}
+              <MorphButton
+                key={state.status}
+                status={state.status}
+                progress={state.progress}
+                onCheck={checkAndDownload}
+                onRestart={restartNow}
+                onManual={openManual}
+              />
             </AnimatePresence>
           </div>
         </div>
 
-        {/* Sonuç paneli */}
+        {/* Bilgi/hata paneli */}
         <AnimatePresence mode="wait" initial={false}>
           {state.status === "none" && (
             <ResultPanel key="none" tone="success">
-              <CheckCircle2 size={13} strokeWidth={1.8} />
+              <CheckCircle2 size={16} strokeWidth={1.8} />
               <span>En güncel sürümdesin.</span>
             </ResultPanel>
           )}
 
-          {state.status === "available" && (
+          {(state.status === "downloading" || state.status === "ready") && state.newVersion && (
             <motion.div
-              key="available"
+              key="downloading-panel"
               initial={{ opacity: 0, y: 8, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -4, scale: 0.98 }}
@@ -125,96 +140,60 @@ export function UpdaterSettings() {
                   <pre className="whitespace-pre-wrap font-sans">{state.notes}</pre>
                 </div>
               )}
-              <motion.button
-                type="button"
-                onClick={downloadAndInstall}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-[0.8571rem] font-medium text-black hover:bg-accent/90"
-              >
-                <Download size={12} strokeWidth={1.8} />
-                İndir ve kur
-              </motion.button>
+              {state.status === "downloading" && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[0.7857rem] text-text-secondary">
+                    <span className="flex items-center gap-1.5">
+                      <motion.span
+                        animate={{ y: [0, 2, 0] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                        className="inline-flex"
+                      >
+                        <Download size={11} strokeWidth={1.8} className="text-accent" />
+                      </motion.span>
+                      İndiriliyor
+                    </span>
+                    <motion.span
+                      key={state.progress}
+                      initial={{ y: -2, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ duration: 0.15 }}
+                      className="font-mono"
+                    >
+                      {state.progress}%
+                    </motion.span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
+                    <motion.div
+                      animate={{ width: `${state.progress}%` }}
+                      transition={{ duration: 0.25, ease: EASE }}
+                      className="h-full bg-accent"
+                    />
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
-          {state.status === "downloading" && (
+          {state.status === "install_failed" && (
             <motion.div
-              key="downloading"
-              initial={{ opacity: 0, y: 8 }}
+              key="install-failed"
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="space-y-2 rounded-md bg-accent/10 p-3"
+              className="space-y-2 rounded-md bg-amber-500/10 p-3 text-amber-400"
             >
-              <div className="flex items-center justify-between text-[0.8571rem] text-text">
-                <span className="flex items-center gap-1.5">
-                  <motion.span
-                    animate={{ y: [0, 3, 0] }}
-                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                    className="inline-flex"
-                  >
-                    <Download size={12} strokeWidth={1.8} className="text-accent" />
-                  </motion.span>
-                  İndiriliyor…
-                </span>
-                <motion.span
-                  key={state.progress}
-                  initial={{ y: -2, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.15 }}
-                  className="font-mono text-text-secondary"
-                >
-                  {state.progress}%
-                </motion.span>
+              <div className="flex items-start gap-2 text-[0.8571rem]">
+                <AlertCircle size={16} strokeWidth={1.8} className="mt-0.5 shrink-0" />
+                <span>{state.error ?? "Kurulum başarısız oldu."}</span>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-                <motion.div
-                  animate={{ width: `${state.progress}%` }}
-                  transition={{ duration: 0.25, ease: EASE }}
-                  className="h-full bg-accent"
-                />
-              </div>
-            </motion.div>
-          )}
-
-          {state.status === "ready" && (
-            <motion.div
-              key="ready"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3, ease: EASE }}
-              className="space-y-2 rounded-md bg-green-500/10 p-3"
-            >
-              <div className="flex items-center gap-2 text-[0.8571rem] text-green-400">
-                <motion.span
-                  initial={{ scale: 0, rotate: -90 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.05 }}
-                  className="inline-flex"
-                >
-                  <CheckCircle2 size={13} strokeWidth={1.8} />
-                </motion.span>
-                <span>Kurulum tamam. Uygulamayı yeniden başlat.</span>
-              </div>
-              <motion.button
-                type="button"
-                onClick={restartNow}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="flex items-center gap-1.5 rounded-md bg-green-500 px-3 py-1.5 text-[0.8571rem] font-medium text-white hover:bg-green-500/90"
-              >
-                Yeniden başlat
-              </motion.button>
             </motion.div>
           )}
 
           {state.status === "error" && state.error && (
             <ResultPanel key="error" tone="error">
-              <AlertCircle size={13} strokeWidth={1.8} className="mt-0.5 shrink-0" />
+              <AlertCircle size={16} strokeWidth={1.8} className="mt-0.5 shrink-0" />
               <span>{state.error}</span>
             </ResultPanel>
           )}
@@ -231,40 +210,131 @@ export function UpdaterSettings() {
   );
 }
 
-interface CheckButtonProps {
-  onClick: () => Promise<void> | void; // onClick artık asenkron da olabilir
-}
+// Tek buton — status'a göre biçim/renk/işlev değiştirir.
+function MorphButton({
+  status,
+  progress,
+  onCheck,
+  onRestart,
+  onManual,
+}: {
+  status: string;
+  progress: number;
+  onCheck: () => void;
+  onRestart: () => void;
+  onManual: () => void;
+}) {
+  if (status === "checking") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.2, ease: EASE }}
+        className="flex items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-[0.8571rem] text-text-faint"
+      >
+        <motion.span
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="inline-flex"
+        >
+          <RefreshCw size={12} strokeWidth={1.8} className="text-accent" />
+        </motion.span>
+        <motion.span
+          animate={{ opacity: [1, 0.55, 1] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          Kontrol ediliyor…
+        </motion.span>
+      </motion.div>
+    );
+  }
 
-function CheckButton({ onClick }: CheckButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  if (status === "downloading" || status === "available") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        transition={{ duration: 0.2, ease: EASE }}
+        className="flex items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-[0.8571rem] text-text-faint"
+      >
+        <motion.span
+          animate={{ y: [0, 2, 0] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          className="inline-flex"
+        >
+          <Download size={12} strokeWidth={1.8} className="text-accent" />
+        </motion.span>
+        <span className="font-mono tabular-nums">{progress}%</span>
+      </motion.div>
+    );
+  }
 
-  const handleClick = async () => {
-    if (isLoading) return; // Zaten yükleniyorsa double click'e geçit yok
-    
-    setIsLoading(true);
-    try {
-      await onClick(); // Dışarıdan gelen fonksiyonu çalıştırıyoruz (API isteği vs.)
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false); // İşlem bitince durdur motoru
-    }
-  };
+  if (status === "ready") {
+    return (
+      <motion.button
+        type="button"
+        onClick={onRestart}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-green-500 px-3 py-1.5 text-[0.8571rem] font-medium text-white"
+      >
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-white/25"
+          initial={{ x: "-200%" }}
+          animate={{ x: "400%" }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+        />
+        <motion.span
+          animate={{ rotate: [0, 8, -8, 0] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+          className="relative inline-flex"
+        >
+          <Rocket size={12} strokeWidth={1.8} />
+        </motion.span>
+        <span className="relative">Yeniden başlat</span>
+      </motion.button>
+    );
+  }
 
+  if (status === "install_failed") {
+    return (
+      <motion.button
+        type="button"
+        onClick={onManual}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-[0.8571rem] font-medium text-black"
+      >
+        <ExternalLink size={12} strokeWidth={1.8} />
+        Elle indir
+      </motion.button>
+    );
+  }
+
+  // idle / none / error → check button
   return (
     <motion.button
       type="button"
-      onClick={handleClick}
+      onClick={onCheck}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
       whileHover={{ scale: 1.04 }}
       whileTap={{ scale: 0.95 }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-surface-2 px-3 py-1.5 text-[0.8571rem] font-medium text-text disabled:opacity-70"
-      disabled={isLoading} // Yüklenirken butonu kilitleyelim, bug olmasın
+      className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-accent px-3 py-1.5 text-[0.8571rem] font-medium text-black"
     >
-      {/* Shimmer Efekti */}
       <motion.span
         aria-hidden
         className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-white/20"
@@ -272,51 +342,15 @@ function CheckButton({ onClick }: CheckButtonProps) {
         animate={{ x: "400%" }}
         transition={{ duration: 2.2, repeat: Infinity, ease: "linear", repeatDelay: 1.2 }}
       />
-      
-      {/* Fır fır dönen ikon alanı */}
       <motion.span
         className="relative inline-flex"
-        animate={isLoading ? { rotate: 360 } : { rotate: 0 }}
-        whileHover={!isLoading ? { rotate: 180 } : {}}
-        transition={
-          isLoading
-            ? { repeat: Infinity, duration: 1, ease: "linear" } // Tıklanınca helikopter pervanesi modu
-            : { duration: 0.6, ease: EASE } // Normal hover modu
-        }
+        whileHover={{ rotate: 180 }}
+        transition={{ duration: 0.6, ease: EASE }}
       >
         <RefreshCw size={12} strokeWidth={1.8} />
       </motion.span>
-      
-      <span className="relative text-text">
-        {isLoading ? "Kontrol ediliyor..." : "Şimdi kontrol et"}
-      </span>
+      <span className="relative">Şimdi kontrol et</span>
     </motion.button>
-  );
-}
-
-function CheckingChip() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.2, ease: EASE }}
-      className="flex items-center gap-2 rounded-full bg-surface-2 px-3 py-1.5 text-[0.8571rem] text-text-faint"
-    >
-      <motion.span
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-        className="inline-flex"
-      >
-        <RefreshCw size={12} strokeWidth={1.8} className="text-accent" />
-      </motion.span>
-      <motion.span
-        animate={{ opacity: [1, 0.55, 1] }}
-        transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
-      >
-        Kontrol ediliyor…
-      </motion.span>
-    </motion.div>
   );
 }
 
@@ -335,13 +369,6 @@ function ResultPanel({
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: 0.22, ease: EASE }}
       className={`flex items-start gap-2 rounded-md px-3 py-2 text-[0.8571rem] ${bg}`}
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: 8,
-        alignItems: "center",
-        justifyContent: "flex-start"
-      }}
     >
       {children}
     </motion.div>

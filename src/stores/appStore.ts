@@ -12,6 +12,8 @@ import {
   resolveClientSecret,
 } from "../lib/oauthProviders";
 
+export const AppVersion : string = "v0.1.5"
+
 export type AppConnectionType = "api" | "webhook" | "oauth" | "local";
 export type AppConnectionStatus = "disconnected" | "checking" | "connected" | "error";
 

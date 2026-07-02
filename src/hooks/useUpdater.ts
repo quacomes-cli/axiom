@@ -1,22 +1,29 @@
 // Tauri updater wrapper — UI tarafı.
 //
-// Akış:
-//  1) checkForUpdate() — manifest endpoint'ini sorgular. Update varsa
-//     status "available" olur, pendingUpdate modül scope'unda tutulur.
-//  2) downloadAndInstall(onProgress?) — Update objesinin metodu; indirir,
-//     imzayı doğrular, kurar. Bittiğinde status "ready" olur.
-//  3) restartNow() — relaunch().
+// Akış (quiet mode):
+//  - checkForUpdate() → manifest sorgulama
+//  - checkAndDownload() → check + varsa arka planda otomatik indir/kur
+//  - restartNow() → relaunch()
 //
-// pendingUpdate Tauri Update instance'ı; serileştirilemez, store dışı.
-// Hem useUpdater (Settings UI) hem useBackgroundUpdater (App-wide poll) aynı
-// modül singleton'unu kullanır → state çift kayıt olmaz.
+// Neden atomic check+download? Kullanıcı deneyimi:
+//   • autoDownload açık: uygulama açılışında arka planda tetiklenir
+//   • autoDownload kapalı: kullanıcı "Şimdi kontrol et"e basar; bulunursa
+//     ara-onay istemeden hemen indirir (ekstra tıklama yok). Ready olunca
+//     aynı buton "Yeniden başlat"a dönüşür.
+//
+// Install failure (elevation/UAC): quiet mode admin gerektiriyorsa sessizce
+// çöker. Bu durumu ayrı "install_failed" durumu ile yakalayıp release
+// sayfasına manuel yönlendirme sunuyoruz.
 
 import { useCallback, useEffect } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useUpdaterStore } from "../stores/updaterStore";
 
 let pendingUpdate: Update | null = null;
+
+const RELEASE_PAGE_BASE = "https://github.com/quacomes-cli/axiom/releases/tag";
 
 export function getPendingUpdate(): Update | null {
   return pendingUpdate;
@@ -58,6 +65,8 @@ export async function performDownloadAndInstall(): Promise<boolean> {
   store.setStatus("downloading");
   store.setProgress(0);
   store.setError(null);
+
+  let downloadFinished = false;
   try {
     let downloaded = 0;
     let contentLength = 0;
@@ -76,16 +85,34 @@ export async function performDownloadAndInstall(): Promise<boolean> {
           break;
         }
         case "Finished":
+          downloadFinished = true;
           useUpdaterStore.getState().setProgress(100);
-          useUpdaterStore.getState().setStatus("ready");
           break;
       }
     });
+    // downloadAndInstall dönerse install de başarılı — hazır sinyalini ver.
+    useUpdaterStore.getState().setStatus("ready");
     return true;
   } catch (e) {
-    useUpdaterStore.getState().setError(friendlyError(e));
+    const s = useUpdaterStore.getState();
+    const msg = String(e);
+    if (downloadFinished || looksLikeElevation(msg)) {
+      // İndirme tamam, install çöktü — muhtemelen admin/UAC gerekli.
+      s.setError(
+        "Otomatik kurulum başarısız (muhtemelen yönetici izni gerekli). Elle indirip kurabilirsin.",
+      );
+      s.setStatus("install_failed");
+    } else {
+      s.setError(friendlyError(e));
+    }
     return false;
   }
+}
+
+export async function performCheckAndDownload(): Promise<boolean> {
+  const found = await performCheck();
+  if (!found) return false;
+  return performDownloadAndInstall();
 }
 
 export async function performRestart(): Promise<void> {
@@ -93,6 +120,16 @@ export async function performRestart(): Promise<void> {
     await relaunch();
   } catch (e) {
     useUpdaterStore.getState().setError(friendlyError(e));
+  }
+}
+
+export async function openReleasePage(): Promise<void> {
+  const v = useUpdaterStore.getState().newVersion;
+  const url = v ? `${RELEASE_PAGE_BASE}/v${v}` : `${RELEASE_PAGE_BASE.replace("/tag", "/latest")}`;
+  try {
+    await openUrl(url);
+  } catch {
+    /* ignore */
   }
 }
 
@@ -110,12 +147,20 @@ export function useUpdater() {
     await performCheck();
   }, []);
 
+  const checkAndDownload = useCallback(async () => {
+    await performCheckAndDownload();
+  }, []);
+
   const downloadAndInstall = useCallback(async () => {
     await performDownloadAndInstall();
   }, []);
 
   const restartNow = useCallback(async () => {
     await performRestart();
+  }, []);
+
+  const openManual = useCallback(async () => {
+    await openReleasePage();
   }, []);
 
   const reset = useCallback(() => {
@@ -135,10 +180,24 @@ export function useUpdater() {
     autoDownload: state.autoDownload,
     setAutoDownload: state.setAutoDownload,
     checkForUpdate,
+    checkAndDownload,
     downloadAndInstall,
     restartNow,
+    openManual,
     reset,
   };
+}
+
+function looksLikeElevation(msg: string): boolean {
+  const m = msg.toLowerCase();
+  return (
+    m.includes("elevat") ||
+    m.includes("admin") ||
+    m.includes("access is denied") ||
+    m.includes("code: 740") ||
+    m.includes("exit code 740") ||
+    m.includes("1223")
+  );
 }
 
 function friendlyError(e: unknown): string {
