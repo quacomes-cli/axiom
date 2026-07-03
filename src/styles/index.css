@@ -6,17 +6,17 @@
 @theme {
     /* Koyu tema: sıcak nötrler + terracotta vurgu (Claude havası).
        Salt siyah/gri yerine hafif kahve altı tonlar — göz yormaz. */
-    --color-base: #1f1e1b;
-    --color-surface: #262521;
-    --color-surface-2: #2d2c27;
-    --color-surface-3: #3a3833;
+    --color-base: #1a1a1a;
+    --color-surface: #222222;
+    --color-surface-2: #2d2d2d;
+    --color-surface-3: #3b3b3b;
 
     --color-border: rgba(255, 255, 255, 0.07);
     --color-border-hover: rgba(255, 255, 255, 0.14);
 
-    --color-accent: #d97757;
-    --color-accent-muted: rgba(217, 119, 87, 0.12);
-    --color-accent-hover: rgba(217, 119, 87, 0.20);
+    --color-accent: #ffffff;
+    --color-accent-muted: rgba(255, 255, 255, 0.12);
+    --color-accent-hover: rgba(255, 255, 255, 0.20);
 
     --color-text: #f0eee6;
     --color-text-secondary: #b8b4a9;
