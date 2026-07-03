@@ -39,6 +39,7 @@ import { useOptimizationStore } from "../../stores/optimizationStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { AppVersion } from "../../stores/appStore";
 import { InteractiveHtml, extractNodeText } from "./InteractiveHtml";
+import { Tooltip } from "../shared/Tooltip";
 
 /**
  * ReactMarkdown pre override'ı: ```html blokları sandbox'lı canlı önizleme
@@ -641,63 +642,69 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
         </span>
       )}
       {msg.role === "agent" && (
-        <button
-          onClick={() => void regenerateMessage(chatId, msg.id)}
-          disabled={thinking}
-          className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary disabled:opacity-40"
-          title="Yeniden oluştur"
-        >
-          <RotateCcw size={13} strokeWidth={1.6} />
-        </button>
+        <Tooltip label="Yeniden oluştur">
+          <button
+            onClick={() => void regenerateMessage(chatId, msg.id)}
+            disabled={thinking}
+            className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary disabled:opacity-40"
+          >
+            <RotateCcw size={13} strokeWidth={1.6} />
+          </button>
+        </Tooltip>
       )}
       {msg.role === "agent" && (
-        <button
-          onClick={handleReport}
-          className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
-          title="Yanıtı raporla"
-        >
-          {reported ? <Check size={13} strokeWidth={1.6} /> : <Flag size={13} strokeWidth={1.6} />}
-        </button>
+        <Tooltip label="Yanıtı raporla">
+          <button
+            onClick={handleReport}
+            className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
+          >
+            {reported ? <Check size={13} strokeWidth={1.6} /> : <Flag size={13} strokeWidth={1.6} />}
+          </button>
+        </Tooltip>
       )}
       {showTtsBtn && (
-        <button
-          onClick={() => speak(msg.id, msg.text)}
-          className={`rounded-md p-1 ${isSpeakingThis
-              ? "text-blue-400 hover:bg-hover"
-              : "text-text-faint hover:bg-hover hover:text-text-secondary"
-            }`}
-          title={isSpeakingThis ? "Durdur" : "Sesli oku"}
-        >
-          {isSpeakingThis ? (
-            <VolumeX size={13} strokeWidth={1.6} className="animate-pulse" />
-          ) : (
-            <Volume2 size={13} strokeWidth={1.6} />
-          )}
-        </button>
+        <Tooltip label={isSpeakingThis ? "Durdur" : "Sesli oku"}>
+          <button
+            onClick={() => speak(msg.id, msg.text)}
+            className={`rounded-md p-1 ${isSpeakingThis
+                ? "text-accent hover:bg-hover"
+                : "text-text-faint hover:bg-hover hover:text-text-secondary"
+              }`}
+          >
+            {isSpeakingThis ? (
+              <VolumeX size={13} strokeWidth={1.6} className="animate-pulse" />
+            ) : (
+              <Volume2 size={13} strokeWidth={1.6} />
+            )}
+          </button>
+        </Tooltip>
       )}
-      <button
-        onClick={handleCopy}
-        className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
-        title="Kopyala"
-      >
-        {copied ? <Check size={13} strokeWidth={1.6} /> : <Copy size={13} strokeWidth={1.6} />}
-      </button>
+      <Tooltip label={copied ? "Kopyalandı" : "Kopyala"}>
+        <button
+          onClick={handleCopy}
+          className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
+        >
+          {copied ? <Check size={13} strokeWidth={1.6} /> : <Copy size={13} strokeWidth={1.6} />}
+        </button>
+      </Tooltip>
       {msg.role === "user" && (
         <>
-          <button
-            onClick={onEdit}
-            className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
-            title="Düzenle"
-          >
-            <Pencil size={13} strokeWidth={1.6} />
-          </button>
-          <button
-            onClick={() => deleteMessage(chatId, msg.id)}
-            className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-red-400"
-            title="Sil"
-          >
-            <Trash2 size={13} strokeWidth={1.6} />
-          </button>
+          <Tooltip label="Düzenle">
+            <button
+              onClick={onEdit}
+              className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
+            >
+              <Pencil size={13} strokeWidth={1.6} />
+            </button>
+          </Tooltip>
+          <Tooltip label="Sil">
+            <button
+              onClick={() => deleteMessage(chatId, msg.id)}
+              className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-red-400"
+            >
+              <Trash2 size={13} strokeWidth={1.6} />
+            </button>
+          </Tooltip>
         </>
       )}
     </div>
