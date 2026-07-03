@@ -80,7 +80,9 @@ export default function App() {
             <div className="logo-icon">
               <img src={logo} alt="Axiom Logo" />
             </div>
-            <span className="baslik">Axiom</span>
+            <span className="baslik">
+              Axiom
+            </span>
           </a>
           <nav>
             <ul>
@@ -113,22 +115,11 @@ export default function App() {
               </li>
             </ul>
           </nav>
-          <div>
-            <a
-              href="https://github.com/quacomes-cli/axiom"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-            >
-              <Github size={14} />
-              GitHub
-            </a>
-          </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems :"center" }}>
         <AnimatePresence mode="wait">
           {activePage === "home" && (
             <motion.div
@@ -173,14 +164,9 @@ export default function App() {
       <footer>
         <div className="container footer-content">
           <div>
-            <p>&copy; {new Date().getFullYear()} Axiom.</p>
+            <p>&copy; {new Date().getFullYear()} <a href="https://quacomes.com" target="_blank">Quacomes</a>. Tüm hakları saklıdır.</p>
           </div>
           <ul className="footer-links">
-            <li>
-              <a href="https://github.com/quacomes-cli/axiom" target="_blank" rel="noopener noreferrer">
-                GitHub
-              </a>
-            </li>
             <li>
               <a href="#home" onClick={(e) => { e.preventDefault(); setActivePage("home"); }}>
                 Anasayfa
@@ -189,6 +175,11 @@ export default function App() {
             <li>
               <a href="#releases" onClick={(e) => { e.preventDefault(); setActivePage("releases"); }}>
                 Sürümler
+              </a>
+            </li>
+            <li>
+              <a href="#releases" onClick={(e) => { e.preventDefault(); setActivePage("download"); }}>
+                İndir
               </a>
             </li>
           </ul>
@@ -211,133 +202,35 @@ function AnimatedSleepClock() {
 
 /* ---------------- HOME PAGE ---------------- */
 function HomePage({ onNavigate }: { onNavigate: (page: PageId) => void }) {
-  // Common scroll animation parameters
-  const scrollAnim = {
-    initial: { opacity: 0, y: 32 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: true, margin: "-100px" },
-    transition: { duration: 0.6, ease: "easeOut" as const }
-  };
 
   return (
-    <div>
-      {/* Hero Section - Exact Design of the Image */}
-      <section className="hero-section container">
-        <motion.div
-          className="hero-grid"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <div className="hero-seed-container">
-            <img src="/axiom.svg" height={420}/>
+    <section className="hero-section container" >
+      <motion.div
+        className="hero-grid"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        <div className="hero-seed-container">
+          <img src="/man.gif" height={420} />
+        </div>
+
+        <div>
+          <h1 className="editorial-title">Axiom</h1>
+          <div className="editorial-tagline">Small devices, big results.</div>
+          <div className="editorial-subtagline">The age of Personal AI</div>
+
+          <div className="hero-ctas">
+            <button onClick={() => onNavigate("download")} className="btn btn-primary">
+              <DownloadIcon size={14} />
+              Axiom'u İndir
+            </button>
           </div>
-
-          <div>
-            <h1 className="editorial-title">Axiom</h1>
-            <div className="editorial-tagline">Small devices, big results.</div>
-            <div className="editorial-subtagline">The age of Personal AI</div>
-
-            <div className="hero-ctas">
-              <button onClick={() => onNavigate("download")} className="btn btn-primary">
-                <DownloadIcon size={14} />
-                Axiom'u İndir
-              </button>
-              <button onClick={() => onNavigate("releases")} className="btn btn-secondary">
-                <Activity size={14} />
-                Sürüm Notları
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* Feature Section 1: Yerel & Çevrimdışı (Private Inference) - Tesla/Apple style */}
-      <section className="editorial-section">
-        <div className="container">
-          <motion.div className="grid-2col" {...scrollAnim}>
-            <div className="editorial-text">
-              <div className="editorial-tag">Lokal Çözümleme</div>
-              <h2 className="editorial-heading">Verileriniz Bilgisayarınızda Kalır.</h2>
-              <p className="editorial-desc">
-                Axiom, Ollama ve yerel model entegrasyonu sayesinde tamamen çevrimdışı çalışır. Sohbetleriniz, kod projeleriniz veya kişisel verileriniz hiçbir uzak sunucuya veya bulut altyapısına gönderilmez. Tam gizlilik ve bağımsızlık elde edersiniz.
-              </p>
-            </div>
-            <div className="visual-mockup" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "220px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-              <FiEyeOff size={60} strokeWidth={1.2} style={{ color: "var(--text-secondary)" }} />
-            </div>
-          </motion.div>
         </div>
-      </section>
+      </motion.div>
+    </section >
 
-      {/* Feature Section 2: Güvenlik & İzin Motoru (Permission Engine) - Tesla/Apple style */}
-      <section className="editorial-section alt-bg">
-        <div className="container">
-          <motion.div className="grid-2col" {...scrollAnim}>
-            <div className="visual-mockup" style={{ order: 1 }}>
-              <div className="ui-mockup">
-                <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Shield size={16} /> İzin Talebi Yürütülüyor
-                </div>
-                <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", marginBottom: "16px" }}>
-                  Axiom dosya temizliği için terminal erişimi istiyor:
-                </div>
-                <div style={{ background: "rgba(0,0,0,0.03)", padding: "10px", borderRadius: "4px", fontSize: "12px", fontFamily: "var(--mono)", marginBottom: "20px" }}>
-                  rm -rf C:\workspace\build\*.log
-                </div>
-                <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                  <button className="btn btn-secondary" style={{ height: "30px", fontSize: "12px" }}>Reddet</button>
-                  <button className="btn btn-primary" style={{ height: "30px", fontSize: "12px" }}>Onayla</button>
-                </div>
-              </div>
-            </div>
-            <div className="editorial-text">
-              <div className="editorial-tag">İzin Motoru</div>
-              <h2 className="editorial-heading">Onayınız Olmadan Tek Bir Satır Kod Çalışmaz.</h2>
-              <p className="editorial-desc">
-                Rust backend tabanlı güvenlik izin katmanı, ajanın yaptığı her kritik komut yürütme, dosya okuma/yazma veya harici API isteklerinde sizden anlık onay alır. Ajanın otonom yetenek sınırlarını siz belirlersiniz.
-              </p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
-      {/* Feature Section 3: Donanım Farkındalığı (Hardware-Aware) - Tesla/Apple style */}
-      <section className="editorial-section">
-        <div className="container">
-          <motion.div className="grid-2col" {...scrollAnim}>
-            <div className="editorial-text">
-              <div className="editorial-tag">Donanım Tünleme</div>
-              <h2 className="editorial-heading">Sistem Kaynaklarınızı Akıllıca Yönetir.</h2>
-              <p className="editorial-desc">
-                Axiom, donanım kaynaklarınızı (CPU çekirdekleri, boş bellek ve GPU bellek sınırları) anlık analiz eder. Model yükleme işlemlerinde kullanılabilir GPU offload miktarını ve bağlam sınırını dinamik ayarlayarak bilgisayarınızın donmasını önler.
-              </p>
-            </div>
-            <div className="visual-mockup" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "220px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
-              <FiCpu size={60} strokeWidth={1.2} style={{ color: "var(--text-secondary)" }} />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Feature Section 4: Otonom Planlama & Telegram (Background Tasks) - Tesla/Apple style */}
-      <section className="editorial-section alt-bg">
-        <div className="container">
-          <motion.div className="grid-2col" {...scrollAnim}>
-            <div className="editorial-text">
-              <div className="editorial-tag">Zamanlayıcı ve Entegrasyon</div>
-              <h2 className="editorial-heading">Siz Uykudayken O Çalışmaya Devam Eder.</h2>
-              <p className="editorial-desc">
-                Periyodik görev zamanlayıcıları sayesinde arka planda fiyat kontrolü yapın, web sitelerinden veri kazıyın veya sistem durumunu izleyin. Telegram bot entegrasyonu ile bilgisayarınızdan uzakta olsan dahi telefonunuzdan ajana komut gönderebilirsiniz.
-              </p>
-            </div>
-            <div className="visual-mockup" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "220px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", order: 1 }}>
-              <AnimatedSleepClock />
-            </div>
-          </motion.div>
-        </div>
-      </section>
-    </div>
   );
 }
 
@@ -368,7 +261,7 @@ function ReleasesPage() {
   // Extremely basic parser for release bodies (monochrome markdown notes format helper)
   const renderReleaseBody = (body: string) => {
     if (!body) return <p>Detaylı açıklama bulunmuyor.</p>;
-    
+
     const lines = body.split("\n");
     let inList = false;
     const elements: React.ReactNode[] = [];
@@ -376,7 +269,7 @@ function ReleasesPage() {
 
     lines.forEach((line, index) => {
       const trimmed = line.trim();
-      
+
       // Headers
       if (trimmed.startsWith("###")) {
         if (inList) {
@@ -400,12 +293,12 @@ function ReleasesPage() {
           listItems = [];
         }
         elements.push(<h2 key={`h2-${index}`}>{trimmed.replace("##", "").trim()}</h2>);
-      } 
+      }
       // Lists
       else if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
         inList = true;
         listItems.push(trimmed.substring(1).trim());
-      } 
+      }
       // Paragraph or empty line
       else {
         if (trimmed === "") {
@@ -447,7 +340,7 @@ function ReleasesPage() {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
-    
+
     // Convert `code` to HTML code tags
     const regex = /`([^`]+)`/g;
     formatted = formatted.replace(regex, "<code>$1</code>");
