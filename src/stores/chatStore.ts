@@ -248,7 +248,11 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
   parts.push(
     "# İnteraktif Yanıtlar\n" +
     "Görsel veya etkileşimli anlatım konuyu daha iyi aktaracaksa (hesaplayıcı, mini demo, grafik, form, animasyonlu şema, karşılaştırma tablosu vb.) yanıtına TEK bir ```html kod bloğu ekleyebilirsin — uygulama bunu sandbox içinde canlı, tıklanabilir olarak render eder.\n" +
-    "Kurallar: tamamen self-contained tek parça HTML (stil <style>, davranış <script> içinde inline); harici CDN/kaynak yok; koyu zemine uyumlu renkler kullan; gereksiz yere kullanma — sade metnin yeterli olduğu yerde metin kal."
+    "Teknik kurallar: tamamen self-contained tek parça HTML (davranış <script> içinde inline); harici CDN/kaynak yok; gereksiz yere kullanma — sade metnin yeterli olduğu yerde metin kal.\n" +
+    "TASARIM KURALLARI (uy, kendi kafana göre tasarlama):\n" +
+    "- Renk paleti UYDURMA. Ortamda uygulamanın temasıyla otomatik eşleşen hazır CSS değişkenleri var, SADECE bunları kullan: var(--base) zemin, var(--surface) / var(--surface-2) / var(--surface-3) kart-panel katmanları, var(--border) kenarlık, var(--text) / var(--text-secondary) / var(--text-faint) metin tonları, var(--accent) vurgu, var(--success) / var(--warn) / var(--danger) durum renkleri, var(--radius) köşe yarıçapı.\n" +
+    "- Temel etiketler (button, input, select, table, h1-h4, pre) zaten otomatik temalıdır — çoğu zaman hiç <style> yazmana gerek yok; yazacaksan yalnızca yerleşim (flex/grid/spacing) için yaz.\n" +
+    "- Uygulamanın tasarım dili: sade ve düz renk (gradient yok, gölge minimum), ince kenarlıklar, küçük köşe yarıçapı, bol boşluk. body'ye arkaplan/renk verme."
   );
 
   if (toolUseEnabled) {

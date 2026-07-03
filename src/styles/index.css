@@ -107,9 +107,9 @@ body {
     --color-border: rgba(60, 50, 30, 0.10);
     --color-border-hover: rgba(60, 50, 30, 0.20);
 
-    --color-accent: #c96442;
-    --color-accent-muted: rgba(201, 100, 66, 0.10);
-    --color-accent-hover: rgba(201, 100, 66, 0.18);
+    --color-accent: rgb(26, 26, 26);
+    --color-accent-muted: rgba(26, 26, 26, 0.10);
+    --color-accent-hover: rgba(26, 26, 26, 0.18);
 
     --color-text: #3d3929;
     --color-text-secondary: #6c6759;
