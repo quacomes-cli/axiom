@@ -12,7 +12,7 @@
 // otomatik büyür: uzun içerikte iç scrollbar birikmez.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Code2, Copy, Play, RefreshCw, Maximize2, X } from "lucide-react";
+import { Check, Code2, Copy, Play, RefreshCw, Maximize2, X, Loader } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSettingsStore } from "../../stores/settingsStore";
 
@@ -55,6 +55,19 @@ button{font:inherit;font-size:.8125rem;font-weight:500;padding:4px 11px;border-r
   cursor:pointer;background:var(--surface-2);color:var(--text-secondary);
   border:1px solid var(--border);transition:background .15s,color .15s}
 button:hover{background:var(--surface-3);color:var(--text)}
+button:disabled{opacity:.4;cursor:default}
+/* Birincil aksiyon: model class="primary" kullanır — accent'i ARKAPLAN
+   yapmadan (temada accent beyaz olabilir) vurgulu ama zarif kalır. */
+button.primary,.primary{background:var(--surface-3);color:var(--text);border-color:var(--border-hover, var(--border))}
+button.primary:hover{background:var(--accent-muted)}
+/* Seçilebilir satır (quiz şıkkı vb.): ince, hover'da belirginleşen */
+.option{display:block;width:100%;text-align:left;padding:7px 11px;margin:5px 0;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text-secondary);cursor:pointer;transition:background .15s,border-color .15s}
+.option:hover{background:var(--surface-2);color:var(--text)}
+.option.selected{border-color:var(--text-faint);background:var(--surface-2);color:var(--text)}
+.option.correct{border-color:var(--success);color:var(--success)}
+.option.wrong{border-color:var(--danger);color:var(--danger)}
 input,textarea,select{font:inherit;font-size:.8571rem;padding:5px 9px;border-radius:var(--radius);
   background:var(--surface-2);color:var(--text);border:1px solid var(--border);outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--text-faint)}
@@ -69,10 +82,21 @@ hr{border:none;border-top:1px solid var(--border);margin:12px 0}
 `;
 }
 
-/** İçerik yüksekliğini parent'a bildiren enjekte script. */
+/** İçerik yüksekliğini parent'a bildiren enjekte script.
+    DİKKAT: documentElement.scrollHeight KULLANILMAZ — html öğesi iframe
+    viewport'unu doldurduğu için bir kez büyüyen iframe asla geri KÜÇÜLMEZ
+    (test bitişinde dev boş alan kalıyordu). body'nin gerçek içerik
+    yüksekliği ölçülür; içerik kısalınca iframe de kısalır. */
 const HEIGHT_REPORTER = `<script>(function(){
-  var send=function(){try{parent.postMessage({__axiomHtmlHeight:document.documentElement.scrollHeight},"*")}catch(e){}};
+  var send=function(){try{
+    var r=document.body.getBoundingClientRect();
+    var s=getComputedStyle(document.body);
+    var h=Math.ceil(r.top+r.height+parseFloat(s.marginBottom||"0"));
+    parent.postMessage({__axiomHtmlHeight:h},"*");
+  }catch(e){}};
   try{new ResizeObserver(send).observe(document.body)}catch(e){setInterval(send,500)}
+  document.addEventListener("transitionend",send,true);
+  document.addEventListener("animationend",send,true);
   window.addEventListener("load",send);send();
 })();</script>`;
 
@@ -172,11 +196,11 @@ export function InteractiveHtml({ code }: { code: string }) {
     return (
       <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-6" onClick={() => setFullscreen(false)}>
         <div
-          className="group/ihtml relative max-h-[75vh] w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-base shadow-2xl"
+          className="group/ihtml relative max-h-[75vh] max-h-[75vh] w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-base shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {controls}
-          <div className="max-h-[75vh] overflow-y-auto p-2">{body}</div>
+          <div className="h-full overflow-y-auto p-2">{body}</div>
         </div>
       </div>
     );
@@ -195,11 +219,11 @@ export function InteractiveHtml({ code }: { code: string }) {
  * kod yazım süreci kullanıcıya sızmaz, dönüşümlü durum mesajları akar.
  */
 const DESIGN_STAGES = [
-  "Arayüz tasarlanıyor…",
-  "Bileşenler yerleştiriliyor…",
-  "Etkileşimler bağlanıyor…",
-  "Tema uygulanıyor…",
-  "Son rötuşlar yapılıyor…",
+  "Arayüz tasarlanıyor",
+  "Bileşenler yerleştiriliyor",
+  "Etkileşimler bağlanıyor",
+  "Tema uygulanıyor",
+  "Son rötuşlar yapılıyor",
 ];
 
 export function DesigningIndicator() {
@@ -214,8 +238,12 @@ export function DesigningIndicator() {
   }, []);
 
   return (
-    <div className="not-prose my-2 flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-      <img src="/logo.svg" alt="Axiom" title={DESIGN_STAGES[stage]} width={15} height={15} />
+    <div className="not-prose flex items-center gap-2">
+      <Loader
+        size={16}
+        strokeWidth={1.4}
+        className="animate-spin"
+      />
       <AnimatePresence mode="wait">
         <motion.span
           key={stage}
