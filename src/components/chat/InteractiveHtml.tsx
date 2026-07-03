@@ -45,22 +45,23 @@ function buildThemeCss(): string {
   --radius:${v("--radius", "8px")};
 }
 *{box-sizing:border-box}
-body{margin:0;padding:12px 2px;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+body{margin:0;padding:2px 0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
   font-size:14px;line-height:1.6;background:var(--base);color:var(--text);overflow:hidden}
-h1,h2,h3,h4{color:var(--text);line-height:1.3;margin:0 0 .5em}
-h1{font-size:1.25rem}h2{font-size:1.1rem}h3{font-size:1rem}
-p{color:var(--text-secondary);margin:.4em 0}
+h1,h2,h3,h4{color:var(--text);line-height:1.3;margin:0 0 .5em;font-weight:600}
+h1{font-size:1.05rem}h2{font-size:.95rem}h3{font-size:.875rem}
+p{color:var(--text-secondary);margin:.35em 0}
 a{color:var(--text);text-decoration:underline;text-underline-offset:2px}
-button{font:inherit;padding:6px 14px;border-radius:var(--radius);cursor:pointer;
-  background:var(--surface-3);color:var(--text);border:1px solid var(--border);
-  transition:background .15s}
-button:hover{background:var(--accent-muted)}
-input,textarea,select{font:inherit;padding:6px 10px;border-radius:var(--radius);
+button{font:inherit;font-size:.8125rem;font-weight:500;padding:4px 11px;border-radius:var(--radius);
+  cursor:pointer;background:var(--surface-2);color:var(--text-secondary);
+  border:1px solid var(--border);transition:background .15s,color .15s}
+button:hover{background:var(--surface-3);color:var(--text)}
+input,textarea,select{font:inherit;font-size:.8571rem;padding:5px 9px;border-radius:var(--radius);
   background:var(--surface-2);color:var(--text);border:1px solid var(--border);outline:none}
 input:focus,textarea:focus,select:focus{border-color:var(--text-faint)}
-table{border-collapse:collapse;width:100%}
-th,td{padding:6px 10px;border:1px solid var(--border);text-align:left}
-th{color:var(--text);background:var(--surface-2)}
+label{font-size:.8571rem}
+table{border-collapse:collapse;width:100%;font-size:.8571rem}
+th,td{padding:5px 9px;border:1px solid var(--border);text-align:left}
+th{color:var(--text);background:var(--surface-2);font-weight:600}
 code,pre{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.85em}
 pre{background:var(--surface-2);padding:10px;border-radius:var(--radius);overflow:auto}
 hr{border:none;border-top:1px solid var(--border);margin:12px 0}
@@ -171,11 +172,11 @@ export function InteractiveHtml({ code }: { code: string }) {
     return (
       <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-6" onClick={() => setFullscreen(false)}>
         <div
-          className="group/ihtml relative h-full w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-base shadow-2xl"
+          className="group/ihtml relative max-h-[75vh] w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-base shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {controls}
-          <div className="h-full overflow-y-auto p-2">{body}</div>
+          <div className="max-h-[75vh] overflow-y-auto p-2">{body}</div>
         </div>
       </div>
     );
@@ -214,10 +215,7 @@ export function DesigningIndicator() {
 
   return (
     <div className="not-prose my-2 flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
-      <span className="relative flex h-2 w-2 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-40" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-      </span>
+      <img src="/logo.svg" alt="Axiom" title={DESIGN_STAGES[stage]} width={15} height={15} />
       <AnimatePresence mode="wait">
         <motion.span
           key={stage}

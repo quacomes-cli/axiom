@@ -250,11 +250,13 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
     "İstek doğası gereği etkileşimliyse (test/quiz, anket, hesaplayıcı, form, mini oyun, adım adım öğretici, karşılaştırma aracı) SORMADAN doğrudan interaktif üret: yanıtına TEK bir ```html kod bloğu ekle — uygulama bunu canlı, tıklanabilir olarak render eder ve kullanıcı kodu değil bitmiş arayüzü görür. Kod bloğundan önce en fazla tek cümle yaz; kodun içeriğini metinde anlatma, tekrar etme.\n" +
     "Teknik kurallar: tamamen self-contained tek parça HTML (davranış <script> içinde inline); harici CDN/kaynak yok; sabit yükseklik verme, içerik doğal yüksekliğinde aksın; sade metnin yeterli olduğu yerde metin kal.\n" +
     "TASARIM KİMLİĞİ (uy, kendi kafana göre tasarlama):\n" +
-    "- AŞAMALI AKIŞ: çok maddeli içerikte (test soruları, form adımları, anket) maddeleri alt alta LİSTELEME — tek seferde TEK adım göster; İleri/Geri kontrolü, üstte küçük ilerleme göstergesi (örn. 2/5 veya nokta dizisi), sonunda özet/sonuç ekranı olsun.\n" +
+    "- CEVABIN DEVAMI GİBİ: içeriği kendi büyük kenarlıklı/gölgeli KUTUSUNA SARMA. En dıştaki kapsayıcıya border, background, box-shadow verme — sohbet metninin doğal devamı gibi aksın. Kenarlığı yalnızca alt öğeleri (tek bir seçenek satırı, sonuç kutusu) hafifçe ayırmak için ince kullan; iç içe kart yığma.\n" +
+    "- KOMPAKT: aşırı padding/margin verme. Dış kenarda yatay boşluk bırakma (içerik metinle aynı hizada başlasın). Öğeler arası boşluk küçük tut (8-12px). Butonlar zaten küçük ve zarif temalıdır — onları büyütme, ekstra padding ekleme.\n" +
+    "- AŞAMALI AKIŞ: çok maddeli içerikte (test soruları, form adımları, anket) maddeleri alt alta LİSTELEME — tek seferde TEK adım göster; İleri/Geri kontrolü, üstte küçük ilerleme göstergesi (örn. 2/5 veya nokta dizisi), sonunda özet/sonuç ekranı olsun. Sonuç ekranını başta gösterme, yalnız bitince aç.\n" +
     "- GEÇİŞLER: adımlar arası yumuşak geçiş kullan (opacity + hafif translateY, ~0.25s ease). Şaşaalı animasyon yok.\n" +
     "- Renk paleti UYDURMA. Ortamda uygulamanın temasıyla otomatik eşleşen hazır CSS değişkenleri var, SADECE bunları kullan: var(--base) zemin, var(--surface) / var(--surface-2) / var(--surface-3) kart-panel katmanları, var(--border) kenarlık, var(--text) / var(--text-secondary) / var(--text-faint) metin tonları, var(--accent) vurgu, var(--success) / var(--warn) / var(--danger) durum renkleri, var(--radius) köşe yarıçapı.\n" +
     "- Temel etiketler (button, input, select, table, h1-h4, pre) zaten otomatik temalıdır — <style>'ı yalnızca yerleşim (flex/grid/spacing) ve geçişler için yaz.\n" +
-    "- Tasarım dili: sade ve düz renk (gradient yok, gölge minimum), ince kenarlıklar, küçük köşe yarıçapı, bol boşluk. body'ye arkaplan/renk verme."
+    "- Tasarım dili: sade ve düz renk (gradient yok, gölge yok), ince kenarlıklar, küçük köşe yarıçapı."
   );
 
   if (toolUseEnabled) {
