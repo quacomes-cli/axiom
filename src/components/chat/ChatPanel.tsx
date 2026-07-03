@@ -38,7 +38,7 @@ import { useUiStore } from "../../stores/uiStore";
 import { useOptimizationStore } from "../../stores/optimizationStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { AppVersion } from "../../stores/appStore";
-import { InteractiveHtml, extractNodeText } from "./InteractiveHtml";
+import { InteractiveHtml, DesigningIndicator, extractNodeText, splitStreamingHtml } from "./InteractiveHtml";
 import { Tooltip } from "../shared/Tooltip";
 
 /**
@@ -907,7 +907,18 @@ const MessageBubble = memo(function MessageBubble({
           style={{ userSelect: "text" }}
         >
           {isStreaming ? (
-            <StreamingMarkdown text={displayText} />
+            // Kod yazım süreci kullanıcıya sızmasın: ```html bloğu başladığı
+            // anda ham kod gizlenir, yerine "tasarlanıyor" durumu akar.
+            (() => {
+              const parts = splitStreamingHtml(displayText);
+              return (
+                <>
+                  {parts.before && <StreamingMarkdown text={parts.before} />}
+                  {parts.designing && <DesigningIndicator />}
+                  {parts.after && <StreamingMarkdown text={parts.after} />}
+                </>
+              );
+            })()
           ) : (
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}

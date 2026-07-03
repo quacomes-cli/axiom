@@ -1,22 +1,26 @@
-// İnteraktif HTML yanıt kartı — modelin ürettiği ```html blokları sandbox'lı
+// İnteraktif HTML yanıtları — modelin ürettiği ```html blokları sandbox'lı
 // iframe'de canlı render edilir (Claude artifact benzeri).
 //
-// GÜVENLİK: iframe'e `allow-same-origin` VERİLMEZ. Böylece snippet, uygulama
-// origin'ine (dolayısıyla Tauri IPC köprüsüne, localStorage'a) erişemez;
-// yalnızca kendi izole belgesinde script çalıştırabilir. Harici ağ istekleri
-// CSP ile değil sandbox origin'sizliğiyle sınırlıdır — model zaten
-// self-contained üretmeye yönlendirilir (sistem promptu).
+// GÜVENLİK: iframe'e `allow-same-origin` VERİLMEZ. Snippet, uygulama
+// origin'ine (Tauri IPC, localStorage) erişemez; yalnızca kendi izole
+// belgesinde script çalıştırır. Yükseklik bildirimi postMessage ile yapılır
+// ve kaynak (event.source) doğrulanır.
+//
+// Görünüm: çerçevesiz — kartın zemini uygulamanın zeminiyle aynı olduğundan
+// içerik sohbete "gömülü" akar; kontroller (kod, yeniden çalıştır, büyüt,
+// kopyala) yalnızca hover'da sağ üstte belirir. Yükseklik içeriğe göre
+// otomatik büyür: uzun içerikte iç scrollbar birikmez.
 
-import { useMemo, useState } from "react";
-import { Check, Code2, Copy, Play, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Code2, Copy, Play, RefreshCw, Maximize2, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useSettingsStore } from "../../stores/settingsStore";
 
 /**
  * Uygulamanın CANLI tema değişkenlerini okuyup iframe'e taşınacak tasarım
  * sistemi CSS'ini üretir. Model palet uydurmasın diye sistem promptu bu
  * değişken adlarını (--base, --surface, --accent…) referans verir; snippet
- * hiç stil vermese bile temel etiketler (buton, input, başlık, tablo)
- * uygulamayla aynı görünür. Tema değişince yeniden hesaplanır.
+ * hiç stil vermese bile temel etiketler uygulamayla aynı görünür.
  */
 function buildThemeCss(): string {
   const cs = getComputedStyle(document.documentElement);
@@ -41,8 +45,8 @@ function buildThemeCss(): string {
   --radius:${v("--radius", "8px")};
 }
 *{box-sizing:border-box}
-body{margin:0;padding:16px;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
-  font-size:14px;line-height:1.6;background:var(--base);color:var(--text)}
+body{margin:0;padding:12px 2px;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px;line-height:1.6;background:var(--base);color:var(--text);overflow:hidden}
 h1,h2,h3,h4{color:var(--text);line-height:1.3;margin:0 0 .5em}
 h1{font-size:1.25rem}h2{font-size:1.1rem}h3{font-size:1rem}
 p{color:var(--text-secondary);margin:.4em 0}
@@ -64,20 +68,42 @@ hr{border:none;border-top:1px solid var(--border);margin:12px 0}
 `;
 }
 
+/** İçerik yüksekliğini parent'a bildiren enjekte script. */
+const HEIGHT_REPORTER = `<script>(function(){
+  var send=function(){try{parent.postMessage({__axiomHtmlHeight:document.documentElement.scrollHeight},"*")}catch(e){}};
+  try{new ResizeObserver(send).observe(document.body)}catch(e){setInterval(send,500)}
+  window.addEventListener("load",send);send();
+})();</script>`;
+
 export function InteractiveHtml({ code }: { code: string }) {
   const [view, setView] = useState<"preview" | "code">("preview");
-  const [tall, setTall] = useState(false);
   const [copied, setCopied] = useState(false);
   const [runId, setRunId] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [height, setHeight] = useState(120);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   // Tema değişiminde iframe'i taze değişkenlerle yeniden kur
   const theme = useSettingsStore((s) => s.settings?.theme);
 
   const srcDoc = useMemo(
     () =>
-      `<!doctype html><html><head><meta charset="utf-8"><style>${buildThemeCss()}</style></head><body>${code}</body></html>`,
+      `<!doctype html><html><head><meta charset="utf-8"><style>${buildThemeCss()}</style></head><body>${code}${HEIGHT_REPORTER}</body></html>`,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [code, theme],
   );
+
+  // Sandbox içinden gelen yükseklik bildirimi — yalnızca kendi iframe'imizden.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      const h = (e.data as { __axiomHtmlHeight?: number })?.__axiomHtmlHeight;
+      if (typeof h === "number" && h > 0) {
+        setHeight(Math.min(Math.max(Math.ceil(h), 60), 4000));
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
 
   function copy() {
     navigator.clipboard.writeText(code);
@@ -85,64 +111,125 @@ export function InteractiveHtml({ code }: { code: string }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
-  return (
-    <div className="not-prose my-2 overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-        <span className="px-1.5 text-[0.7143rem] uppercase tracking-wider text-text-faint">
-          İnteraktif içerik
-        </span>
-        <div className="ml-auto flex items-center gap-0.5">
-          <button
-            onClick={() => setView(view === "preview" ? "code" : "preview")}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-            title={view === "preview" ? "Kodu göster" : "Önizlemeyi göster"}
-          >
-            {view === "preview" ? <Code2 size={12} /> : <Play size={12} />}
-            {view === "preview" ? "Kod" : "Önizle"}
-          </button>
-          {view === "preview" && (
-            <button
-              onClick={() => setRunId((n) => n + 1)}
-              className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-              title="Yeniden çalıştır"
-            >
-              <RefreshCw size={12} />
-            </button>
-          )}
-          <button
-            onClick={() => setTall((t) => !t)}
-            className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-            title={tall ? "Küçült" : "Büyüt"}
-          >
-            {tall ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-          </button>
-          <button
-            onClick={copy}
-            className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-            title="Kodu kopyala"
-          >
-            {copied ? <Check size={12} /> : <Copy size={12} />}
-          </button>
+  const controls = (
+    <div className={`absolute right-1 top-1 z-10 flex items-center gap-0.5 rounded-lg bg-surface/95 px-1 py-0.5 shadow-md transition-opacity ${fullscreen ? "opacity-100" : "opacity-0 group-hover/ihtml:opacity-100"}`}>
+      <button
+        onClick={() => setView(view === "preview" ? "code" : "preview")}
+        className="flex items-center gap-1 rounded-md px-1.5 py-0 text-[0.7143rem] text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
+        title={view === "preview" ? "Kodu göster" : "Önizlemeye dön"}
+      >
+        {view === "preview" ? <Code2 size={12} /> : <Play size={12} />}
+        {view === "preview" ? "Kod" : "Önizle"}
+      </button>
+      {view === "preview" && (
+        <button
+          onClick={() => setRunId((n) => n + 1)}
+          className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
+          title="Yeniden çalıştır"
+        >
+          <RefreshCw size={12} />
+        </button>
+      )}
+      <button
+        onClick={() => setFullscreen((f) => !f)}
+        className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
+        title={fullscreen ? "Kapat" : "Büyüt"}
+      >
+        {fullscreen ? <X size={12} /> : <Maximize2 size={12} />}
+      </button>
+      <button
+        onClick={copy}
+        className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
+        title="Kodu kopyala"
+      >
+        {copied ? <Check size={12} /> : <Copy size={12} />}
+      </button>
+    </div>
+  );
+
+  const body =
+    view === "preview" ? (
+      <iframe
+        key={`${runId}-${fullscreen ? "fs" : "inline"}`}
+        ref={iframeRef}
+        sandbox="allow-scripts allow-forms allow-modals"
+        srcDoc={srcDoc}
+        title="İnteraktif yanıt"
+        className="w-full border-0"
+        style={{ height: fullscreen ? "100%" : height, display: "block" }}
+      />
+    ) : (
+      <pre
+        className="m-0 overflow-x-auto whitespace-pre-wrap break-words rounded-lg border border-border bg-surface px-3 py-2.5 font-mono text-[0.7857rem] leading-relaxed text-text-secondary"
+        style={{ maxHeight: fullscreen ? "100%" : 480, overflowY: "auto", userSelect: "text" }}
+      >
+        {code}
+      </pre>
+    );
+
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 p-6" onClick={() => setFullscreen(false)}>
+        <div
+          className="group/ihtml relative h-full w-full max-w-5xl overflow-hidden rounded-xl border border-border bg-base shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {controls}
+          <div className="h-full overflow-y-auto p-2">{body}</div>
         </div>
       </div>
+    );
+  }
 
-      {view === "preview" ? (
-        <iframe
-          key={runId}
-          sandbox="allow-scripts allow-forms allow-modals"
-          srcDoc={srcDoc}
-          title="İnteraktif yanıt"
-          className="w-full border-0 bg-base"
-          style={{ height: tall ? 560 : 340 }}
-        />
-      ) : (
-        <pre
-          className="m-0 overflow-x-auto whitespace-pre-wrap break-words px-3 py-2.5 font-mono text-[0.7857rem] leading-relaxed text-text-secondary"
-          style={{ maxHeight: tall ? 560 : 340, overflowY: "auto", userSelect: "text" }}
+  return (
+    <div className="group/ihtml not-prose relative my-1">
+      {controls}
+      {body}
+    </div>
+  );
+}
+
+/**
+ * Streaming sırasında ham HTML kodu yerine gösterilen "tasarlanıyor" bloğu —
+ * kod yazım süreci kullanıcıya sızmaz, dönüşümlü durum mesajları akar.
+ */
+const DESIGN_STAGES = [
+  "Arayüz tasarlanıyor…",
+  "Bileşenler yerleştiriliyor…",
+  "Etkileşimler bağlanıyor…",
+  "Tema uygulanıyor…",
+  "Son rötuşlar yapılıyor…",
+];
+
+export function DesigningIndicator() {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(
+      () => setStage((s) => Math.min(s + 1, DESIGN_STAGES.length - 1)),
+      1800,
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="not-prose my-2 flex items-center gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+      <span className="relative flex h-2 w-2 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-40" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+      </span>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={stage}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.25 }}
+          className="text-[0.8571rem] text-text-secondary"
         >
-          {code}
-        </pre>
-      )}
+          {DESIGN_STAGES[stage]}
+        </motion.span>
+      </AnimatePresence>
     </div>
   );
 }
@@ -156,4 +243,18 @@ export function extractNodeText(node: unknown): string {
     return extractNodeText((node as { props: { children?: unknown } }).props.children);
   }
   return "";
+}
+
+/**
+ * Streaming metnini böler: ```html bloğu başladıysa (yarım ya da tam) kod
+ * kısmı gizlenir — öncesi normal markdown akar, kod yerine DesigningIndicator
+ * gösterilir. Blok kapandıktan SONRA gelen metin de akmaya devam eder.
+ */
+export function splitStreamingHtml(text: string): { before: string; designing: boolean; after: string } {
+  const start = text.search(/```html\b/);
+  if (start === -1) return { before: text, designing: false, after: "" };
+  const before = text.slice(0, start).trimEnd();
+  const closeIdx = text.indexOf("```", start + 6);
+  const after = closeIdx === -1 ? "" : text.slice(closeIdx + 3);
+  return { before, designing: true, after };
 }

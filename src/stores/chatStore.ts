@@ -247,12 +247,14 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
 
   parts.push(
     "# İnteraktif Yanıtlar\n" +
-    "Görsel veya etkileşimli anlatım konuyu daha iyi aktaracaksa (hesaplayıcı, mini demo, grafik, form, animasyonlu şema, karşılaştırma tablosu vb.) yanıtına TEK bir ```html kod bloğu ekleyebilirsin — uygulama bunu sandbox içinde canlı, tıklanabilir olarak render eder.\n" +
-    "Teknik kurallar: tamamen self-contained tek parça HTML (davranış <script> içinde inline); harici CDN/kaynak yok; gereksiz yere kullanma — sade metnin yeterli olduğu yerde metin kal.\n" +
-    "TASARIM KURALLARI (uy, kendi kafana göre tasarlama):\n" +
+    "İstek doğası gereği etkileşimliyse (test/quiz, anket, hesaplayıcı, form, mini oyun, adım adım öğretici, karşılaştırma aracı) SORMADAN doğrudan interaktif üret: yanıtına TEK bir ```html kod bloğu ekle — uygulama bunu canlı, tıklanabilir olarak render eder ve kullanıcı kodu değil bitmiş arayüzü görür. Kod bloğundan önce en fazla tek cümle yaz; kodun içeriğini metinde anlatma, tekrar etme.\n" +
+    "Teknik kurallar: tamamen self-contained tek parça HTML (davranış <script> içinde inline); harici CDN/kaynak yok; sabit yükseklik verme, içerik doğal yüksekliğinde aksın; sade metnin yeterli olduğu yerde metin kal.\n" +
+    "TASARIM KİMLİĞİ (uy, kendi kafana göre tasarlama):\n" +
+    "- AŞAMALI AKIŞ: çok maddeli içerikte (test soruları, form adımları, anket) maddeleri alt alta LİSTELEME — tek seferde TEK adım göster; İleri/Geri kontrolü, üstte küçük ilerleme göstergesi (örn. 2/5 veya nokta dizisi), sonunda özet/sonuç ekranı olsun.\n" +
+    "- GEÇİŞLER: adımlar arası yumuşak geçiş kullan (opacity + hafif translateY, ~0.25s ease). Şaşaalı animasyon yok.\n" +
     "- Renk paleti UYDURMA. Ortamda uygulamanın temasıyla otomatik eşleşen hazır CSS değişkenleri var, SADECE bunları kullan: var(--base) zemin, var(--surface) / var(--surface-2) / var(--surface-3) kart-panel katmanları, var(--border) kenarlık, var(--text) / var(--text-secondary) / var(--text-faint) metin tonları, var(--accent) vurgu, var(--success) / var(--warn) / var(--danger) durum renkleri, var(--radius) köşe yarıçapı.\n" +
-    "- Temel etiketler (button, input, select, table, h1-h4, pre) zaten otomatik temalıdır — çoğu zaman hiç <style> yazmana gerek yok; yazacaksan yalnızca yerleşim (flex/grid/spacing) için yaz.\n" +
-    "- Uygulamanın tasarım dili: sade ve düz renk (gradient yok, gölge minimum), ince kenarlıklar, küçük köşe yarıçapı, bol boşluk. body'ye arkaplan/renk verme."
+    "- Temel etiketler (button, input, select, table, h1-h4, pre) zaten otomatik temalıdır — <style>'ı yalnızca yerleşim (flex/grid/spacing) ve geçişler için yaz.\n" +
+    "- Tasarım dili: sade ve düz renk (gradient yok, gölge minimum), ince kenarlıklar, küçük köşe yarıçapı, bol boşluk. body'ye arkaplan/renk verme."
   );
 
   if (toolUseEnabled) {
