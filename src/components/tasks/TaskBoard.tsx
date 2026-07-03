@@ -23,6 +23,7 @@ import {
   type TaskRecurring,
 } from "../../stores/taskStore";
 import { runAgentTaskNow } from "../../hooks/useTaskScheduler";
+import { Tooltip } from "../shared/Tooltip";
 
 const COLUMNS: {
   status: TaskStatus;
@@ -71,9 +72,13 @@ function TaskCard({ task }: { task: Task }) {
 
   const isScheduled = !!task.scheduledAt && task.status === "running" && !task.executedAt;
   const isAgentTask = task.actionType === "agent";
+  // Full agentable: yalnız zamanlanmış agent görevleri değil, panodaki her
+  // görev agent'a devredilebilir (başlık+açıklama talimat olur, sonuç
+  // bildirim merkezine düşer, başarıda görev tamamlananlara taşınır).
+  const canRun = !running && task.status !== "completed";
 
   async function runNow() {
-    if (!isAgentTask || running) return;
+    if (!canRun) return;
     setRunning(true);
     try {
       await runAgentTaskNow(task.id);
@@ -118,26 +123,31 @@ function TaskCard({ task }: { task: Task }) {
           <h3 className="truncate text-sm leading-snug text-text">{task.title}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          {isAgentTask && (
-            <button
-              onClick={runNow}
-              disabled={running}
-              title="Şimdi çalıştır"
-              className="rounded p-0.5 text-text-faint transition-colors hover:text-purple-300 disabled:opacity-50"
-            >
-              {running ? (
-                <Loader2 size={12} strokeWidth={1.6} className="animate-spin" />
-              ) : (
-                <Zap size={12} strokeWidth={1.6} />
-              )}
-            </button>
+          {task.status !== "completed" && (
+            <Tooltip label={isAgentTask ? "Şimdi çalıştır" : "Agent'a yaptır"}>
+              <button
+                onClick={runNow}
+                disabled={!canRun}
+                className="rounded p-0.5 text-text-faint transition-colors hover:text-purple-300 disabled:opacity-50"
+              >
+                {running ? (
+                  <Loader2 size={12} strokeWidth={1.6} className="animate-spin" />
+                ) : isAgentTask ? (
+                  <Zap size={12} strokeWidth={1.6} />
+                ) : (
+                  <Bot size={12} strokeWidth={1.6} />
+                )}
+              </button>
+            </Tooltip>
           )}
-          <button
-            onClick={() => deleteTask(task.id)}
-            className="rounded p-0.5 text-text-faint transition-colors hover:text-red-400"
-          >
-            <Trash2 size={12} strokeWidth={1.4} />
-          </button>
+          <Tooltip label="Sil">
+            <button
+              onClick={() => deleteTask(task.id)}
+              className="rounded p-0.5 text-text-faint transition-colors hover:text-red-400"
+            >
+              <Trash2 size={12} strokeWidth={1.4} />
+            </button>
+          </Tooltip>
         </div>
       </div>
       {task.description && (

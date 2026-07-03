@@ -142,7 +142,7 @@ export async function runAgentTaskNow(taskId: string): Promise<void> {
 
 async function executeAgentTask(task: Task) {
   console.log("[agent] executing task:", task.id, task.title);
-  const { markExecuted, rescheduleNext, attachNotification, updateTask } = useTaskStore.getState();
+  const { markExecuted, rescheduleNext, attachNotification, updateTask, moveTask } = useTaskStore.getState();
   const addNotification = useNotificationStore.getState().add;
   const active = useModelStore.getState().models.find((m) => m.isActive);
 
@@ -161,7 +161,11 @@ async function executeAgentTask(task: Task) {
   const persona =
     task.agentPrompt?.trim() ||
     "Sen Axiom uygulamasının zamanlanmış arka plan ajansısın. Verilen görevi kısa, doğrudan ve özet bir şekilde yerine getir. Türkçe yanıt ver.";
-  const userMsg = task.actionMessage?.trim() || task.title;
+  // Pano görevlerinde (manuel todo) talimat = başlık + açıklama; agent
+  // görevlerinde kullanıcının yazdığı actionMessage esastır.
+  const userMsg =
+    task.actionMessage?.trim() ||
+    [task.title, task.description].filter((s) => s?.trim()).join("\n");
   const hasTools = modelSupportsTools(active);
 
   // System prompt'u: persona + built-in tool tarifi + etkin uygulama tool'ları
@@ -259,7 +263,11 @@ async function executeAgentTask(task: Task) {
     return;
   }
 
-  if (task.recurring && task.recurring !== "once") {
+  if (task.actionType !== "agent") {
+    // Pano görevi agent'a yaptırıldı → tamamlananlara taşı
+    moveTask(task.id, "completed");
+    console.log("[agent] board task completed:", task.id);
+  } else if (task.recurring && task.recurring !== "once") {
     rescheduleNext(task.id);
     console.log("[agent] rescheduled:", task.id, task.recurring);
   } else {
