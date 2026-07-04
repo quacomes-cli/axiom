@@ -3,6 +3,7 @@ import { Check, FolderOpen, Globe, Loader2, Monitor, Play, ShieldCheck, Terminal
 import { LevelControl } from "./LevelControl";
 import { ChipList } from "./ChipList";
 import { ipc } from "../../lib/ipc";
+import { useT } from "../../i18n";
 import type { PermissionConfig, PermissionLevel } from "../../types";
 
 type SaveState = "idle" | "saving" | "saved";
@@ -62,6 +63,7 @@ function Row({
 }
 
 export function PermissionGrid() {
+  const t = useT();
   const [config, setConfig] = useState<PermissionConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [save, setSave] = useState<SaveState>("idle");
@@ -101,7 +103,7 @@ export function PermissionGrid() {
   if (error) {
     return (
       <div className="rounded-xl bg-[rgba(248,113,113,0.06)] p-3 text-sm text-danger">
-        İzinler yüklenemedi: {error}
+        {t("permissions.loadError")} {error}
       </div>
     );
   }
@@ -120,9 +122,7 @@ export function PermissionGrid() {
         <div className="flex items-start gap-2 text-xs leading-relaxed text-text-faint">
           <ShieldCheck size={14} className="mt-0.5 shrink-0" />
           <p>
-            Varsayılan her şey kapalıdır; sen açarsın. "Sor" seviyesindeki işlemler
-            sağ altta onay kartı çıkarır — karttaki <span className="text-text-secondary">"Her zaman"</span> seçimi
-            buradaki kuralı kalıcı günceller.
+            {t("permissions.introBefore")}<span className="text-text-secondary">{t("permissions.alwaysQuoted")}</span>{t("permissions.introAfter")}
           </p>
         </div>
         <div className="flex h-6 shrink-0 items-center gap-1.5 text-xs text-text-faint">
@@ -130,7 +130,7 @@ export function PermissionGrid() {
           {save === "saved" && (
             <>
               <Check size={13} className="text-success" />
-              Kaydedildi
+              {t("permissions.saved")}
             </>
           )}
         </div>
@@ -139,12 +139,12 @@ export function PermissionGrid() {
       <div className="space-y-2.5">
         <Group
           icon={<FolderOpen size={15} strokeWidth={1.6} />}
-          title="Dosya Sistemi"
-          subtitle="Listedeki dizinler sınırdır — dışındaki yollar her zaman sorulur"
+          title={t("permissions.fsTitle")}
+          subtitle={t("permissions.fsSubtitle")}
         >
           <Row
-            label="Okuma"
-            hint="Modelin dosya ve dizin okuyabildiği kökler"
+            label={t("permissions.read")}
+            hint={t("permissions.readHint")}
             level={config.filesystem.read.level}
             onLevel={(l) => patch((d) => (d.filesystem.read.level = l))}
           >
@@ -156,8 +156,8 @@ export function PermissionGrid() {
             />
           </Row>
           <Row
-            label="Yazma"
-            hint="Dosya oluşturma ve üzerine yazma kökleri"
+            label={t("permissions.write")}
+            hint={t("permissions.writeHint")}
             level={config.filesystem.write.level}
             onLevel={(l) => patch((d) => (d.filesystem.write.level = l))}
           >
@@ -169,14 +169,14 @@ export function PermissionGrid() {
             />
           </Row>
           <Row
-            label="Silme"
-            hint="Yıkıcı işlem — varsayılan engelli"
+            label={t("permissions.delete")}
+            hint={t("permissions.deleteHint")}
             level={config.filesystem.delete}
             onLevel={(l) => patch((d) => (d.filesystem.delete = l))}
           />
           <Row
-            label="İzleme"
-            hint="Dizin değişikliklerini takip etme"
+            label={t("permissions.watch")}
+            hint={t("permissions.watchHint")}
             level={config.filesystem.watch.level}
             onLevel={(l) => patch((d) => (d.filesystem.watch.level = l))}
           >
@@ -191,12 +191,12 @@ export function PermissionGrid() {
 
         <Group
           icon={<Play size={15} strokeWidth={1.6} />}
-          title="Süreçler"
-          subtitle="Uygulama başlatma ve süreç yönetimi"
+          title={t("permissions.processTitle")}
+          subtitle={t("permissions.processSubtitle")}
         >
           <Row
-            label="Başlatma"
-            hint="Whitelist boşsa tüm uygulamalar seviyeye tabidir"
+            label={t("permissions.launch")}
+            hint={t("permissions.launchHint")}
             level={config.process.launch}
             onLevel={(l) => patch((d) => (d.process.launch = l))}
           >
@@ -208,12 +208,12 @@ export function PermissionGrid() {
             />
           </Row>
           <Row
-            label="Sonlandırma"
+            label={t("permissions.kill")}
             level={config.process.kill}
             onLevel={(l) => patch((d) => (d.process.kill = l))}
           />
           <Row
-            label="Listeleme"
+            label={t("permissions.list")}
             level={config.process.list}
             onLevel={(l) => patch((d) => (d.process.list = l))}
           />
@@ -221,24 +221,24 @@ export function PermissionGrid() {
 
         <Group
           icon={<Globe size={15} strokeWidth={1.6} />}
-          title="Ağ"
-          subtitle="Web araması, hava durumu, döviz gibi araçların internet erişimi"
+          title={t("permissions.networkTitle")}
+          subtitle={t("permissions.networkSubtitle")}
         >
           <Row
-            label="Dış bağlantı"
-            hint="İnternete giden istekler (web_search, weather, currency…)"
+            label={t("permissions.outbound")}
+            hint={t("permissions.outboundHint")}
             level={config.network.outbound}
             onLevel={(l) => patch((d) => (d.network.outbound = l))}
           />
           <Row
-            label="Localhost"
-            hint="Yerel servislere erişim (Ollama vb.)"
+            label={t("permissions.localhost")}
+            hint={t("permissions.localhostHint")}
             level={config.network.localhost}
             onLevel={(l) => patch((d) => (d.network.localhost = l))}
           />
           <div className="rounded-xl bg-surface-2 px-3.5 py-2.5">
-            <div className="text-[0.9286rem] text-text-secondary">Engelli alan adları</div>
-            <div className="mt-0.5 text-xs text-text-faint">Bu alanlara istek her koşulda reddedilir</div>
+            <div className="text-[0.9286rem] text-text-secondary">{t("permissions.blockedDomains")}</div>
+            <div className="mt-0.5 text-xs text-text-faint">{t("permissions.blockedDomainsHint")}</div>
             <ChipList
               items={config.network.blocked_domains}
               onChange={(b) => patch((d) => (d.network.blocked_domains = b))}
@@ -250,19 +250,19 @@ export function PermissionGrid() {
 
         <Group
           icon={<Terminal size={15} strokeWidth={1.6} />}
-          title="Kabuk"
-          subtitle="Modelin komut satırı çalıştırması"
+          title={t("permissions.shellTitle")}
+          subtitle={t("permissions.shellSubtitle")}
         >
           <Row
-            label="Komut çalıştırma"
-            hint='"Sor" önerilir — her komut onay kartına düşer'
+            label={t("permissions.execute")}
+            hint={t("permissions.executeHint")}
             level={config.shell.execute}
             onLevel={(l) => patch((d) => (d.shell.execute = l))}
           />
           <div className="rounded-xl bg-surface-2 px-3.5 py-2.5">
-            <div className="text-[0.9286rem] text-text-secondary">Engelli komut kalıpları</div>
+            <div className="text-[0.9286rem] text-text-secondary">{t("permissions.blockedCommands")}</div>
             <div className="mt-0.5 text-xs text-text-faint">
-              Bu kalıpları içeren komutlar seviye ne olursa olsun reddedilir
+              {t("permissions.blockedCommandsHint")}
             </div>
             <ChipList
               items={config.shell.blocked_commands}
@@ -275,17 +275,17 @@ export function PermissionGrid() {
 
         <Group
           icon={<Monitor size={15} strokeWidth={1.6} />}
-          title="Ekran"
-          subtitle="Ekran görüntüsü ve izleme"
+          title={t("permissions.screenTitle")}
+          subtitle={t("permissions.screenSubtitle")}
         >
           <Row
-            label="Ekran yakalama"
+            label={t("permissions.capture")}
             level={config.screen.capture}
             onLevel={(l) => patch((d) => (d.screen.capture = l))}
           />
           <Row
-            label="Sürekli izleme"
-            hint="Ekranın periyodik takibi — varsayılan engelli"
+            label={t("permissions.continuousWatch")}
+            hint={t("permissions.continuousWatchHint")}
             level={config.screen.continuous_watch}
             onLevel={(l) => patch((d) => (d.screen.continuous_watch = l))}
           />

@@ -1,11 +1,12 @@
 import { useId } from "react";
 import { motion } from "framer-motion";
+import { useT } from "../../i18n";
 import type { PermissionLevel } from "../../types";
 
-const OPTIONS: { value: PermissionLevel; label: string; dot: string }[] = [
-  { value: "allowed", label: "Serbest", dot: "bg-success" },
-  { value: "confirm", label: "Onay", dot: "bg-warn" },
-  { value: "blocked", label: "Engelli", dot: "bg-danger" },
+const OPTIONS: { value: PermissionLevel; labelKey: string; dot: string }[] = [
+  { value: "allowed", labelKey: "permissions.levelAllowed", dot: "bg-success" },
+  { value: "confirm", labelKey: "permissions.levelConfirm", dot: "bg-warn" },
+  { value: "blocked", labelKey: "permissions.levelBlocked", dot: "bg-danger" },
 ];
 
 export function LevelControl({
@@ -15,6 +16,7 @@ export function LevelControl({
   value: PermissionLevel;
   onChange: (level: PermissionLevel) => void;
 }) {
+  const t = useT();
   const id = useId();
 
   return (
@@ -41,7 +43,7 @@ export function LevelControl({
                 active ? "opacity-100" : "opacity-30"
               }`}
             />
-            <span className="relative">{o.label}</span>
+            <span className="relative">{t(o.labelKey)}</span>
           </button>
         );
       })}
