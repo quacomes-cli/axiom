@@ -21,6 +21,7 @@ import { useModelStore } from "../../stores/modelStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ipc } from "../../lib/ipc";
 import { lookupContextWindow, formatContext } from "./modelCatalog";
+import { useT } from "../../i18n";
 import type { HardwareProfile, LibraryModel, MemoryEstimate } from "../../types";
 
 // Yetenek bazlı filtreler (çoklu seçilebilir)
@@ -43,13 +44,14 @@ function capabilityIcon(cap: string) {
   }
 }
 
-const CAP_LABELS: Record<string, string> = {
-  vision: "Görsel",
-  tools: "Araçlar",
-  thinking: "Düşünme",
-  embedding: "Gömme",
-  audio: "Ses",
-  cloud: "Bulut",
+// cap → i18n anahtarı; render'da t() ile çözülür.
+const CAP_LABEL_KEYS: Record<string, string> = {
+  vision: "models.capVision",
+  tools: "models.capTools",
+  thinking: "models.capThinking",
+  embedding: "models.capEmbedding",
+  audio: "models.capAudio",
+  cloud: "models.capCloud",
 };
 
 const CAP_COLORS: Record<string, string> = {
@@ -61,6 +63,7 @@ const CAP_COLORS: Record<string, string> = {
 };
 
 export function ModelExplore() {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [activeCaps, setActiveCaps] = useState<Set<string>>(new Set());
   const [selectedModel, setSelectedModel] = useState<LibraryModel | null>(null);
@@ -151,10 +154,10 @@ export function ModelExplore() {
       <div className="mb-5 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text">
-            Modeller{!catalogLoading && catalog.length > 0 && ` (${filtered.length})`}
+            {t("models.title")}{!catalogLoading && catalog.length > 0 && ` (${filtered.length})`}
           </h1>
           <p className="mt-0.5 text-[0.9286rem] text-text-faint">
-            Keşfet, indir ve yerel olarak çalıştır
+            {t("models.subtitle")}
           </p>
         </div>
         <div style={{
@@ -169,14 +172,14 @@ export function ModelExplore() {
             className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-[0.9286rem] text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
           >
             <Rocket size={14} strokeWidth={1.4} />
-            Hızlandır
+            {t("models.accelerate")}
           </button>
           <button
             onClick={() => setView("models-manage" as any)}
             className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-[0.9286rem] text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
           >
             <Settings2 size={14} strokeWidth={1.4} />
-            Düzenle
+            {t("models.manage")}
           </button>
         </div>
       </div>
@@ -187,7 +190,7 @@ export function ModelExplore() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Model ara..."
+          placeholder={t("models.search")}
           className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
         />
       </div>
@@ -207,7 +210,7 @@ export function ModelExplore() {
                   }`}
               >
                 {capabilityIcon(cap)}
-                {CAP_LABELS[cap] ?? cap}
+                {t(CAP_LABEL_KEYS[cap] ?? cap)}
               </button>
             );
           })}
@@ -322,7 +325,7 @@ export function ModelExplore() {
                           className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.7143rem] font-medium ${CAP_COLORS[cap] ?? "bg-surface-3 text-text-faint"}`}
                         >
                           {capabilityIcon(cap)}
-                          {CAP_LABELS[cap] ?? cap}
+                          {t(CAP_LABEL_KEYS[cap] ?? cap)}
                         </span>
                       ))}
                     {(() => {
@@ -454,6 +457,7 @@ function ModelDetailModal({
   ollamaOnline: boolean;
   onClose: () => void;
 }) {
+  const t = useT();
   const pullModel = useModelStore((s) => s.pullModel);
   const pulling = useModelStore((s) => s.pulling);
   const pullProgress = useModelStore((s) => s.pullProgress);
@@ -543,7 +547,7 @@ function ModelDetailModal({
                   className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[0.7857rem] font-medium ${CAP_COLORS[cap] ?? "bg-surface-2 text-text-faint"}`}
                 >
                   {capabilityIcon(cap)}
-                  {CAP_LABELS[cap] ?? cap}
+                  {t(CAP_LABEL_KEYS[cap] ?? cap)}
                 </span>
               ))}
             {(() => {

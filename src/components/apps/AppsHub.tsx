@@ -18,12 +18,14 @@ import { VscVscode } from "react-icons/vsc";
 import { RiNotionFill } from "react-icons/ri";
 import { SiObsidian, SiGmail, SiGooglecalendar } from "react-icons/si";
 import { AppWindow, TrendingDown } from "lucide-react";
+import { useT } from "../../i18n";
 
-const TYPE_LABELS: Record<AppConnectionType, string> = {
-  api: "API Key",
-  webhook: "Webhook",
-  oauth: "OAuth",
-  local: "Yerel",
+// connectionType → i18n anahtarı; render'da t() ile çözülür.
+const TYPE_LABEL_KEYS: Record<AppConnectionType, string> = {
+  api: "apps.connApiKey",
+  webhook: "apps.connWebhook",
+  oauth: "apps.connOAuth",
+  local: "apps.connLocal",
 };
 
 type ConfigField =
@@ -590,6 +592,7 @@ function AppConfigDialog({
 }
 
 function AppCard({ app }: { app: AppIntegration }) {
+  const t = useT();
   const toggleApp = useAppStore((s) => s.toggleApp);
   const [configOpen, setConfigOpen] = useState(false);
 
@@ -616,14 +619,14 @@ function AppCard({ app }: { app: AppIntegration }) {
             </div>
             {hasTools && (
               <div className="mt-1 text-[0.7143rem] text-text-faint">
-                {app.tools.length} araç
+                {t("apps.toolCount", { count: app.tools.length })}
               </div>
             )}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[0.8571rem] text-text-faint">
-            {TYPE_LABELS[app.connectionType]}
+            {t(TYPE_LABEL_KEYS[app.connectionType])}
           </span>
           <button
             onClick={() => setConfigOpen(true)}
@@ -652,6 +655,7 @@ function AppCard({ app }: { app: AppIntegration }) {
 }
 
 export function AppsHub() {
+  const t = useT();
   const apps = useAppStore((s) => s.apps);
   const enabledCount = apps.filter((a) => a.enabled).length;
   const connectedCount = apps.filter((a) => a.connectionStatus === "connected").length;
@@ -662,13 +666,13 @@ export function AppsHub() {
   return (
     <div className="h-full overflow-y-auto p-6">
       <PageHeader
-        title="Uygulamalar"
-        subtitle={`${enabledCount} aktif${connectedCount > 0 ? ` · ${connectedCount} bağlı` : ""} — ${apps.length} entegrasyon`}
+        title={t("apps.title")}
+        subtitle={`${t("apps.active", { count: enabledCount })}${connectedCount > 0 ? ` · ${t("apps.connected", { count: connectedCount })}` : ""} — ${t("apps.integrations", { count: apps.length })}`}
       />
 
       {appsWithTools.length > 0 && (
         <>
-          <div className="mb-2 mt-4 text-[0.7857rem] uppercase tracking-wider text-text-faint">Araç Destekli</div>
+          <div className="mb-2 mt-4 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("apps.toolSupported")}</div>
           <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {appsWithTools.map((app) => (
               <AppCard key={app.id} app={app} />
@@ -679,7 +683,7 @@ export function AppsHub() {
 
       {appsWithout.length > 0 && (
         <>
-          <div className="mb-2 mt-6 text-[0.7857rem] uppercase tracking-wider text-text-faint">Yakında</div>
+          <div className="mb-2 mt-6 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("apps.comingSoon")}</div>
           <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-2">
             {appsWithout.map((app) => (
               <AppCard key={app.id} app={app} />
