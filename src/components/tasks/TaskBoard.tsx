@@ -24,17 +24,18 @@ import {
 } from "../../stores/taskStore";
 import { runAgentTaskNow } from "../../hooks/useTaskScheduler";
 import { Tooltip } from "../shared/Tooltip";
+import { useT, t as translate } from "../../i18n";
 
 const COLUMNS: {
   status: TaskStatus;
-  label: string;
+  labelKey: string;
   icon: React.FC<{ size?: number; strokeWidth?: number; className?: string }>;
   color: string;
 }[] = [
-  { status: "pending", label: "Bekleyen", icon: Clock, color: "text-yellow-400" },
-  { status: "running", label: "Çalışan", icon: Play, color: "text-blue-400" },
-  { status: "completed", label: "Tamamlanan", icon: CheckCircle2, color: "text-green-400" },
-  { status: "failed", label: "Başarısız", icon: XCircle, color: "text-red-400" },
+  { status: "pending", labelKey: "tasks.colPending", icon: Clock, color: "text-yellow-400" },
+  { status: "running", labelKey: "tasks.colRunning", icon: Play, color: "text-blue-400" },
+  { status: "completed", labelKey: "tasks.colCompleted", icon: CheckCircle2, color: "text-green-400" },
+  { status: "failed", labelKey: "tasks.colFailed", icon: XCircle, color: "text-red-400" },
 ];
 
 const STATUS_ORDER: TaskStatus[] = ["pending", "running", "completed", "failed"];
@@ -55,16 +56,20 @@ const PRIORITY_DOT: Record<string, string> = {
 };
 
 function formatCountdown(ms: number): string {
-  if (ms <= 0) return "0s";
+  const uh = translate("tasks.unitHour");
+  const um = translate("tasks.unitMin");
+  const us = translate("tasks.unitSec");
+  if (ms <= 0) return `0${us}`;
   const h = Math.floor(ms / 3_600_000);
   const m = Math.floor((ms % 3_600_000) / 60_000);
   const s = Math.floor((ms % 60_000) / 1_000);
-  if (h > 0) return `${h}sa ${m}dk`;
-  if (m > 0) return `${m}dk ${s}s`;
-  return `${s}s`;
+  if (h > 0) return `${h}${uh} ${m}${um}`;
+  if (m > 0) return `${m}${um} ${s}${us}`;
+  return `${s}${us}`;
 }
 
 function TaskCard({ task }: { task: Task }) {
+  const t = useT();
   const moveTask = useTaskStore((s) => s.moveTask);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -101,12 +106,12 @@ function TaskCard({ task }: { task: Task }) {
   const age = Date.now() - task.createdAt;
   const ageLabel =
     age < 60_000
-      ? "az önce"
+      ? t("tasks.justNow")
       : age < 3_600_000
-        ? `${Math.floor(age / 60_000)}dk`
+        ? `${Math.floor(age / 60_000)}${t("tasks.unitMin")}`
         : age < 86_400_000
-          ? `${Math.floor(age / 3_600_000)}sa`
-          : `${Math.floor(age / 86_400_000)}g`;
+          ? `${Math.floor(age / 3_600_000)}${t("tasks.unitHour")}`
+          : `${Math.floor(age / 86_400_000)}${t("tasks.unitDay")}`;
 
   const isAgent = task.source === "agent";
 
@@ -124,7 +129,7 @@ function TaskCard({ task }: { task: Task }) {
         </div>
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           {task.status !== "completed" && (
-            <Tooltip label={isAgentTask ? "Şimdi çalıştır" : "Agent'a yaptır"}>
+            <Tooltip label={isAgentTask ? t("tasks.runNow") : t("tasks.runByAgent")}>
               <button
                 onClick={runNow}
                 disabled={!canRun}
@@ -140,7 +145,7 @@ function TaskCard({ task }: { task: Task }) {
               </button>
             </Tooltip>
           )}
-          <Tooltip label="Sil">
+          <Tooltip label={t("tasks.delete")}>
             <button
               onClick={() => deleteTask(task.id)}
               className="rounded p-0.5 text-text-faint transition-colors hover:text-red-400"
@@ -177,7 +182,7 @@ function TaskCard({ task }: { task: Task }) {
           {prev && (
             <button
               onClick={() => moveTask(task.id, prev)}
-              title={COLUMNS.find((c) => c.status === prev)?.label}
+              title={t(COLUMNS.find((c) => c.status === prev)?.labelKey ?? "")}
               className="flex h-5 w-5 items-center justify-center rounded text-text-faint transition-colors hover:bg-hover hover:text-text"
             >
               <ChevronLeft size={12} strokeWidth={1.6} />
@@ -186,7 +191,7 @@ function TaskCard({ task }: { task: Task }) {
           {next && (
             <button
               onClick={() => moveTask(task.id, next)}
-              title={COLUMNS.find((c) => c.status === next)?.label}
+              title={t(COLUMNS.find((c) => c.status === next)?.labelKey ?? "")}
               className="flex h-5 w-5 items-center justify-center rounded text-text-faint transition-colors hover:bg-hover hover:text-text"
             >
               <ChevronRight size={12} strokeWidth={1.6} />
@@ -199,13 +204,14 @@ function TaskCard({ task }: { task: Task }) {
 }
 
 const PRIORITIES = [
-  { value: undefined as "low" | "medium" | "high" | undefined, label: "Yok" },
-  { value: "low" as const, label: "Düşük" },
-  { value: "medium" as const, label: "Normal" },
-  { value: "high" as const, label: "Yüksek" },
+  { value: undefined as "low" | "medium" | "high" | undefined, labelKey: "tasks.prioNone" },
+  { value: "low" as const, labelKey: "tasks.prioLow" },
+  { value: "medium" as const, labelKey: "tasks.prioMedium" },
+  { value: "high" as const, labelKey: "tasks.prioHigh" },
 ];
 
 function AddTaskForm({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const addTask = useTaskStore((s) => s.addTask);
   const updateTask = useTaskStore((s) => s.updateTask);
   const [title, setTitle] = useState("");
@@ -236,20 +242,20 @@ function AddTaskForm({ onClose }: { onClose: () => void }) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
-        placeholder="Görev başlığı..."
+        placeholder={t("tasks.titlePlaceholder")}
         className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
       />
       <textarea
         value={desc}
         onChange={(e) => setDesc(e.target.value)}
-        placeholder="Açıklama (opsiyonel)"
+        placeholder={t("tasks.descPlaceholder")}
         rows={2}
         className="mt-2 w-full resize-none bg-transparent text-xs text-text-secondary outline-none placeholder:text-text-faint"
       />
       <div className="mt-2 flex items-center gap-1.5">
         {PRIORITIES.map((p) => (
           <button
-            key={p.label}
+            key={p.labelKey}
             type="button"
             onClick={() => setPriority(p.value)}
             className={`rounded-md px-2 py-0.5 text-[0.7143rem] transition-colors ${
@@ -258,7 +264,7 @@ function AddTaskForm({ onClose }: { onClose: () => void }) {
                 : "text-text-faint hover:bg-hover hover:text-text-secondary"
             }`}
           >
-            {p.label}
+            {t(p.labelKey)}
           </button>
         ))}
       </div>
@@ -268,14 +274,14 @@ function AddTaskForm({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="rounded-lg px-2.5 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text"
         >
-          İptal
+          {t("tasks.cancel")}
         </button>
         <button
           type="submit"
           disabled={!title.trim()}
           className="rounded-lg bg-active px-2.5 py-1 text-xs text-text transition-colors hover:bg-border-hover disabled:opacity-30"
         >
-          Ekle
+          {t("tasks.add")}
         </button>
       </div>
     </form>
@@ -283,6 +289,7 @@ function AddTaskForm({ onClose }: { onClose: () => void }) {
 }
 
 function AgentTaskForm({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const scheduleTask = useTaskStore((s) => s.scheduleTask);
   const [title, setTitle] = useState("");
   const [userMsg, setUserMsg] = useState("");
@@ -321,27 +328,27 @@ function AgentTaskForm({ onClose }: { onClose: () => void }) {
     <form onSubmit={submit} className="rounded-xl bg-surface-2 p-3">
       <div className="mb-2 flex items-center gap-1.5 text-[0.7857rem] text-purple-400">
         <Sparkles size={12} strokeWidth={1.6} />
-        <span className="uppercase tracking-wider">Agent Görevi</span>
+        <span className="uppercase tracking-wider">{t("tasks.agentTask")}</span>
       </div>
       <input
         ref={inputRef}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === "Escape" && onClose()}
-        placeholder="Görev adı (örn. Sabah haber özeti)..."
+        placeholder={t("tasks.agentTitlePlaceholder")}
         className="w-full bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
       />
       <textarea
         value={userMsg}
         onChange={(e) => setUserMsg(e.target.value)}
-        placeholder="Ne yapmasını istiyorsun? (örn. 'Bugün hava nasıl olacak istanbul için kısaca özetle')"
+        placeholder={t("tasks.agentMsgPlaceholder")}
         rows={2}
         className="mt-2 w-full resize-none bg-transparent text-xs text-text-secondary outline-none placeholder:text-text-faint"
       />
       <textarea
         value={systemPrompt}
         onChange={(e) => setSystemPrompt(e.target.value)}
-        placeholder="Sistem promptu (opsiyonel — agent'ın kişiliği ve kuralları)"
+        placeholder={t("tasks.agentPromptPlaceholder")}
         rows={2}
         className="mt-2 w-full resize-none bg-transparent text-[0.7857rem] text-text-faint outline-none placeholder:text-text-faint/60"
       />
@@ -362,9 +369,9 @@ function AgentTaskForm({ onClose }: { onClose: () => void }) {
             onChange={(e) => setRecurring(e.target.value as TaskRecurring)}
             className="rounded-md bg-surface px-1.5 py-0.5 text-[0.7857rem] text-text-secondary outline-none"
           >
-            <option value="once">Tek sefer</option>
-            <option value="daily">Her gün</option>
-            <option value="weekly">Her hafta</option>
+            <option value="once">{t("tasks.once")}</option>
+            <option value="daily">{t("tasks.daily")}</option>
+            <option value="weekly">{t("tasks.weekly")}</option>
           </select>
         </label>
       </div>
@@ -374,14 +381,14 @@ function AgentTaskForm({ onClose }: { onClose: () => void }) {
           onClick={onClose}
           className="rounded-lg px-2.5 py-1 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text"
         >
-          İptal
+          {t("tasks.cancel")}
         </button>
         <button
           type="submit"
           disabled={!title.trim() || !userMsg.trim()}
           className="rounded-lg bg-purple-500/30 px-2.5 py-1 text-xs text-purple-200 transition-colors hover:bg-purple-500/50 disabled:opacity-30"
         >
-          Zamanla
+          {t("tasks.schedule")}
         </button>
       </div>
     </form>
@@ -389,6 +396,7 @@ function AgentTaskForm({ onClose }: { onClose: () => void }) {
 }
 
 export function TaskBoard() {
+  const t = useT();
   const tasks = useTaskStore((s) => s.tasks);
   const [adding, setAdding] = useState(false);
   const [addingAgent, setAddingAgent] = useState(false);
@@ -397,8 +405,8 @@ export function TaskBoard() {
     <div className="flex h-full flex-col overflow-hidden p-6">
       <div className="flex items-center justify-between">
         <PageHeader
-          title="Görevler"
-          subtitle="Aktif, zamanlanmış ve tamamlanmış görevler."
+          title={t("tasks.title")}
+          subtitle={t("tasks.subtitle")}
         />
         <div className="flex items-center gap-2">
           <button
@@ -406,14 +414,14 @@ export function TaskBoard() {
             className="flex items-center gap-1.5 rounded-lg bg-purple-500/15 px-3 py-1.5 text-xs text-purple-300 transition-colors hover:bg-purple-500/25"
           >
             <Sparkles size={13} strokeWidth={1.6} />
-            Agent Zamanla
+            {t("tasks.scheduleAgent")}
           </button>
           <button
             onClick={() => { setAdding(true); setAddingAgent(false); }}
             className="flex items-center gap-1.5 rounded-lg bg-surface px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-2 hover:text-text"
           >
             <Plus size={13} strokeWidth={1.6} />
-            Yeni Görev
+            {t("tasks.newTask")}
           </button>
         </div>
       </div>
@@ -429,7 +437,7 @@ export function TaskBoard() {
             >
               <div className="flex items-center gap-2 px-4 pt-4 pb-3">
                 <Icon size={14} strokeWidth={1.4} className={col.color} />
-                <span className="text-sm text-text-secondary">{col.label}</span>
+                <span className="text-sm text-text-secondary">{t(col.labelKey)}</span>
                 <span className="ml-auto rounded-md bg-surface-2 px-1.5 py-0.5 text-[0.7143rem] text-text-faint">
                   {colTasks.length}
                 </span>
@@ -443,7 +451,7 @@ export function TaskBoard() {
                 )}
                 {colTasks.length === 0 && !(col.status === "pending" && adding) && !(col.status === "running" && addingAgent) && (
                   <div className="rounded-xl bg-surface-2 py-8 text-center text-xs text-text-faint">
-                    Görev yok
+                    {t("tasks.noTasks")}
                   </div>
                 )}
                 {colTasks.map((task) => (

@@ -1,5 +1,6 @@
 import { Star, Download, Trash2, ExternalLink } from "lucide-react";
 import type { SkillInfo, InstalledSkill } from "../../types";
+import { useT } from "../../i18n";
 
 function formatStars(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
@@ -15,6 +16,7 @@ export function DiscoverCard({
   installed: boolean;
   onInstall: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-surface-2">
       <div className="flex items-start gap-3">
@@ -36,19 +38,19 @@ export function DiscoverCard({
       </div>
 
       <p className="mt-2 flex-1 text-xs leading-relaxed text-text-secondary line-clamp-2">
-        {skill.description || "Açıklama yok"}
+        {skill.description || t("skills.noDescription")}
       </p>
 
       <div className="mt-3 flex items-center gap-2">
         {installed ? (
-          <span className="text-xs text-text-faint">Yüklü</span>
+          <span className="text-xs text-text-faint">{t("skills.installedShort")}</span>
         ) : (
           <button
             onClick={onInstall}
             className="flex items-center gap-1.5 rounded-lg bg-active px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-border-hover"
           >
             <Download size={12} strokeWidth={1.6} />
-            Yükle
+            {t("skills.install")}
           </button>
         )}
         <a
@@ -73,6 +75,7 @@ export function InstalledCard({
   onToggle: () => void;
   onUninstall: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-col rounded-2xl border border-border bg-surface p-4 transition-colors hover:bg-surface-2">
       <div className="flex items-start gap-3">
@@ -86,7 +89,7 @@ export function InstalledCard({
       </div>
 
       <p className="mt-2 flex-1 text-xs leading-relaxed text-text-secondary line-clamp-2">
-        {skill.description || "Açıklama yok"}
+        {skill.description || t("skills.noDescription")}
       </p>
 
       <div className="mt-3 flex items-center gap-2">
@@ -98,7 +101,7 @@ export function InstalledCard({
               : "bg-surface-3 text-text-faint"
           }`}
         >
-          {skill.enabled ? "Aktif" : "Pasif"}
+          {skill.enabled ? t("skills.active") : t("skills.inactive")}
         </button>
         <button
           onClick={onUninstall}

@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, Loader2, Sparkles } from "lucide-react";
 import { useSkillStore } from "../../stores/skillStore";
 import { DiscoverCard, InstalledCard } from "./SkillCard";
+import { useT } from "../../i18n";
 
 const PAGE_SIZE = 20;
 
 export function SkillsPanel() {
+  const t = useT();
   const availableSkills = useSkillStore((s) => s.availableSkills);
   const installedSkills = useSkillStore((s) => s.installedSkills);
   const loading = useSkillStore((s) => s.loading);
@@ -55,7 +57,7 @@ export function SkillsPanel() {
       <div className="shrink-0 px-6 pt-6 pb-4">
         <div className="flex items-center gap-2.5 mb-4">
           <Sparkles size={20} strokeWidth={1.4} className="text-text-faint" />
-          <h1 className="text-lg font-semibold text-text">Yetenekler</h1>
+          <h1 className="text-lg font-semibold text-text">{t("skills.title")}</h1>
         </div>
 
         <div className="flex items-center gap-3">
@@ -64,7 +66,7 @@ export function SkillsPanel() {
             <input
               value={searchValue}
               onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Yetenek ara..."
+              placeholder={t("skills.search")}
               className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
             />
           </div>
@@ -78,7 +80,7 @@ export function SkillsPanel() {
                   : "text-text-faint hover:text-text-secondary"
               }`}
             >
-              Keşfet
+              {t("skills.explore")}
             </button>
             <button
               onClick={() => setActiveTab("installed")}
@@ -88,7 +90,7 @@ export function SkillsPanel() {
                   : "text-text-faint hover:text-text-secondary"
               }`}
             >
-              Yüklü ({installedSkills.length})
+              {t("skills.installed", { count: installedSkills.length })}
             </button>
           </div>
         </div>

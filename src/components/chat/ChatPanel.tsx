@@ -63,6 +63,7 @@ import { ScreenshotButton } from "../shared/ScreenshotButton";
 import { useTTS } from "../../hooks/useTTS";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useAppStore } from "../../stores/appStore";
+import { useT } from "../../i18n";
 import { FaGithub, FaTelegram, FaDiscord } from "react-icons/fa6";
 import { RiNotionFill } from "react-icons/ri";
 import { ToolBlock } from "../code/ToolMessage";
@@ -72,18 +73,19 @@ import { useUserProfileStore } from "../../stores/userProfileStore";
 
 const EMPTY_DOCS: DocumentAttachment[] = [];
 
-const authenticatedTemplates = [
-  (name: string) => `Merhaba, ${name}.`,
-  (name: string) => `Hoş geldin ${name}.`,
-  (name: string) => `Seni dinliyorum ${name}.`,
-  (name: string) => `Söz sende ${name}.`
+// i18n anahtarları — render sırasında t() ile çözülür (auth olanlar {{name}} alır).
+const authenticatedTemplateKeys = [
+  "chat.greetName1",
+  "chat.greetName2",
+  "chat.greetName3",
+  "chat.greetName4",
 ];
 
-const unauthenticatedTemplates = [
-  "Nasıl yardımcı olabilirim?",
-  "Yeni bir çalışma başlatalım.",
-  "Sorunuzu analiz etmeye hazırım.",
-  "Lütfen bir komut girin."
+const unauthenticatedTemplateKeys = [
+  "chat.greet1",
+  "chat.greet2",
+  "chat.greet3",
+  "chat.greet4",
 ];
 
 function getDomain(url: string): string {
@@ -667,8 +669,8 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
           <button
             onClick={() => speak(msg.id, msg.text)}
             className={`rounded-md p-1 ${isSpeakingThis
-                ? "text-accent hover:bg-hover"
-                : "text-text-faint hover:bg-hover hover:text-text-secondary"
+              ? "text-accent hover:bg-hover"
+              : "text-text-faint hover:bg-hover hover:text-text-secondary"
               }`}
           >
             {isSpeakingThis ? (
@@ -973,13 +975,14 @@ function useSlashCommands(): SlashCommand[] {
   return [...BASE_SLASH_COMMANDS, ...appCommands];
 }
 
-const MODE_OPTIONS: { value: ChatMode; icon: typeof Zap; label: string }[] = [
-  { value: "fast", icon: Zap, label: "Hızlı" },
-  { value: "balanced", icon: Sparkles, label: "Dengeli" },
-  { value: "thinking", icon: Brain, label: "Derin Düşünme" },
+const MODE_OPTIONS: { value: ChatMode; icon: typeof Zap; labelKey: string }[] = [
+  { value: "fast", icon: Zap, labelKey: "chat.modeFast" },
+  { value: "balanced", icon: Sparkles, labelKey: "chat.modeBalanced" },
+  { value: "thinking", icon: Brain, labelKey: "chat.modeThinking" },
 ];
 
 export function ModeSelector({ mode, onChange }: { mode?: ChatMode; onChange?: (m: ChatMode) => void } = {}) {
+  const t = useT();
   const storeMode = useChatStore((s) => s.chatMode);
   const storeSet = useChatStore((s) => s.setChatMode);
   const chatMode = mode ?? storeMode;
@@ -1013,7 +1016,7 @@ export function ModeSelector({ mode, onChange }: { mode?: ChatMode; onChange?: (
         className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.7857rem] text-text-faint transition-all duration-200 hover:bg-hover hover:text-text-secondary"
       >
         <CurrentIcon size={12} strokeWidth={1.6} />
-        <span style={{ height: 20, fontSize: 13 }}>{current.label}</span>
+        <span style={{ height: 20, fontSize: 13 }}>{t(current.labelKey)}</span>
         {open ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
       </button>
 
@@ -1035,7 +1038,7 @@ export function ModeSelector({ mode, onChange }: { mode?: ChatMode; onChange?: (
                     key={opt.value}
                     type="button"
                     disabled={disabled}
-                    title={disabled ? "Bu model derin düşünme yeteneğini desteklemiyor" : undefined}
+                    title={disabled ? t("chat.modeUnsupported") : undefined}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (disabled) return;
@@ -1050,7 +1053,7 @@ export function ModeSelector({ mode, onChange }: { mode?: ChatMode; onChange?: (
                       }`}
                   >
                     <Icon size={14} strokeWidth={1.6} />
-                    <span style={{ height: 20 }}>{opt.label}</span>
+                    <span style={{ height: 20 }}>{t(opt.labelKey)}</span>
                     {chatMode === opt.value && !disabled && <Check size={14} strokeWidth={2} className="ml-auto shrink-0 text-accent" />}
                   </button>
                 );
@@ -1287,6 +1290,7 @@ export function ModelSelector() {
 }
 
 export function ChatPanel() {
+  const t = useT();
   const chat = useChatStore((s) => s.activeChat());
   const thinking = useChatStore((s) => s.thinking);
   const thinkingStatus = useChatStore((s) => s.thinkingStatus);
@@ -1473,26 +1477,50 @@ export function ChatPanel() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // 1. Menü kapalıyken normal Enter basılırsa formu gönder
       if (e.key === "Enter" && !e.shiftKey && !showSlash) {
         e.preventDefault();
         (e.target as HTMLTextAreaElement).form?.requestSubmit();
         return;
       }
-      if (filteredCommands.length === 0) return;
+
+      // Eğer menü görünmüyorsa veya liste boşsa klavye yönlendirmelerini siktir et, normal çalışsın
+      if (!showSlash || filteredCommands.length === 0) return;
+
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSlashIndex((i) => (i + 1) % filteredCommands.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSlashIndex((i) => (i - 1 + filteredCommands.length) % filteredCommands.length);
-      } else if (e.key === "Tab" || (e.key === "Enter" && showSlash)) {
+      } else if (e.key === "Tab" || e.key === "Enter") {
         e.preventDefault();
         const cmd = filteredCommands[slashIndex];
-        if (cmd) setDraft(cmd.command + " ");
+        if (cmd) {
+          setDraft(cmd.command + " ");
+          // Opsiyonel: Komut seçilince menüyü kapatmak istersen buraya setShowSlash(false) atabilirsin
+        }
       }
     },
     [filteredCommands, slashIndex, showSlash]
   );
+
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // 2. Index her değiştiğinde scroll barı ittirecek efekti yaz
+  useEffect(() => {
+    if (!showSlash || !listRef.current) return;
+
+    // Listenin içindeki aktif butonu index yardımıyla buluyoruz
+    const activeChild = listRef.current.children[slashIndex] as HTMLElement;
+
+    if (activeChild) {
+      activeChild.scrollIntoView({
+        behavior: "auto", // Hızlı tepki vermesi için "auto" klavyede daha crisp hissettirir, "smooth" biraz hantal kalabilir
+        block: "nearest", // Sadece ekrandan taşarsa kaydırır, can evimiz burası
+      });
+    }
+  }, [slashIndex, showSlash]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -1529,11 +1557,16 @@ export function ChatPanel() {
       <AnimatePresence>
         {filteredCommands.length > 0 && (
           <motion.div
+            ref={listRef}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.15 }}
             className="absolute bottom-full left-0 mb-1.5 w-full h-max-[50vh] overflow-hidden rounded-xl border border-border bg-surface-2 shadow-lg"
+            style={{
+              maxHeight: 225,
+              overflowY: "scroll",
+            }}
           >
             {filteredCommands.map((cmd, i) => (
               <button
@@ -1570,7 +1603,7 @@ export function ChatPanel() {
 
       <form
         onSubmit={submit}
-        className="group/form flex mx-auto w-[90%] gap-3 rounded-2xl bg-surface-2 px-1 py-1.5 pb-2 transition-colors duration-200 focus-within:bg-surface-3"
+        className="group/form flex mx-auto w-[90%] gap-3 rounded-2xl bg-surface-2 px-1 py-1.5 pb-2 transition-color duration-200 focus-within:bg-surface-3 ring-1 ring-accent/15 focus-within:ring-accent/25"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -1597,8 +1630,8 @@ export function ChatPanel() {
             rows={1}
             placeholder={
               activeModel
-                ? "Mesaj yaz..."
-                : "Model seçilmedi — Bir model seç"
+                ? t("chat.inputPlaceholder")
+                : t("chat.noModel")
             }
             disabled={thinking || !activeModel}
             className="flex-1 resize-none bg-transparent text-sm text-text outline-none placeholder:text-text-faint disabled:opacity-50"
@@ -1679,10 +1712,10 @@ export function ChatPanel() {
                 ? "bg-accent-muted text-text-secondary"
                 : "text-text-faint hover:bg-hover hover:text-text-secondary"
                 }`}
-              title={toolUseEnabled ? "Araçlar açık — kapat" : "Araçlar kapalı — aç"}
+              title={toolUseEnabled ? t("chat.toolsOn") : t("chat.toolsOff")}
             >
               <Wrench size={12} strokeWidth={1.6} />
-              <span style={{ height: 20, fontSize: 13 }}>Araçlar</span>
+              <span style={{ height: 20, fontSize: 13 }}>{t("chat.tools")}</span>
             </button>
           )}
           {modelSupportsTools(activeModel) && toolUseEnabled && modelWeakAtTools(activeModel) && (
@@ -1745,18 +1778,18 @@ export function ChatPanel() {
         textAlign: "center",
         width: "fit-content",
         fontSize: 13
-      }}>(Deneysel Sürüm) Geliştirme aşamasındadır, hata yapabilir...</p>
+      }}>{t("chat.disclaimer")}</p>
     </div>
   );
 
   const profile = useUserProfileStore((s) => s.profile);
 
-  const [authIndex] = useState(() => Math.floor(Math.random() * authenticatedTemplates.length));
-  const [unauthIndex] = useState(() => Math.floor(Math.random() * unauthenticatedTemplates.length));
+  const [authIndex] = useState(() => Math.floor(Math.random() * authenticatedTemplateKeys.length));
+  const [unauthIndex] = useState(() => Math.floor(Math.random() * unauthenticatedTemplateKeys.length));
 
-  const userName = profile?.name?.split(" ")[0] || "Kullanıcı";
-  const renderedAuthText = authenticatedTemplates[authIndex](userName);
-  const renderedUnauthText = unauthenticatedTemplates[unauthIndex];
+  const userName = profile?.name?.split(" ")[0] || t("chat.defaultUser");
+  const renderedAuthText = t(authenticatedTemplateKeys[authIndex], { name: userName });
+  const renderedUnauthText = t(unauthenticatedTemplateKeys[unauthIndex]);
 
   return (
     <div className="flex h-full flex-col">
@@ -1771,7 +1804,7 @@ export function ChatPanel() {
             className="flex flex-1 flex-col items-center justify-center px-6"
           >
             <div className="mb-10 flex flex-row items-center justify-center gap-3 select-none">
-              
+
 
               <h1 className="text-xl md:text-3xl tracking-tight flex items-center justify-center text-center gap-3 w-full">
                 {activeModel ? (
