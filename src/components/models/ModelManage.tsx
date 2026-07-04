@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ModalOverlay } from "../shared/ModalOverlay";
 import {
@@ -25,6 +25,7 @@ import { OptimizationPanel } from "./OptimizationPanel";
 import { useModelStore } from "../../stores/modelStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ipc } from "../../lib/ipc";
+import { useT } from "../../i18n";
 import type {
   ModelInfo,
   ModelDetail,
@@ -44,6 +45,7 @@ type TabId = (typeof TABS)[number]["id"];
 // ---- Main ------------------------------------------------------------------
 
 export function ModelManage() {
+  const t = useT();
   const [tab, setTab] = useState<TabId>("ollama");
   const setView = useUiStore((s) => s.setView);
 
@@ -70,7 +72,7 @@ export function ModelManage() {
           <ArrowLeft size={16} strokeWidth={1.4} />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-text">Model Yönetimi</h1>
+          <h1 className="text-lg font-semibold text-text">{t("models.manageTitle")}</h1>
         </div>
       </div>
 
@@ -86,11 +88,10 @@ export function ModelManage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.9286rem] font-medium transition-colors duration-150 ${
-                active
+              className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[0.9286rem] font-medium transition-colors duration-150 ${active
                   ? "text-text"
                   : "text-text-faint hover:text-text-secondary"
-              }`}
+                }`}
             >
               {active && (
                 <motion.div
@@ -117,6 +118,7 @@ export function ModelManage() {
 // ---- Ollama Section --------------------------------------------------------
 
 function OllamaSection() {
+  const t = useT();
   const ollamaOnline = useModelStore((s) => s.ollamaOnline);
   const ollamaStatus = useModelStore((s) => s.ollamaStatus);
   const ollamaInstalling = useModelStore((s) => s.ollamaInstalling);
@@ -234,8 +236,8 @@ function OllamaSection() {
       {!loading && ollamaModels.length === 0 && (
         <div className="rounded-2xl bg-surface px-6 py-10 text-center text-sm text-text-faint">
           {ollamaOnline
-            ? "Ollama'da henüz model yok. Keşfet sayfasından model indir."
-            : "Ollama bağlantısı kurulamadı. Ollama'nın çalıştığından emin ol."}
+            ? t("models.noModelsExplore")
+            : t("models.ollamaFailed")}
         </div>
       )}
 
@@ -259,6 +261,7 @@ function formatBytes(bytes: number | null): string {
 }
 
 function ModelCard({ model }: { model: ModelInfo }) {
+  const t = useT();
   const setActive = useModelStore((s) => s.setActive);
   const deleteModel = useModelStore((s) => s.deleteModel);
   const [confirming, setConfirming] = useState(false);
@@ -267,9 +270,8 @@ function ModelCard({ model }: { model: ModelInfo }) {
   return (
     <>
       <div
-        className={`group flex items-center gap-3 rounded-xl px-3.5 py-3 transition-colors duration-150 ${
-          model.isActive ? "bg-surface-2 ring-1 ring-border-hover" : "bg-surface-2 hover:bg-surface-3"
-        }`}
+        className={`group flex items-center gap-3 rounded-xl px-3.5 py-3 transition-colors duration-150 ${model.isActive ? "bg-surface-2 ring-1 ring-border-hover" : "bg-surface-2 hover:bg-surface-3"
+          }`}
       >
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-hover">
           {model.provider === "ollama" ? (
@@ -295,11 +297,10 @@ function ModelCard({ model }: { model: ModelInfo }) {
             {model.quantization && (
               <button
                 onClick={() => model.provider === "ollama" && setShowDetail(true)}
-                className={`rounded px-1 py-0.5 transition-colors ${
-                  model.provider === "ollama"
+                className={`rounded px-1 py-0.5 transition-colors ${model.provider === "ollama"
                     ? "hover:bg-hover-strong hover:text-text-secondary cursor-pointer"
                     : ""
-                }`}
+                  }`}
               >
                 {model.quantization}
               </button>
@@ -314,7 +315,7 @@ function ModelCard({ model }: { model: ModelInfo }) {
             <button
               onClick={() => setShowDetail(true)}
               className="flex h-7 w-7 items-center justify-center rounded-lg text-text-faint transition-colors hover:bg-hover-strong hover:text-text-secondary"
-              title="Model detayları"
+              title={t("models.modelDetails")}
             >
               <Info size={14} strokeWidth={1.4} />
             </button>
@@ -377,6 +378,7 @@ function formatMb(mb: number): string {
 }
 
 function ModelDetailDialog({ model, onClose }: { model: ModelInfo; onClose: () => void }) {
+  const t = useT();
   const [detail, setDetail] = useState<ModelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -431,7 +433,7 @@ function ModelDetailDialog({ model, onClose }: { model: ModelInfo; onClose: () =
               <DetailField icon={Info} label="Kuantizasyon" value={detail.quantizationLevel ?? "—"} />
               <DetailField icon={Info} label="Format" value={detail.format ?? "—"} />
               {detail.contextLength && (
-                <DetailField icon={Info} label="Bağlam Uzunluğu" value={`${(detail.contextLength / 1024).toFixed(0)}K token`} />
+                <DetailField icon={Info} label={t("models.contextLength")} value={`${(detail.contextLength / 1024).toFixed(0)}K token`} />
               )}
             </div>
 
@@ -455,27 +457,25 @@ function ModelDetailDialog({ model, onClose }: { model: ModelInfo; onClose: () =
 
                 <div className="flex gap-2 pt-1">
                   <span
-                    className={`rounded px-2 py-0.5 text-[0.7143rem] font-medium ${
-                      detail.memoryEstimate.fitsVram
+                    className={`rounded px-2 py-0.5 text-[0.7143rem] font-medium ${detail.memoryEstimate.fitsVram
                         ? "bg-success/15 text-success"
                         : "bg-warn/15 text-warn"
-                    }`}
+                      }`}
                   >
-                    {detail.memoryEstimate.fitsVram ? "VRAM'e sığar" : "VRAM yetersiz"}
+                    {detail.memoryEstimate.fitsVram ? t("models.fitsVram") : "VRAM yetersiz"}
                   </span>
                   <span
-                    className={`rounded px-2 py-0.5 text-[0.7143rem] font-medium ${
-                      detail.memoryEstimate.fitsRam
+                    className={`rounded px-2 py-0.5 text-[0.7143rem] font-medium ${detail.memoryEstimate.fitsRam
                         ? "bg-success/15 text-success"
                         : "bg-danger/15 text-danger"
-                    }`}
+                      }`}
                   >
-                    {detail.memoryEstimate.fitsRam ? "RAM'e sığar" : "RAM yetersiz"}
+                    {detail.memoryEstimate.fitsRam ? t("models.fitsRam") : "RAM yetersiz"}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-[0.7857rem]">
-                  <span className="text-text-faint">Önerilen Bağlam</span>
+                  <span className="text-text-faint">{t("models.recommendedContext")}</span>
                   <span className="text-text-secondary">
                     {(detail.memoryEstimate.recommendedCtx / 1024).toFixed(0)}K token
                   </span>
@@ -507,24 +507,35 @@ const CLOUD_PRESETS: Record<string, { label: string; defaultModels: CloudModelDe
   openai: {
     label: "OpenAI",
     defaultModels: [
-      { id: "gpt-4o", displayName: "GPT-4o", contextLength: 128000 },
+      { id: "gpt-5.5", displayName: "GPT-5.5 (Frontier)", contextLength: 1048576 },
+      { id: "gpt-5.5-pro", displayName: "GPT-5.5 Pro", contextLength: 1048576 },
+      { id: "gpt-5.4-mini", displayName: "GPT-5.4 Mini", contextLength: 1048576 },
+      { id: "gpt-5.4-nano", displayName: "GPT-5.4 Nano", contextLength: 1048576 },
+      { id: "o1", displayName: "OpenAI o1 (Reasoning)", contextLength: 200000 },
+      { id: "o3-mini", displayName: "OpenAI o3-mini", contextLength: 200000 },
+      { id: "gpt-4o", displayName: "GPT-4o (Legacy Prod)", contextLength: 128000 },
       { id: "gpt-4o-mini", displayName: "GPT-4o Mini", contextLength: 128000 },
-      { id: "gpt-4.1", displayName: "GPT-4.1", contextLength: 1047576 },
     ],
   },
   anthropic: {
     label: "Anthropic",
     defaultModels: [
-      { id: "claude-sonnet-4-20250514", displayName: "Claude Sonnet 4", contextLength: 200000 },
-      { id: "claude-opus-4-20250514", displayName: "Claude Opus 4", contextLength: 200000 },
-      { id: "claude-haiku-3-5-20241022", displayName: "Claude 3.5 Haiku", contextLength: 200000 },
+      { id: "claude-fable-5", displayName: "Claude Fable 5", contextLength: 1048576 },
+      { id: "claude-sonnet-5", displayName: "Claude Sonnet 5", contextLength: 1048576 },
+      { id: "claude-opus-4-8", displayName: "Claude Opus 4.8", contextLength: 1048576 },
+      { id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6", contextLength: 1048576 },
+      { id: "claude-opus-4-6", displayName: "Claude Opus 4.6", contextLength: 1048576 },
+      { id: "claude-haiku-4-5", displayName: "Claude 4.5 Haiku", contextLength: 200000 },
     ],
   },
   gemini: {
-    label: "Google Gemini",
+    label: "Gemini",
     defaultModels: [
-      { id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash", contextLength: 1048576 },
+      { id: "gemini-3.5-flash", displayName: "Gemini 3.5 Flash", contextLength: 1048576 },
+      { id: "gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro (Preview)", contextLength: 1048576 },
+      { id: "gemini-3.1-flash-lite", displayName: "Gemini 3.1 Flash-Lite", contextLength: 1048576 },
       { id: "gemini-2.5-pro", displayName: "Gemini 2.5 Pro", contextLength: 1048576 },
+      { id: "gemini-2.5-flash", displayName: "Gemini 2.5 Flash", contextLength: 1048576 },
     ],
   },
 };
@@ -598,6 +609,7 @@ function CloudProviderCard({
   onUpdate: (cfg: CloudProviderConfig) => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const [editingKey, setEditingKey] = useState(false);
   const [keyDraft, setKeyDraft] = useState(config.apiKey);
@@ -607,7 +619,7 @@ function CloudProviderCard({
   const label = preset?.label ?? config.name;
   const maskedKey = config.apiKey
     ? `${config.apiKey.slice(0, 6)}…${config.apiKey.slice(-4)}`
-    : "Ayarlanmadı";
+    : t("models.notSet");
 
   return (
     <div className="rounded-xl bg-surface-2">
@@ -627,9 +639,8 @@ function CloudProviderCard({
         </div>
         <div className="flex items-center gap-2">
           <span
-            className={`h-2 w-2 rounded-full ${
-              config.enabled && config.apiKey ? "bg-success" : "bg-text-faint"
-            }`}
+            className={`h-2 w-2 rounded-full ${config.enabled && config.apiKey ? "bg-success" : "bg-text-faint"
+              }`}
           />
           {expanded ? (
             <ChevronUp size={14} strokeWidth={1.4} className="text-text-faint" />
@@ -726,13 +737,12 @@ function CloudProviderCard({
                   onClick={() =>
                     onUpdate({ ...config, enabled: !config.enabled })
                   }
-                  className={`rounded-lg px-2.5 py-1 text-[0.8571rem] transition-colors ${
-                    config.enabled
+                  className={`rounded-lg px-2.5 py-1 text-[0.8571rem] transition-colors ${config.enabled
                       ? "text-success hover:bg-success/10"
                       : "text-text-faint hover:bg-hover"
-                  }`}
+                    }`}
                 >
-                  {config.enabled ? "Etkin" : "Devre dışı"}
+                  {config.enabled ? "Etkin" : t("models.disabled")}
                 </button>
                 <button
                   onClick={onRemove}
@@ -825,11 +835,10 @@ function AddCloudProviderDialog({
             <button
               key={key}
               onClick={() => setSelected(key)}
-              className={`relative flex-1 rounded-lg px-2 py-1.5 text-[0.8571rem] font-medium transition-colors ${
-                selected === key
+              className={`relative flex-1 rounded-lg px-2 py-1.5 text-[0.8571rem] font-medium transition-colors ${selected === key
                   ? "text-text"
                   : "text-text-faint hover:text-text-secondary"
-              }`}
+                }`}
             >
               {selected === key && (
                 <motion.div
