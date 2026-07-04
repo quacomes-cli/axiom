@@ -14,10 +14,12 @@ import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, RefreshCw, AlertCircle, Sparkles, Download, Rocket, ExternalLink } from "lucide-react";
 import { useUpdater } from "../../hooks/useUpdater";
+import { useT } from "../../i18n";
 
 const EASE = [0.32, 0.72, 0, 1] as const;
 
 export function UpdaterSettings() {
+  const t = useT();
   const {
     state,
     autoDownload,
@@ -36,9 +38,9 @@ export function UpdaterSettings() {
       <div className="rounded-lg border border-border bg-surface-1 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-medium text-text">Sürüm</h3>
+            <h3 className="text-sm font-medium text-text">{t("updater.version")}</h3>
             <p className="mt-0.5 text-[0.8571rem] text-text-faint">
-              Yüklü Axiom sürümü
+              {t("updater.versionHint")}
             </p>
           </div>
           <motion.span
@@ -56,9 +58,9 @@ export function UpdaterSettings() {
       <div className="rounded-lg border border-border bg-surface-1 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-medium text-text">Otomatik indir</h3>
+            <h3 className="text-sm font-medium text-text">{t("updater.autoDownload")}</h3>
             <p className="mt-0.5 text-[0.8571rem] text-text-faint">
-              Yeni sürüm bulunduğunda arka planda sessizce indirilir; kenar çubuğunda "Yeniden başlat" butonu belirir.
+              {t("updater.autoDownloadHint")}
             </p>
           </div>
           <button
@@ -81,13 +83,13 @@ export function UpdaterSettings() {
       <div className="rounded-lg border border-border bg-surface-1 p-4">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-medium text-text">Güncellemeler</h3>
+            <h3 className="text-sm font-medium text-text">{t("updater.updates")}</h3>
             <p className="mt-0.5 text-[0.8571rem] text-text-faint">
               {state.status === "ready"
-                ? "Yeni sürüm indirildi. Yeniden başlatınca devreye girer."
+                ? t("updater.ready")
                 : state.status === "downloading"
-                  ? "Yeni sürüm sessizce indiriliyor…"
-                  : "Yeni sürüm var mı diye kontrol et"}
+                  ? t("updater.downloadingStatus")
+                  : t("updater.checkPrompt")}
             </p>
           </div>
 
@@ -110,7 +112,7 @@ export function UpdaterSettings() {
           {state.status === "none" && (
             <ResultPanel key="none" tone="success">
               <CheckCircle2 size={16} strokeWidth={1.8} />
-              <span>En güncel sürümdesin.</span>
+              <span>{t("updater.upToDate")}</span>
             </ResultPanel>
           )}
 
@@ -132,7 +134,7 @@ export function UpdaterSettings() {
                   <Sparkles size={13} strokeWidth={1.8} className="text-accent" />
                 </motion.span>
                 <span>
-                  Yeni sürüm: <span className="font-mono font-medium">v{state.newVersion}</span>
+                  {t("updater.newVersion")} <span className="font-mono font-medium">v{state.newVersion}</span>
                 </span>
               </div>
               {state.notes && (
@@ -151,7 +153,7 @@ export function UpdaterSettings() {
                       >
                         <Download size={11} strokeWidth={1.8} className="text-accent" />
                       </motion.span>
-                      İndiriliyor
+                      {t("updater.downloading")}
                     </span>
                     <motion.span
                       key={state.progress}
@@ -186,7 +188,7 @@ export function UpdaterSettings() {
             >
               <div className="flex items-start gap-2 text-[0.8571rem]">
                 <AlertCircle size={16} strokeWidth={1.8} className="mt-0.5 shrink-0" />
-                <span>{state.error ?? "Kurulum başarısız oldu."}</span>
+                <span>{state.error ?? t("updater.installFailed")}</span>
               </div>
             </motion.div>
           )}
@@ -201,10 +203,7 @@ export function UpdaterSettings() {
       </div>
 
       <div className="rounded-lg border border-border bg-surface-1 p-4 text-[0.7857rem] text-text-faint">
-        <p>
-          Güncellemeler GitHub Releases üzerinden imzalı manifest ile dağıtılır.
-          İmza doğrulanamayan paketler kurulmaz.
-        </p>
+        <p>{t("updater.footer")}</p>
       </div>
     </div>
   );
@@ -224,6 +223,7 @@ function MorphButton({
   onRestart: () => void;
   onManual: () => void;
 }) {
+  const t = useT();
   if (status === "checking") {
     return (
       <motion.div
@@ -244,7 +244,7 @@ function MorphButton({
           animate={{ opacity: [1, 0.55, 1] }}
           transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
         >
-          Kontrol ediliyor…
+          {t("updater.checking")}
         </motion.span>
       </motion.div>
     );
@@ -298,7 +298,7 @@ function MorphButton({
         >
           <Rocket size={12} strokeWidth={1.8} />
         </motion.span>
-        <span className="relative">Yeniden başlat</span>
+        <span className="relative">{t("updater.restart")}</span>
       </motion.button>
     );
   }
@@ -317,7 +317,7 @@ function MorphButton({
         className="flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1.5 text-[0.8571rem] font-medium text-black"
       >
         <ExternalLink size={12} strokeWidth={1.8} />
-        Elle indir
+        {t("updater.manualDownload")}
       </motion.button>
     );
   }
@@ -349,7 +349,7 @@ function MorphButton({
       >
         <RefreshCw size={12} strokeWidth={1.8} />
       </motion.span>
-      <span className="relative">Şimdi kontrol et</span>
+      <span className="relative">{t("updater.checkNow")}</span>
     </motion.button>
   );
 }

@@ -1,26 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useT } from "../../i18n";
 import type { Shortcuts } from "../../types";
 
-const SHORTCUT_LABELS: { key: keyof Shortcuts; label: string; hint: string }[] =
+const SHORTCUT_LABELS: { key: keyof Shortcuts; labelKey: string; hintKey: string }[] =
   [
-    {
-      key: "toggleSidebar",
-      label: "Kenar çubuğu",
-      hint: "Kenar çubuğunu aç/kapat",
-    },
-    { key: "search", label: "Arama", hint: "Arama modalını aç" },
-    {
-      key: "toggleScreenVision",
-      label: "Ekran görüntüsü",
-      hint: "Screen Vision'ı aç/kapat",
-    },
-    { key: "newChat", label: "Yeni sohbet", hint: "Yeni bir sohbet başlat" },
-    {
-      key: "palette",
-      label: "Hızlı palet",
-      hint: "Global kısayol — uygulama arka plandayken bile mini asistanı açar",
-    },
+    { key: "toggleSidebar", labelKey: "shortcuts.sidebarLabel", hintKey: "shortcuts.sidebarHint" },
+    { key: "search", labelKey: "shortcuts.searchLabel", hintKey: "shortcuts.searchHint" },
+    { key: "toggleScreenVision", labelKey: "shortcuts.screenshotLabel", hintKey: "shortcuts.screenshotHint" },
+    { key: "newChat", labelKey: "shortcuts.newChatLabel", hintKey: "shortcuts.newChatHint" },
+    { key: "palette", labelKey: "shortcuts.paletteLabel", hintKey: "shortcuts.paletteHint" },
   ];
 
 function formatKeyCombo(e: KeyboardEvent): string {
@@ -47,6 +36,7 @@ function ShortcutRow({
   value: string;
   onRecord: (combo: string) => void;
 }) {
+  const t = useT();
   const [recording, setRecording] = useState(false);
 
   const handleKeyDown = useCallback(
@@ -93,13 +83,14 @@ function ShortcutRow({
             : "border-border text-text-faint hover:border-border-hover hover:text-text-secondary"
         }`}
       >
-        {recording ? "Tuşa bas…" : value}
+        {recording ? t("shortcuts.recording") : value}
       </button>
     </div>
   );
 }
 
 export function ShortcutSettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const loaded = useSettingsStore((s) => s.loaded);
   const load = useSettingsStore((s) => s.load);
@@ -114,14 +105,14 @@ export function ShortcutSettings() {
   return (
     <div className="rounded-2xl bg-surface p-4">
       <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-        Klavye kısayolları
+        {t("shortcuts.header")}
       </div>
       <div className="space-y-1">
         {SHORTCUT_LABELS.map((s) => (
           <ShortcutRow
             key={s.key}
-            label={s.label}
-            hint={s.hint}
+            label={t(s.labelKey)}
+            hint={t(s.hintKey)}
             value={settings.shortcuts[s.key]}
             onRecord={(combo) => updateShortcut(s.key, combo)}
           />
