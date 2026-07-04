@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const ja: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const ja: typeof en = {
     capture: "画面キャプチャ",
     continuousWatch: "継続監視",
     continuousWatchHint: "画面の定期的な追跡 — 既定でブロック",
+  },
+  optimization: {
+    header: "パフォーマンス最適化",
+    presetSpeed: "速度",
+    presetSpeedDesc: "低コンテキスト、高バッチ",
+    presetBalance: "バランス",
+    presetBalanceDesc: "ハードウェアに応じて自動",
+    presetQuality: "品質",
+    presetQualityDesc: "最大のコンテキストと品質",
+    presetCustom: "カスタム",
+    presetCustomDesc: "手動調整",
+    detectAndOptimize: "ハードウェアを検出して最適化",
+    gpuLayers: "GPU レイヤー",
+    gpuLayersHint: "-1 = すべて GPU、0 = CPU のみ",
+    cpuThread: "CPU スレッド",
+    cpuThreadHint: "物理コア数を超えないでください",
+    contextWindow: "コンテキストウィンドウ",
+    contextWindowHint: "小さい = 速い、大きい = メモリ増",
+    batchSize: "バッチサイズ",
+    batchSizeHint: "プロンプト処理速度に影響します",
+    memoryLock: "メモリロック (mlock)",
+    memoryLockHint: "ディスクへのスワップを防ぎます",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "変更を適用するため Ollama が再起動します",
+    flashConfirmEnable: "Flash Attention を有効にしますか？",
+    flashConfirmDisable: "Flash Attention を無効にしますか？",
+    restartNeeded: "この変更を適用するには Ollama の再起動が必要です。続行しますか？",
+    no: "いいえ",
+    restarting: "再起動中...",
+    yesRestart: "はい、再起動",
   },
   profile: {
     engineHint: "会話から自動的に学習し、チャットをパーソナライズします。",

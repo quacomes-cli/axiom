@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const pt: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const pt: typeof en = {
     capture: "Captura de tela",
     continuousWatch: "Monitoramento contínuo",
     continuousWatchHint: "Acompanhamento periódico da tela — bloqueado por padrão",
+  },
+  optimization: {
+    header: "Otimização de desempenho",
+    presetSpeed: "Velocidade",
+    presetSpeedDesc: "Contexto baixo, batch alto",
+    presetBalance: "Equilíbrio",
+    presetBalanceDesc: "Automático conforme o hardware",
+    presetQuality: "Qualidade",
+    presetQualityDesc: "Contexto e qualidade máximos",
+    presetCustom: "Personalizado",
+    presetCustomDesc: "Ajuste manual",
+    detectAndOptimize: "Detectar hardware e otimizar",
+    gpuLayers: "Camadas de GPU",
+    gpuLayersHint: "-1 = tudo na GPU, 0 = apenas CPU",
+    cpuThread: "Threads de CPU",
+    cpuThreadHint: "Não ultrapasse o número de núcleos físicos",
+    contextWindow: "Janela de contexto",
+    contextWindowHint: "Menor = mais rápido, maior = mais memória",
+    batchSize: "Tamanho do batch",
+    batchSizeHint: "Afeta a velocidade de processamento do prompt",
+    memoryLock: "Bloqueio de memória (mlock)",
+    memoryLockHint: "Evita a troca para o disco",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "O Ollama reinicia para aplicar a mudança",
+    flashConfirmEnable: "Ativar Flash Attention?",
+    flashConfirmDisable: "Desativar Flash Attention?",
+    restartNeeded: "O Ollama precisa reiniciar para aplicar esta mudança. Continuar?",
+    no: "Não",
+    restarting: "Reiniciando...",
+    yesRestart: "Sim, reiniciar",
   },
   profile: {
     engineHint: "Aprende automaticamente das conversas e personaliza os chats.",

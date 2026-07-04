@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const tr: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const tr: typeof en = {
     capture: "Ekran yakalama",
     continuousWatch: "Sürekli izleme",
     continuousWatchHint: "Ekranın periyodik takibi — varsayılan engelli",
+  },
+  optimization: {
+    header: "Performans Optimizasyonu",
+    presetSpeed: "Hız",
+    presetSpeedDesc: "Düşük bağlam, yüksek batch",
+    presetBalance: "Denge",
+    presetBalanceDesc: "Donanıma göre otomatik",
+    presetQuality: "Kalite",
+    presetQualityDesc: "Maksimum bağlam ve kalite",
+    presetCustom: "Özel",
+    presetCustomDesc: "Manuel ayarlama",
+    detectAndOptimize: "Donanımı Algıla ve Optimize Et",
+    gpuLayers: "GPU Katmanları",
+    gpuLayersHint: "-1 = tümü GPU'da, 0 = sadece CPU",
+    cpuThread: "CPU Thread",
+    cpuThreadHint: "Fiziksel çekirdek sayısını geçmeyin",
+    contextWindow: "Bağlam Penceresi",
+    contextWindowHint: "Küçük = daha hızlı, büyük = daha fazla hafıza",
+    batchSize: "Batch Boyutu",
+    batchSizeHint: "Prompt işleme hızını etkiler",
+    memoryLock: "Bellek Kilidi (mlock)",
+    memoryLockHint: "Swap'a düşmeyi engeller",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Değişiklik için Ollama yeniden başlatılır",
+    flashConfirmEnable: "Flash Attention Açılsın mı?",
+    flashConfirmDisable: "Flash Attention Kapatılsın mı?",
+    restartNeeded: "Bu değişikliğin uygulanması için Ollama'nın yeniden başlatılması gerekiyor. Devam edilsin mi?",
+    no: "Hayır",
+    restarting: "Yeniden başlatılıyor...",
+    yesRestart: "Evet, Yeniden Başlat",
   },
   profile: {
     engineHint: "Konuşmalardan otomatik öğrenir, sohbetlere kişiselleştirme ekler.",

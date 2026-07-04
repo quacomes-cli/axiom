@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const zh: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const zh: typeof en = {
     capture: "屏幕捕获",
     continuousWatch: "持续监视",
     continuousWatchHint: "定期屏幕跟踪 — 默认阻止",
+  },
+  optimization: {
+    header: "性能优化",
+    presetSpeed: "速度",
+    presetSpeedDesc: "低上下文，高批处理",
+    presetBalance: "平衡",
+    presetBalanceDesc: "根据硬件自动",
+    presetQuality: "质量",
+    presetQualityDesc: "最大上下文与质量",
+    presetCustom: "自定义",
+    presetCustomDesc: "手动调整",
+    detectAndOptimize: "检测硬件并优化",
+    gpuLayers: "GPU 层",
+    gpuLayersHint: "-1 = 全部在 GPU，0 = 仅 CPU",
+    cpuThread: "CPU 线程",
+    cpuThreadHint: "不要超过物理核心数",
+    contextWindow: "上下文窗口",
+    contextWindowHint: "越小越快，越大占用越多内存",
+    batchSize: "批大小",
+    batchSizeHint: "影响提示词处理速度",
+    memoryLock: "内存锁定 (mlock)",
+    memoryLockHint: "防止交换到磁盘",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Ollama 将重启以应用更改",
+    flashConfirmEnable: "开启 Flash Attention？",
+    flashConfirmDisable: "关闭 Flash Attention？",
+    restartNeeded: "应用此更改需要重启 Ollama。是否继续？",
+    no: "否",
+    restarting: "重启中...",
+    yesRestart: "是，重启",
   },
   profile: {
     engineHint: "从对话中自动学习，为聊天添加个性化。",

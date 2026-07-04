@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Zap, Scale, Gem, Settings2, Loader2, AlertTriangle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ModalOverlay } from "../shared/ModalOverlay";
 import { useOptimizationStore } from "../../stores/optimizationStore";
 import { useModelStore } from "../../stores/modelStore";
 import { ipc } from "../../lib/ipc";
+import { useT } from "../../i18n";
 import type { ProfilePreset } from "../../types";
 
-const PRESETS: { id: ProfilePreset; label: string; icon: React.ReactNode; desc: string }[] = [
-  { id: "hiz", label: "Hız", icon: <Zap size={14} />, desc: "Düşük bağlam, yüksek batch" },
-  { id: "denge", label: "Denge", icon: <Scale size={14} />, desc: "Donanıma göre otomatik" },
-  { id: "kalite", label: "Kalite", icon: <Gem size={14} />, desc: "Maksimum bağlam ve kalite" },
-  { id: "ozel", label: "Özel", icon: <Settings2 size={14} />, desc: "Manuel ayarlama" },
+const PRESETS: { id: ProfilePreset; labelKey: string; icon: React.ReactNode }[] = [
+  { id: "hiz", labelKey: "optimization.presetSpeed", icon: <Zap size={14} /> },
+  { id: "denge", labelKey: "optimization.presetBalance", icon: <Scale size={14} /> },
+  { id: "kalite", labelKey: "optimization.presetQuality", icon: <Gem size={14} /> },
+  { id: "ozel", labelKey: "optimization.presetCustom", icon: <Settings2 size={14} /> },
 ];
 
 function NumberField({
@@ -82,6 +83,7 @@ function ToggleField({
 }
 
 export function OptimizationPanel() {
+  const t = useT();
   const config = useOptimizationStore((s) => s.config);
   const loading = useOptimizationStore((s) => s.loading);
   const loadConfig = useOptimizationStore((s) => s.loadConfig);
@@ -103,7 +105,7 @@ export function OptimizationPanel() {
     <section className="mt-5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Performans Optimizasyonu
+          {t("optimization.header")}
         </h2>
         {loading && <Loader2 size={14} className="animate-spin text-text-faint" />}
       </div>
@@ -121,7 +123,7 @@ export function OptimizationPanel() {
               }`}
           >
             {p.icon}
-            <span className="font-medium">{p.label}</span>
+            <span className="font-medium">{t(p.labelKey)}</span>
           </button>
         ))}
       </div>
@@ -131,54 +133,54 @@ export function OptimizationPanel() {
           onClick={() => void autoDetect()}
           className="w-full rounded-xl bg-accent/10 py-3 text-sm text-accent transition-colors hover:bg-accent/20"
         >
-          Donanımı Algıla ve Optimize Et
+          {t("optimization.detectAndOptimize")}
         </button>
       )}
 
       {config && (
         <div className="space-y-1.5">
           <NumberField
-            label="GPU Katmanları"
+            label={t("optimization.gpuLayers")}
             value={config.numGpu}
             onChange={(v) => updateField("numGpu", v)}
             min={-1}
-            hint="-1 = tümü GPU'da, 0 = sadece CPU"
+            hint={t("optimization.gpuLayersHint")}
           />
           <NumberField
-            label="CPU Thread"
+            label={t("optimization.cpuThread")}
             value={config.numThread}
             onChange={(v) => updateField("numThread", v)}
             min={1}
             max={64}
-            hint="Fiziksel çekirdek sayısını geçmeyin"
+            hint={t("optimization.cpuThreadHint")}
           />
           <NumberField
-            label="Bağlam Penceresi"
+            label={t("optimization.contextWindow")}
             value={config.numCtx}
             onChange={(v) => updateField("numCtx", v)}
             min={512}
             max={131072}
-            hint="Küçük = daha hızlı, büyük = daha fazla hafıza"
+            hint={t("optimization.contextWindowHint")}
           />
           <NumberField
-            label="Batch Boyutu"
+            label={t("optimization.batchSize")}
             value={config.numBatch}
             onChange={(v) => updateField("numBatch", v)}
             min={1}
             max={2048}
-            hint="Prompt işleme hızını etkiler"
+            hint={t("optimization.batchSizeHint")}
           />
           <ToggleField
-            label="Bellek Kilidi (mlock)"
+            label={t("optimization.memoryLock")}
             value={config.useMlock}
             onChange={(v) => updateField("useMlock", v)}
-            hint="Swap'a düşmeyi engeller"
+            hint={t("optimization.memoryLockHint")}
           />
           <ToggleField
             label="Flash Attention"
             value={config.flashAttention}
             onChange={() => setFlashConfirm(true)}
-            hint="Değişiklik için Ollama yeniden başlatılır"
+            hint={t("optimization.flashAttentionHint")}
           />
         </div>
       )}
@@ -200,19 +202,18 @@ export function OptimizationPanel() {
                   <AlertTriangle size={18} className="text-amber-400" />
                 </div>
                 <h3 className="text-sm font-semibold text-text">
-                  Flash Attention {config?.flashAttention ? "Kapatılsın" : "Açılsın"} mı?
+                  {config?.flashAttention ? t("optimization.flashConfirmDisable") : t("optimization.flashConfirmEnable")}
                 </h3>
               </div>
               <p className="mb-4 text-xs leading-relaxed text-text-faint">
-                Bu değişikliğin uygulanması için Ollama&apos;nın yeniden başlatılması gerekiyor.
-                Devam edilsin mi?
+                {t("optimization.restartNeeded")}
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setFlashConfirm(false)}
                   className="flex-1 rounded-xl bg-surface-3 py-2 text-sm text-text-secondary transition-colors hover:bg-hover"
                 >
-                  Hayır
+                  {t("optimization.no")}
                 </button>
                 <button
                   disabled={restarting}
@@ -238,10 +239,10 @@ export function OptimizationPanel() {
                   {restarting ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      Yeniden başlatılıyor...
+                      {t("optimization.restarting")}
                     </>
                   ) : (
-                    "Evet, Yeniden Başlat"
+                    t("optimization.yesRestart")
                   )}
                 </button>
               </div>

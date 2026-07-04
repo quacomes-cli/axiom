@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const de: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const de: typeof en = {
     capture: "Bildschirmaufnahme",
     continuousWatch: "Dauerüberwachung",
     continuousWatchHint: "Periodische Bildschirmverfolgung — standardmäßig blockiert",
+  },
+  optimization: {
+    header: "Leistungsoptimierung",
+    presetSpeed: "Geschwindigkeit",
+    presetSpeedDesc: "Wenig Kontext, hoher Batch",
+    presetBalance: "Ausgewogen",
+    presetBalanceDesc: "Automatisch je nach Hardware",
+    presetQuality: "Qualität",
+    presetQualityDesc: "Maximaler Kontext und Qualität",
+    presetCustom: "Benutzerdefiniert",
+    presetCustomDesc: "Manuelle Anpassung",
+    detectAndOptimize: "Hardware erkennen und optimieren",
+    gpuLayers: "GPU-Schichten",
+    gpuLayersHint: "-1 = alles auf der GPU, 0 = nur CPU",
+    cpuThread: "CPU-Threads",
+    cpuThreadHint: "Überschreite die Anzahl der physischen Kerne nicht",
+    contextWindow: "Kontextfenster",
+    contextWindowHint: "Kleiner = schneller, größer = mehr Speicher",
+    batchSize: "Batch-Größe",
+    batchSizeHint: "Beeinflusst die Prompt-Verarbeitungsgeschwindigkeit",
+    memoryLock: "Speichersperre (mlock)",
+    memoryLockHint: "Verhindert das Auslagern auf die Festplatte",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Ollama startet neu, um die Änderung zu übernehmen",
+    flashConfirmEnable: "Flash Attention aktivieren?",
+    flashConfirmDisable: "Flash Attention deaktivieren?",
+    restartNeeded: "Ollama muss neu starten, um diese Änderung zu übernehmen. Fortfahren?",
+    no: "Nein",
+    restarting: "Wird neu gestartet...",
+    yesRestart: "Ja, neu starten",
   },
   profile: {
     engineHint: "Lernt automatisch aus Gesprächen und personalisiert Chats.",

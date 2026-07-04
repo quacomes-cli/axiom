@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const fr: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const fr: typeof en = {
     capture: "Capture d'écran",
     continuousWatch: "Surveillance continue",
     continuousWatchHint: "Suivi périodique de l'écran — bloqué par défaut",
+  },
+  optimization: {
+    header: "Optimisation des performances",
+    presetSpeed: "Vitesse",
+    presetSpeedDesc: "Contexte faible, batch élevé",
+    presetBalance: "Équilibre",
+    presetBalanceDesc: "Automatique selon le matériel",
+    presetQuality: "Qualité",
+    presetQualityDesc: "Contexte et qualité maximum",
+    presetCustom: "Personnalisé",
+    presetCustomDesc: "Réglage manuel",
+    detectAndOptimize: "Détecter le matériel et optimiser",
+    gpuLayers: "Couches GPU",
+    gpuLayersHint: "-1 = tout sur le GPU, 0 = CPU uniquement",
+    cpuThread: "Threads CPU",
+    cpuThreadHint: "Ne dépassez pas le nombre de cœurs physiques",
+    contextWindow: "Fenêtre de contexte",
+    contextWindowHint: "Plus petit = plus rapide, plus grand = plus de mémoire",
+    batchSize: "Taille de batch",
+    batchSizeHint: "Affecte la vitesse de traitement du prompt",
+    memoryLock: "Verrou mémoire (mlock)",
+    memoryLockHint: "Empêche le swap sur le disque",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Ollama redémarre pour appliquer le changement",
+    flashConfirmEnable: "Activer Flash Attention ?",
+    flashConfirmDisable: "Désactiver Flash Attention ?",
+    restartNeeded: "Ollama doit redémarrer pour appliquer ce changement. Continuer ?",
+    no: "Non",
+    restarting: "Redémarrage...",
+    yesRestart: "Oui, redémarrer",
   },
   profile: {
     engineHint: "Apprend automatiquement des conversations et personnalise les discussions.",

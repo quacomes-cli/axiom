@@ -1,4 +1,4 @@
-// English — source-of-truth shape. All other locales must match these keys
+﻿// English — source-of-truth shape. All other locales must match these keys
 // (typed as `Dict`), so TypeScript flags any missing/extra key.
 
 export const en = {
@@ -374,6 +374,36 @@ export const en = {
     capture: "Screen capture",
     continuousWatch: "Continuous watch",
     continuousWatchHint: "Periodic screen tracking — blocked by default",
+  },
+  optimization: {
+    header: "Performance Optimization",
+    presetSpeed: "Speed",
+    presetSpeedDesc: "Low context, high batch",
+    presetBalance: "Balance",
+    presetBalanceDesc: "Automatic based on hardware",
+    presetQuality: "Quality",
+    presetQualityDesc: "Maximum context and quality",
+    presetCustom: "Custom",
+    presetCustomDesc: "Manual tuning",
+    detectAndOptimize: "Detect Hardware and Optimize",
+    gpuLayers: "GPU Layers",
+    gpuLayersHint: "-1 = all on GPU, 0 = CPU only",
+    cpuThread: "CPU Threads",
+    cpuThreadHint: "Don't exceed the physical core count",
+    contextWindow: "Context Window",
+    contextWindowHint: "Smaller = faster, larger = more memory",
+    batchSize: "Batch Size",
+    batchSizeHint: "Affects prompt processing speed",
+    memoryLock: "Memory Lock (mlock)",
+    memoryLockHint: "Prevents swapping to disk",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Ollama restarts to apply the change",
+    flashConfirmEnable: "Turn Flash Attention on?",
+    flashConfirmDisable: "Turn Flash Attention off?",
+    restartNeeded: "Ollama needs to restart to apply this change. Continue?",
+    no: "No",
+    restarting: "Restarting...",
+    yesRestart: "Yes, Restart",
   },
   profile: {
     engineHint: "Learns automatically from conversations and personalizes chats.",

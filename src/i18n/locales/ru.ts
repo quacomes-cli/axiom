@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const ru: typeof en = {
   nav: {
@@ -373,6 +373,36 @@ export const ru: typeof en = {
     capture: "Снимок экрана",
     continuousWatch: "Непрерывный мониторинг",
     continuousWatchHint: "Периодическое отслеживание экрана — по умолчанию заблокировано",
+  },
+  optimization: {
+    header: "Оптимизация производительности",
+    presetSpeed: "Скорость",
+    presetSpeedDesc: "Малый контекст, большой batch",
+    presetBalance: "Баланс",
+    presetBalanceDesc: "Автоматически по железу",
+    presetQuality: "Качество",
+    presetQualityDesc: "Максимальный контекст и качество",
+    presetCustom: "Свой",
+    presetCustomDesc: "Ручная настройка",
+    detectAndOptimize: "Определить железо и оптимизировать",
+    gpuLayers: "Слои GPU",
+    gpuLayersHint: "-1 = всё на GPU, 0 = только CPU",
+    cpuThread: "Потоки CPU",
+    cpuThreadHint: "Не превышайте число физических ядер",
+    contextWindow: "Окно контекста",
+    contextWindowHint: "Меньше = быстрее, больше = больше памяти",
+    batchSize: "Размер batch",
+    batchSizeHint: "Влияет на скорость обработки промпта",
+    memoryLock: "Блокировка памяти (mlock)",
+    memoryLockHint: "Предотвращает выгрузку в swap",
+    flashAttention: "Flash Attention",
+    flashAttentionHint: "Ollama перезапустится для применения изменения",
+    flashConfirmEnable: "Включить Flash Attention?",
+    flashConfirmDisable: "Выключить Flash Attention?",
+    restartNeeded: "Для применения этого изменения Ollama нужно перезапустить. Продолжить?",
+    no: "Нет",
+    restarting: "Перезапуск...",
+    yesRestart: "Да, перезапустить",
   },
   profile: {
     engineHint: "Автоматически учится из бесед и персонализирует чаты.",
