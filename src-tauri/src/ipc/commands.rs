@@ -1594,6 +1594,76 @@ pub fn chat_images_load(
         .map_err(|e| e.to_string())
 }
 
+// ---- MCP (Model Context Protocol) ------------------------------------------
+
+use crate::mcp::{McpManager, McpServerConfig, McpServerStatus, McpToolInfo};
+
+/// Sunucu tanımlarını settings'e yazar (bağlantı kurmaz).
+#[tauri::command]
+pub fn mcp_servers_set(
+    state: State<'_, SettingsState>,
+    servers: Vec<McpServerConfig>,
+) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.mcp_servers = servers;
+    crate::settings::save(&state.config_path, &settings)
+}
+
+#[tauri::command]
+pub fn mcp_servers_get(state: State<'_, SettingsState>) -> Vec<McpServerConfig> {
+    state.settings.read().unwrap().mcp_servers.clone()
+}
+
+/// Sunucuya bağlanır (idempotent) ve araç listesini döner.
+#[tauri::command]
+pub async fn mcp_connect(
+    mcp: State<'_, McpManager>,
+    settings_state: State<'_, SettingsState>,
+    name: String,
+) -> Result<Vec<McpToolInfo>, String> {
+    let cfg = settings_state
+        .settings
+        .read()
+        .unwrap()
+        .mcp_servers
+        .iter()
+        .find(|s| s.name == name)
+        .cloned()
+        .ok_or_else(|| format!("'{name}' adlı MCP sunucusu tanımlı değil"))?;
+    // Spawn + el sıkışma bloklayıcı — async runtime'ı tıkamasın
+    let mcp = mcp.inner().clone();
+    tokio::task::spawn_blocking(move || mcp.connect(&cfg))
+        .await
+        .map_err(|e| format!("task hatası: {e}"))?
+}
+
+#[tauri::command]
+pub fn mcp_disconnect(mcp: State<'_, McpManager>, name: String) {
+    mcp.disconnect(&name);
+}
+
+#[tauri::command]
+pub fn mcp_status(
+    mcp: State<'_, McpManager>,
+    settings_state: State<'_, SettingsState>,
+) -> Vec<McpServerStatus> {
+    let configs = settings_state.settings.read().unwrap().mcp_servers.clone();
+    mcp.status(&configs)
+}
+
+#[tauri::command]
+pub async fn mcp_call(
+    mcp: State<'_, McpManager>,
+    server: String,
+    tool: String,
+    args: serde_json::Value,
+) -> Result<String, String> {
+    let mcp = mcp.inner().clone();
+    tokio::task::spawn_blocking(move || mcp.call_tool(&server, &tool, args))
+        .await
+        .map_err(|e| format!("task hatası: {e}"))?
+}
+
 // ---- Active Window --------------------------------------------------------
 
 #[derive(Debug, Serialize)]

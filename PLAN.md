@@ -151,17 +151,31 @@ Gemini regex-prompt yoluyla zaten güvenilir çalışıyor (talimat takibi güç
 native'e geçiş düşük öncelik. Yapılacaksa: `cloud/gemini.rs`'de `tools` →
 `functionDeclarations` çevirisi + yanıt `functionCall` → aynı blok-metin enjeksiyonu.
 
-## FAZ 3 — MCP client (2-3 gün, ayrı branch)
+## FAZ 3 — MCP client — TAMAMLANDI (2026-07-04, faz3-mcp branch)
 
-- [ ] Rust tarafı: `rmcp` (resmi Rust SDK) ile stdio transport MCP client.
-      Config: settings'e `mcpServers: [{name, command, args, env}]`.
-      Komutlar: `mcp_list_tools(server)`, `mcp_call_tool(server, tool, args_json)`,
-      `mcp_server_status()`. Süreç yaşam döngüsü: app start'ta lazy spawn, çıkışta kill.
-- [ ] Tool registry'ye MCP tool'ları dinamik eklenir (Faz 2'deki tek kaynak sayesinde
-      hem prompt'a hem native şemaya otomatik girer). İsim çakışması: `mcp__server__tool`.
-- [ ] Ayarlar UI: sunucu ekle/kaldır/başlat-durdur + tool listesi görünümü.
-- [ ] Güvenlik: MCP tool çağrıları Faz 0.4'teki onay kapısından geçer (varsayılan `confirm`).
-- Kabul: filesystem MCP sunucusu eklenip chat'ten dosya listeletilebiliyor.
+- [x] Rust tarafı: **elle yazılmış** minimal stdio MCP client (`src-tauri/src/mcp/mod.rs`).
+      `rmcp` SDK yerine bağımlılıksız ~470 satır tercih edildi (initialize →
+      notifications/initialized → tools/list → tools/call, satır-ayrımlı JSON-RPC).
+      Config: `AppSettings.mcp_servers: [{name, command, args, env, enabled}]`.
+      Komutlar: `mcp_servers_get/set`, `mcp_connect`, `mcp_disconnect`, `mcp_status`,
+      `mcp_call`. Yaşam döngüsü: açılışta enabled sunuculara auto-connect (App.tsx),
+      çıkışta `kill_all` (lib.rs RunEvent::Exit).
+- [x] Tool registry'ye MCP tool'ları dinamik eklenir: native ad `mcp__server__tool`,
+      sunucunun kendi `inputSchema`'sı aynen geçer. Rust `tool_call_to_block` bu adı
+      `tool:mcp_call` bloğuna çevirir (server/tool + `---` + JSON args). Prompt-tabanlı
+      modeller için `buildMcpToolsPrompt` sistem prompt'una araç bloğu ekler.
+- [x] Ayarlar UI: **MCP sekmesi** (`McpSettings.tsx`) — ekle/sil/bağlan/kes,
+      enable toggle, canlı durum (bağlı/araç sayısı/hata), araç listesi.
+- [x] Güvenlik: MCP çağrıları HER ZAMAN onay kartından geçer (arka planda otomatik red —
+      `interactive:false` → uzaktan sessiz dış-araç çalıştırma engellenir).
+- [x] Kabul: filesystem sunucusu (`npx @modelcontextprotocol/server-filesystem`) entegrasyon
+      testiyle doğrulandı (14 araç, list_directory çalışıyor). Canlı chat doğrulaması
+      kullanıcıda: MCP sekmesinden filesystem ekle → sohbetten dosya listelet.
+- NOT (spawn/PATH tuzağı, çözüldü): `cargo run`/`cargo test` bağımlılıkların DLL
+      arama yollarını (whisper-rs-sys CMake dizinleri) PATH'e ekleyip ~19KB'a şişiriyor;
+      cmd.exe 8191 karakter üstünü genişletemediği için npx .cmd shim'leri "is not
+      recognized" ile ölüyordu. `sanitized_path()` PATH >8000 ise `target\debug|release`
+      girdilerini ayıklar. Gerçek kullanıcı PATH'i (~2.3KB) zaten sınır altında.
 
 ## FAZ 4 — Hızlı palet + i18n
 

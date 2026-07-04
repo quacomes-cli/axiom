@@ -380,7 +380,31 @@ export interface UserProfile {
 
 // ---- Code Tool ----
 
-export type ToolActionKind = "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "edit_file" | "search" | "glob" | "delete_file" | "rename_file";
+export type ToolActionKind = "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "edit_file" | "search" | "glob" | "delete_file" | "rename_file" | "mcp_call";
+
+// ---- MCP (Model Context Protocol) ----
+
+export interface McpServerConfig {
+  name: string;
+  /** Çalıştırılacak komut: "npx", "uvx" veya tam yol. */
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+}
+
+export interface McpToolInfo {
+  name: string;
+  description: string;
+  /** JSON Schema — native tool şemasına aynen geçer. */
+  inputSchema: unknown;
+}
+
+export interface McpServerStatus {
+  name: string;
+  connected: boolean;
+  toolCount: number;
+}
 
 export interface ToolAction {
   kind: ToolActionKind;

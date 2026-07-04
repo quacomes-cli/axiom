@@ -14,6 +14,7 @@
 // write_file→path+content, diğerleri→`anahtar: değer` satırları).
 
 import { useAppStore } from "../stores/appStore";
+import { getConnectedMcpTools, mcpNativeName } from "../stores/mcpStore";
 
 interface NativeTool {
   type: "function";
@@ -130,6 +131,35 @@ function buildAppTools(): NativeTool[] {
 }
 
 /**
+ * Bağlı MCP sunucularının araçlarını native şemaya çevirir. Ad
+ * `mcp__<server>__<tool>`; sunucunun kendi inputSchema'sı aynen geçer
+ * (özel tip/enum bilgisi korunur). Rust tool_call_to_block bu adı çözüp
+ * `tool:mcp_call` bloğuna çevirir.
+ */
+function buildMcpTools(): NativeTool[] {
+  const out: NativeTool[] = [];
+  for (const { server, tool } of getConnectedMcpTools()) {
+    const schema = (tool.inputSchema as NativeTool["function"]["parameters"] | undefined) ?? {
+      type: "object",
+      properties: {},
+    };
+    out.push({
+      type: "function",
+      function: {
+        name: mcpNativeName(server, tool.name),
+        description: `[MCP:${server}] ${tool.description || tool.name}`,
+        parameters: {
+          type: "object",
+          properties: schema.properties ?? {},
+          ...(schema.required?.length ? { required: schema.required } : {}),
+        },
+      },
+    });
+  }
+  return out;
+}
+
+/**
  * Model native tool destekliyorsa istek için şema listesi döner; yoksa
  * undefined (istek alanı hiç gönderilmez, davranış eskisi gibi kalır).
  */
@@ -137,5 +167,5 @@ export function buildNativeTools(
   model: { capabilities?: string[] | null } | null | undefined,
 ): NativeTool[] | undefined {
   if (!model?.capabilities?.includes("tools")) return undefined;
-  return [...BUILTIN_TOOLS, ...buildAppTools()];
+  return [...BUILTIN_TOOLS, ...buildAppTools(), ...buildMcpTools()];
 }

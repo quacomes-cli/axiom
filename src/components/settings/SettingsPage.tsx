@@ -6,12 +6,14 @@ import { ShortcutSettings } from "./ShortcutSettings";
 import { PermissionGrid } from "./PermissionGrid";
 import { ProfileSettings } from "./ProfileSettings";
 import { UpdaterSettings } from "./UpdaterSettings";
+import { McpSettings } from "./McpSettings";
 
 const TABS = [
   { id: "general", label: "Genel" },
   { id: "profile", label: "Profil" },
   { id: "shortcuts", label: "Kısayollar" },
   { id: "permissions", label: "İzinler" },
+  { id: "mcp", label: "MCP" },
   { id: "updater", label: "Güncelleme" },
 ] as const;
 
@@ -57,6 +59,7 @@ export function SettingsPage() {
       {tab === "profile" && <ProfileSettings />}
       {tab === "shortcuts" && <ShortcutSettings />}
       {tab === "permissions" && <PermissionGrid />}
+      {tab === "mcp" && <McpSettings />}
       {tab === "updater" && <UpdaterSettings />}
     </div>
   );

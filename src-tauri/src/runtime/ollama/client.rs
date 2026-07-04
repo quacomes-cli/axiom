@@ -17,6 +17,18 @@ pub(super) fn tool_call_to_block(name: &str, args: &serde_json::Value) -> String
         }
     }
 
+    // MCP araçları: native ad `mcp__<server>__<tool>` biçiminde gelir. Bunu
+    // yürütme yolunun anladığı tek `tool:mcp_call` bloğuna çevir — server/tool
+    // satırları + `---` ardından ham JSON argümanlar (write_file ile aynı desen).
+    if let Some(rest) = name.strip_prefix("mcp__") {
+        if let Some((server, tool)) = rest.split_once("__") {
+            let args_json = serde_json::to_string(args).unwrap_or_else(|_| "{}".into());
+            return format!(
+                "\n```tool:mcp_call\nserver: {server}\ntool: {tool}\n---\n{args_json}\n```\n"
+            );
+        }
+    }
+
     let body = match name {
         "web_search" => arg_str(args, "query"),
         "run_command" => arg_str(args, "command"),

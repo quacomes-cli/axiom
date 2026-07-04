@@ -32,6 +32,9 @@ pub struct AppSettings {
     pub tts: TtsConfig,
     #[serde(default)]
     pub clipboard: ClipboardConfig,
+    /// MCP sunucu tanımları (stdio) — bağlantı durumu değil, yalnız konfig.
+    #[serde(default)]
+    pub mcp_servers: Vec<crate::mcp::McpServerConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -219,6 +222,7 @@ impl Default for AppSettings {
             memory: MemoryConfig::default(),
             tts: TtsConfig::default(),
             clipboard: ClipboardConfig::default(),
+            mcp_servers: vec![],
         }
     }
 }

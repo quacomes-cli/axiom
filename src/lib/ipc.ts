@@ -420,4 +420,26 @@ export const ipc = {
   optimizationAutoDetect(preset?: string, hwOverride?: import("../types").HardwareProfile): Promise<import("../types").OptimizationConfig> {
     return invoke("optimization_auto_detect", { preset: preset ?? null, hwOverride: hwOverride ?? null });
   },
+
+  // ---- MCP (Model Context Protocol) ----
+  mcpServersGet(): Promise<import("../types").McpServerConfig[]> {
+    return invoke("mcp_servers_get");
+  },
+  mcpServersSet(servers: import("../types").McpServerConfig[]): Promise<void> {
+    return invoke("mcp_servers_set", { servers });
+  },
+  /** Sunucuya bağlanır (idempotent) ve araç listesini döner. */
+  mcpConnect(name: string): Promise<import("../types").McpToolInfo[]> {
+    return invoke("mcp_connect", { name });
+  },
+  mcpDisconnect(name: string): Promise<void> {
+    return invoke("mcp_disconnect", { name });
+  },
+  mcpStatus(): Promise<import("../types").McpServerStatus[]> {
+    return invoke("mcp_status");
+  },
+  /** Bağlı sunucudaki aracı çağırır; sonucu düz metin döner. */
+  mcpCall(server: string, tool: string, args: Record<string, unknown>): Promise<string> {
+    return invoke("mcp_call", { server, tool, args });
+  },
 };

@@ -12,6 +12,7 @@ import { useSettingsStore } from "./stores/settingsStore";
 import { useModelStore } from "./stores/modelStore";
 import { useChatStore } from "./stores/chatStore";
 import { useOptimizationStore } from "./stores/optimizationStore";
+import { useMcpStore } from "./stores/mcpStore";
 import { useAuthStore } from "./stores/authStore";
 import { useCloudSync } from "./hooks/useCloudSync";
 import { useTaskScheduler } from "./hooks/useTaskScheduler";
@@ -117,6 +118,9 @@ export default function App() {
       await useChatStore.getState().loadFromDb();
       void useOptimizationStore.getState().loadConfig();
       void useModelStore.getState().checkOllamaLifecycle();
+      // MCP sunucularını yükle ve enabled olanlara arka planda bağlan —
+      // spawn saniyeler alabilir, UI'yı bloklamasın.
+      void useMcpStore.getState().load().then(() => useMcpStore.getState().connectEnabled());
 
       const modelsPromise = useModelStore.getState().loadModels().catch(() => { });
       const timeout = new Promise<void>((resolve) => setTimeout(resolve, 3000));

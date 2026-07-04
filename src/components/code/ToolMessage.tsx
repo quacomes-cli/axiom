@@ -51,6 +51,7 @@ function toolLabel(action: ToolAction): { prefix: string; value: string } {
     case "create_dir": return { prefix: "mkdir", value: basename(action.path) };
     case "run_command": return { prefix: "run", value: action.command || "" };
     case "app_tool": return { prefix: "app", value: action.command || "" };
+    case "mcp_call": return { prefix: "mcp", value: action.command || "" };
     case "get_settings": return { prefix: "settings", value: "read" };
     case "change_setting": return { prefix: "settings", value: action.command || "" };
     case "edit_file": return { prefix: "edit", value: basename(action.path) };

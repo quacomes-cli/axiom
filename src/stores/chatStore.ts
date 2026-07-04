@@ -17,6 +17,7 @@ import { useSkillStore } from "./skillStore";
 import { useUserProfileStore } from "./userProfileStore";
 import { useAppStore, executeAppTool } from "./appStore";
 import { useApprovalStore } from "./approvalStore";
+import { buildMcpToolsPrompt } from "./mcpStore";
 import { useSettingsStore } from "./settingsStore";
 import { useOptimizationStore } from "./optimizationStore";
 import { useTaskStore, type TaskStatus } from "./taskStore";
@@ -227,11 +228,16 @@ const MODE_PROMPTS: Record<ChatMode, string | null> = {
 
 function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs?: DocumentAttachment[]): string | null {
   const parts: string[] = [];
+  
+  const activeModel = useModelStore.getState().models.find((m) => m.isActive);
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("tr-TR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const timeStr = now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-  parts.push(`Bugünün tarihi: ${dateStr}, saat ${timeStr}. Bunu erekmedikçe vurgulama.`);
+  parts.push(`Bugünün tarihi: ${dateStr}, saat ${timeStr}. Bunu gerekmedikçe vurgulama.`);
+  parts.push("Axiom bir Local Yapay Zeka motorudur. Bunu gerekmedikçe vurgulama")
+  parts.push(`Sen Fırat Tuna Arslan tarafından geliştirilen Axiom'un içinde çalışan bir yapay zekasın. Bunu gerekmedikçe vurgulama.`)
+  parts.push(`Sen ${JSON.stringify(activeModel, null, 2)} dil modelisin.`)
 
   parts.push(
     "Doğal ve samimi konuş. Kullanıcıyla sıcak bir sohbet havası kur. " +
@@ -249,7 +255,7 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
     "# İnteraktif Yanıtlar\n" +
     "İstek doğası gereği etkileşimliyse (test/quiz, anket, hesaplayıcı, form, mini oyun, adım adım öğretici, karşılaştırma aracı) SORMADAN doğrudan interaktif üret: yanıtına TEK bir ```html kod bloğu ekle — uygulama bunu canlı, tıklanabilir olarak render eder ve kullanıcı kodu değil bitmiş arayüzü görür. Kod bloğundan önce en fazla tek cümle yaz; kodun içeriğini metinde anlatma, tekrar etme.\n" +
     "Teknik kurallar: tamamen self-contained tek parça HTML (davranış <script> içinde inline); harici CDN/kaynak yok; sabit yükseklik verme, içerik doğal yüksekliğinde aksın; sade metnin yeterli olduğu yerde metin kal.\n" +
-    "Quiz lerde her zaman ileri ve geri butonları olsun onların arasında soru sayacı olsun. \n"+
+    "Quiz lerde her zaman ileri ve geri butonları olsun onların arasında soru sayacı olsun. \n" +
     "TASARIM KİMLİĞİ (uy, kendi kafana göre tasarlama):\n" +
     "- CEVABIN DEVAMI GİBİ: içeriği kendi büyük kenarlıklı/gölgeli KUTUSUNA SARMA. En dıştaki kapsayıcıya border, background, box-shadow verme — sohbet metninin doğal devamı gibi aksın. Kenarlığı yalnızca alt öğeleri (tek bir seçenek satırı, sonuç kutusu) hafifçe ayırmak için ince kullan; iç içe kart yığma.\n" +
     "- KOMPAKT: aşırı padding/margin verme. Dış kenarda yatay boşluk bırakma (içerik metinle aynı hizada başlasın). Öğeler arası boşluk küçük tut (8-12px). Butonlar zaten küçük ve zarif temalıdır — onları büyütme, ekstra padding ekleme.\n" +
@@ -283,6 +289,9 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
 
     const appsPrompt = buildEnabledAppsPrompt();
     if (appsPrompt) parts.push(appsPrompt);
+
+    const mcpPrompt = buildMcpToolsPrompt();
+    if (mcpPrompt) parts.push(mcpPrompt);
   } else {
     const active = useModelStore.getState().models.find(m => m.isActive);
     if (active && !modelSupportsTools(active)) {
@@ -314,7 +323,7 @@ function buildSystemPrompt(chatId: string, toolUseEnabled: boolean, snapshotDocs
       .join("\n\n---\n\n");
     parts.push(
       "Kullanıcı aşağıdaki belgeleri bağlam olarak ekledi. Yanıtlarında bu belgelerin içeriğini dikkate al:\n\n" +
-        docContext
+      docContext
     );
   }
   const imageDocs = docs.filter((d) => !!d.base64Data);
@@ -509,7 +518,7 @@ function formatScheduleLabel(epoch: number): string {
 }
 
 type ToolBlock = {
-  kind: "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task";
+  kind: "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "mcp_call";
   path?: string;
   content?: string;
   command?: string;
@@ -531,6 +540,9 @@ type ToolBlock = {
   scheduleAt?: string;        // ISO veya HH:MM
   scheduleRecurring?: string; // once|daily|weekly
   schedulePrompt?: string;    // agent için sistem promptu
+  mcpServer?: string;
+  mcpTool?: string;
+  mcpArgs?: Record<string, unknown>;
 };
 
 /**
@@ -548,18 +560,21 @@ function rewriteAppToolBlocks(text: string): string {
       if (!toolToApp.has(t.name)) toolToApp.set(t.name, app.id);
     }
   }
-  if (toolToApp.size === 0) return text;
-
   return text.replace(
     /```tool:([a-z][a-z0-9_]*)\n([\s\S]*?)```/g,
     (full, kind: string, body: string) => {
+      // Model native adı `mcp__server__tool` yazdıysa mcp_call bloğuna çevir.
+      const mcpMatch = kind.match(/^mcp__(.+?)__(.+)$/);
+      if (mcpMatch) {
+        return "```tool:mcp_call\nserver: " + mcpMatch[1] + "\ntool: " + mcpMatch[2] + "\n---\n" + body.trim() + "\n```";
+      }
       // Bilinen built-in kindler ve app_tool aynen kalsın
       const builtin = new Set([
         "read_file", "write_file", "run_command", "list_dir", "create_dir",
         "web_search", "app_tool", "get_settings", "change_setting",
         "weather", "currency",
         "create_task", "list_tasks", "update_task", "complete_task",
-        "delete_task", "schedule_task",
+        "delete_task", "schedule_task", "mcp_call",
       ]);
       if (builtin.has(kind)) return full;
       const appId = toolToApp.get(kind);
@@ -573,7 +588,7 @@ function rewriteAppToolBlocks(text: string): string {
 export function parseToolBlocks(text: string): ToolBlock[] {
   const blocks: ToolBlock[] = [];
   const normalized = rewriteAppToolBlocks(text);
-  const regex = /```tool:(read_file|write_file|run_command|list_dir|create_dir|web_search|app_tool|get_settings|change_setting|weather|currency|create_task|list_tasks|update_task|complete_task|delete_task|schedule_task)\n([\s\S]*?)```/g;
+  const regex = /```tool:(read_file|write_file|run_command|list_dir|create_dir|web_search|app_tool|get_settings|change_setting|weather|currency|create_task|list_tasks|update_task|complete_task|delete_task|schedule_task|mcp_call)\n([\s\S]*?)```/g;
   let match;
   while ((match = regex.exec(normalized)) !== null) {
     const kind = match[1] as ToolBlock["kind"];
@@ -650,6 +665,23 @@ export function parseToolBlocks(text: string): ToolBlock[] {
           taskStatus: statusMatch ? statusMatch[1].trim() : undefined,
           taskPriority: prioMatch ? prioMatch[1].trim() as "low" | "medium" | "high" : undefined,
         });
+      }
+    } else if (kind === "mcp_call") {
+      const serverMatch = body.match(/^server:\s*(.+)/m);
+      const toolMatch = body.match(/^tool:\s*(.+)/m);
+      const sepIdx = body.indexOf("---");
+      let args: Record<string, unknown> = {};
+      if (sepIdx !== -1) {
+        const rawArgs = body.slice(sepIdx + 3).trim();
+        if (rawArgs) {
+          try {
+            const parsed = JSON.parse(rawArgs);
+            if (parsed && typeof parsed === "object") args = parsed as Record<string, unknown>;
+          } catch { /* geçersiz JSON — boş argümanla dene */ }
+        }
+      }
+      if (serverMatch && toolMatch) {
+        blocks.push({ kind, mcpServer: serverMatch[1].trim(), mcpTool: toolMatch[1].trim(), mcpArgs: args });
       }
     } else if (kind === "complete_task") {
       const idMatch = body.match(/^id:\s*(.+)/m);
@@ -828,6 +860,34 @@ export async function executeToolBlock(
         const result = await executeAppTool(block.appId, block.appToolName, block.appParams || {});
         return { kind: "app_tool", command: `${block.appId}/${block.appToolName}`, content: result, collapsed: false };
       }
+      case "mcp_call": {
+        const server = block.mcpServer;
+        const tool = block.mcpTool;
+        const label = `${server}/${tool}`;
+        if (!server || !tool) {
+          return { kind: "mcp_call", command: label, content: "Hata: server ve tool gerekli.", collapsed: false };
+        }
+        // MCP araçları harici süreçlerdir — HER ZAMAN kullanıcı onayı iste.
+        // Arka planda (agent/telegram) onay alınamaz → otomatik reddet, aksi
+        // halde uzaktan gelen bir istek sessizce dış araç çalıştırabilir.
+        const argsPreview = JSON.stringify(block.mcpArgs || {}, null, 2);
+        if (!interactive) {
+          return {
+            kind: "mcp_call",
+            command: label,
+            content: "İzin gerekli: MCP aracı arka planda onaysız çalıştırılamaz.",
+            collapsed: false,
+          };
+        }
+        const choice = await useApprovalStore
+          .getState()
+          .request(`MCP aracı: ${label}`, argsPreview === "{}" ? "(argümansız)" : argsPreview);
+        if (choice === "deny") {
+          return { kind: "mcp_call", command: label, content: "Kullanıcı bu MCP çağrısını reddetti.", collapsed: false };
+        }
+        const result = await ipc.mcpCall(server, tool, block.mcpArgs || {});
+        return { kind: "mcp_call", command: label, content: result, collapsed: true };
+      }
       case "get_settings": {
         const s = await ipc.settingsGet();
         const summary = [
@@ -965,6 +1025,7 @@ export function buildToolResultText(actions: ToolAction[]): string {
       case "weather": return `Hava durumu alındı:\n${a.content}`;
       case "currency": return `Döviz kurları alındı (TRY bazında):\n${a.content}`;
       case "app_tool": return `Uygulama aracı: ${a.command}\n${a.content}`;
+      case "mcp_call": return `MCP aracı (${a.command}):\n${a.content}`;
       case "get_settings": return `Mevcut uygulama ayarları:\n${a.content}`;
       case "change_setting": return `Ayar değiştirildi (${a.command}): ${a.content}`;
       case "create_task": return `Görev oluşturuldu:\n${a.content}`;
@@ -986,16 +1047,16 @@ export interface ContextUsage {
 }
 
 const TR_CITIES = [
-  "Adana","Adıyaman","Afyon","Ağrı","Aksaray","Amasya","Ankara","Antalya","Ardahan",
-  "Artvin","Aydın","Balıkesir","Bartın","Batman","Bayburt","Bilecik","Bingöl","Bitlis",
-  "Bolu","Burdur","Bursa","Çanakkale","Çankırı","Çorum","Denizli","Diyarbakır","Düzce",
-  "Edirne","Elazığ","Erzincan","Erzurum","Eskişehir","Gaziantep","Giresun","Gümüşhane",
-  "Hakkari","Hatay","Iğdır","Isparta","İstanbul","İzmir","Kahramanmaraş","Karabük",
-  "Karaman","Kars","Kastamonu","Kayseri","Kırıkkale","Kırklareli","Kırşehir","Kilis",
-  "Kocaeli","Konya","Kütahya","Malatya","Manisa","Mardin","Mersin","Muğla","Muş",
-  "Nevşehir","Niğde","Ordu","Osmaniye","Rize","Sakarya","Samsun","Siirt","Sinop",
-  "Sivas","Şanlıurfa","Şırnak","Tekirdağ","Tokat","Trabzon","Tunceli","Uşak","Van",
-  "Yalova","Yozgat","Zonguldak",
+  "Adana", "Adıyaman", "Afyon", "Ağrı", "Aksaray", "Amasya", "Ankara", "Antalya", "Ardahan",
+  "Artvin", "Aydın", "Balıkesir", "Bartın", "Batman", "Bayburt", "Bilecik", "Bingöl", "Bitlis",
+  "Bolu", "Burdur", "Bursa", "Çanakkale", "Çankırı", "Çorum", "Denizli", "Diyarbakır", "Düzce",
+  "Edirne", "Elazığ", "Erzincan", "Erzurum", "Eskişehir", "Gaziantep", "Giresun", "Gümüşhane",
+  "Hakkari", "Hatay", "Iğdır", "Isparta", "İstanbul", "İzmir", "Kahramanmaraş", "Karabük",
+  "Karaman", "Kars", "Kastamonu", "Kayseri", "Kırıkkale", "Kırklareli", "Kırşehir", "Kilis",
+  "Kocaeli", "Konya", "Kütahya", "Malatya", "Manisa", "Mardin", "Mersin", "Muğla", "Muş",
+  "Nevşehir", "Niğde", "Ordu", "Osmaniye", "Rize", "Sakarya", "Samsun", "Siirt", "Sinop",
+  "Sivas", "Şanlıurfa", "Şırnak", "Tekirdağ", "Tokat", "Trabzon", "Tunceli", "Uşak", "Van",
+  "Yalova", "Yozgat", "Zonguldak",
 ];
 
 function extractTurkishCity(text: string): string | null {
@@ -1077,7 +1138,7 @@ function generateTitle(chat: Chat) {
         useChatStore.getState().renameChat(chat.id, title);
       }
     })
-    .catch(() => {});
+    .catch(() => { });
 }
 
 /**
@@ -1114,11 +1175,11 @@ async function hydrateImages(chatId: string) {
     chats: s.chats.map((c) =>
       c.id === chatId
         ? {
-            ...c,
-            messages: c.messages.map((m) =>
-              map[m.id] ? { ...m, images: map[m.id] } : m,
-            ),
-          }
+          ...c,
+          messages: c.messages.map((m) =>
+            map[m.id] ? { ...m, images: map[m.id] } : m,
+          ),
+        }
         : c,
     ),
   }));
@@ -1191,10 +1252,10 @@ export const useChatStore = create<ChatState>()(
           chats: s.chats.map((c) =>
             c.id === activeChatId
               ? {
-                  ...c,
-                  title: title && c.title === "Yeni Sohbet" ? title : c.title,
-                  messages: [...c.messages, msg],
-                }
+                ...c,
+                title: title && c.title === "Yeni Sohbet" ? title : c.title,
+                messages: [...c.messages, msg],
+              }
               : c,
           ),
         }));
@@ -1223,8 +1284,8 @@ export const useChatStore = create<ChatState>()(
         });
         // Sohbet silinince kalıcı kopya, FTS ve bellek kayıtları da temizlenir.
         void chatDb.deleteChat(id);
-        void ipc.chatHistoryClear(id).catch(() => {});
-        void ipc.memoryClearChat(id).catch(() => {});
+        void ipc.chatHistoryClear(id).catch(() => { });
+        void ipc.memoryClearChat(id).catch(() => { });
       },
 
       renameChat: (id, title) => {
@@ -1239,18 +1300,18 @@ export const useChatStore = create<ChatState>()(
           chats: s.chats.map((c) =>
             c.id === chatId
               ? {
-                  ...c,
-                  messages: c.messages.map((m) =>
-                    m.id === msgId
-                      ? {
-                          ...m,
-                          toolActions: m.toolActions?.map((a, i) =>
-                            i === actionIdx ? { ...a, collapsed: !a.collapsed } : a
-                          ),
-                        }
-                      : m
-                  ),
-                }
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === msgId
+                    ? {
+                      ...m,
+                      toolActions: m.toolActions?.map((a, i) =>
+                        i === actionIdx ? { ...a, collapsed: !a.collapsed } : a
+                      ),
+                    }
+                    : m
+                ),
+              }
               : c
           ),
         }));
@@ -1422,7 +1483,7 @@ export const useChatStore = create<ChatState>()(
           const lastUserMsg = [...conversationHistory].reverse().find((m) => m.role === "user");
           if (lastUserMsg) {
             lastUserMsg.images = snapshotImages;
-            console.log(`[Axiom] ${snapshotImages.length} resim eklendi (${snapshotImages.map(i => Math.round(i.length/1024) + "KB").join(", ")})`);
+            console.log(`[Axiom] ${snapshotImages.length} resim eklendi (${snapshotImages.map(i => Math.round(i.length / 1024) + "KB").join(", ")})`);
           }
         }
 
@@ -1499,12 +1560,12 @@ export const useChatStore = create<ChatState>()(
             chats: s.chats.map((c) =>
               c.id === activeChatId
                 ? {
-                    ...c,
-                    messages: [
-                      ...c.messages,
-                      { id: agentMsgId, role: "agent" as const, text: "", toolActions: [] },
-                    ],
-                  }
+                  ...c,
+                  messages: [
+                    ...c.messages,
+                    { id: agentMsgId, role: "agent" as const, text: "", toolActions: [] },
+                  ],
+                }
                 : c
             ),
           }));
@@ -1527,11 +1588,11 @@ export const useChatStore = create<ChatState>()(
                 chats: s.chats.map((c) =>
                   c.id === activeChatId
                     ? {
-                        ...c,
-                        messages: c.messages.map((m) =>
-                          m.id === agentMsgId ? { ...m, thinkingContent: fullThinking } : m
-                        ),
-                      }
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === agentMsgId ? { ...m, thinkingContent: fullThinking } : m
+                      ),
+                    }
                     : c
                 ),
               }));
@@ -1542,11 +1603,11 @@ export const useChatStore = create<ChatState>()(
               chats: s.chats.map((c) =>
                 c.id === activeChatId
                   ? {
-                      ...c,
-                      messages: c.messages.map((m) =>
-                        m.id === agentMsgId ? { ...m, text: fullText } : m
-                      ),
-                    }
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === agentMsgId ? { ...m, text: fullText } : m
+                    ),
+                  }
                   : c
               ),
             }));
@@ -1573,11 +1634,11 @@ export const useChatStore = create<ChatState>()(
               chats: s.chats.map((c) =>
                 c.id === activeChatId
                   ? {
-                      ...c,
-                      messages: c.messages.map((m) =>
-                        m.id === agentMsgId ? { ...m, text: fullText || `Hata: ${String(e)}` } : m
-                      ),
-                    }
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === agentMsgId ? { ...m, text: fullText || `Hata: ${String(e)}` } : m
+                    ),
+                  }
                   : c
               ),
               thinking: false,
@@ -1695,11 +1756,11 @@ export const useChatStore = create<ChatState>()(
             chats: s.chats.map((c) =>
               c.id === activeChatId
                 ? {
-                    ...c,
-                    messages: c.messages.map((m) =>
-                      m.id === agentMsgId ? { ...m, toolActions: actions } : m
-                    ),
-                  }
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === agentMsgId ? { ...m, toolActions: actions } : m
+                  ),
+                }
                 : c
             ),
             thinkingStatus: "Düşünüyor...",
@@ -1717,20 +1778,20 @@ export const useChatStore = create<ChatState>()(
             chats: s.chats.map((c) =>
               c.id === activeChatId
                 ? {
-                    ...c,
-                    messages: c.messages.map((m) =>
-                      m.id === lastAgentMsgId
-                        ? {
-                            ...m,
-                            alternates: [
-                              ...stash,
-                              { text: m.text, thinkingContent: m.thinkingContent, toolActions: m.toolActions },
-                            ],
-                            versionIndex: stash.length,
-                          }
-                        : m
-                    ),
-                  }
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === lastAgentMsgId
+                      ? {
+                        ...m,
+                        alternates: [
+                          ...stash,
+                          { text: m.text, thinkingContent: m.thinkingContent, toolActions: m.toolActions },
+                        ],
+                        versionIndex: stash.length,
+                      }
+                      : m
+                  ),
+                }
                 : c
             ),
           }));
@@ -1744,7 +1805,7 @@ export const useChatStore = create<ChatState>()(
         const doneChat = get().chats.find((c) => c.id === activeChatId);
         if (doneChat && doneChat.title === "Yeni Sohbet") generateTitle(doneChat);
         if (lastAgentText) {
-          useUserProfileStore.getState().extractFromTurn(text, lastAgentText).catch(() => {});
+          useUserProfileStore.getState().extractFromTurn(text, lastAgentText).catch(() => { });
         }
 
         // ---- Memory store (background, fire-and-forget) -----------------------
@@ -1790,7 +1851,7 @@ export const useChatStore = create<ChatState>()(
           // Dinamik import — TTS yardımcısı küçük, ama chat store'u sade tutmak için ayrı.
           import("../hooks/useTTS")
             .then(({ speakOnce }) => speakOnce(lastAgentText, { voice: ttsCfg.voice, rate: ttsCfg.rate }))
-            .catch(() => {});
+            .catch(() => { });
         }
         // ----------------------------------------------------------------------
 
@@ -1826,7 +1887,7 @@ export const useChatStore = create<ChatState>()(
         // Auto-compact: context %80'i aşınca otomatik sıkıştır
         const usage = get().contextUsage;
         if (usage.total > 0 && usage.used / usage.total > 0.8) {
-          get().compactChat().catch(() => {});
+          get().compactChat().catch(() => { });
         }
 
         void lastAgentMsgId;

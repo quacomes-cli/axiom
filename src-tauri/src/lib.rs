@@ -2,6 +2,7 @@ mod audio;
 mod documents;
 mod filesystem;
 mod ipc;
+mod mcp;
 mod memory;
 mod permissions;
 mod runtime;
@@ -80,6 +81,7 @@ pub fn run() {
                 settings: RwLock::new(app_settings),
                 config_path: settings_path,
             });
+            app.manage(mcp::McpManager::default());
 
             let memory_path = config_dir.join("memory.db");
             match memory::MemoryStore::open(&memory_path) {
@@ -262,8 +264,21 @@ pub fn run() {
             ipc::commands::chat_history_index,
             ipc::commands::chat_history_search,
             ipc::commands::chat_history_clear,
+            ipc::commands::mcp_servers_get,
+            ipc::commands::mcp_servers_set,
+            ipc::commands::mcp_connect,
+            ipc::commands::mcp_disconnect,
+            ipc::commands::mcp_status,
+            ipc::commands::mcp_call,
             ipc::commands::active_window,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(|app, event| {
+            // Uygulama kapanırken MCP çocuk süreçlerini öldür — yetim
+            // npx/node süreçleri arka planda kalmasın.
+            if let tauri::RunEvent::Exit = event {
+                app.state::<mcp::McpManager>().kill_all();
+            }
+        });
 }
