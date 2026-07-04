@@ -1,4 +1,4 @@
-// Fiyat takibi yönetim sayfası.
+﻿// Fiyat takibi yönetim sayfası.
 //
 // Üstte: yeni ürün ekleme formu (URL + opsiyonel hedef fiyat).
 // Altta: takip edilen ürünler, kart halinde. Her kart: isim, fiyat, en düşük,
@@ -17,6 +17,7 @@ import {
 import { PageHeader } from "../shared/PageHeader";
 import { usePriceTrackStore, type PriceTrackItem } from "../../stores/priceTrackStore";
 import { scrapePrice } from "../../lib/priceScraper";
+import { useT, t } from "../../i18n";
 
 function formatPrice(p: number | null, cur: string): string {
   if (p === null) return "—";
@@ -24,17 +25,18 @@ function formatPrice(p: number | null, cur: string): string {
 }
 
 function formatRelative(ts: number | null): string {
-  if (!ts) return "henüz kontrol edilmedi";
+  if (!ts) return t("priceTracker.neverChecked");
   const sec = (Date.now() - ts) / 1000;
-  if (sec < 60) return "şimdi";
-  if (sec < 3600) return `${Math.floor(sec / 60)} dk önce`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} sa önce`;
-  return `${Math.floor(sec / 86400)} gün önce`;
+  if (sec < 60) return t("priceTracker.now");
+  if (sec < 3600) return t("priceTracker.minAgo", { n: Math.floor(sec / 60) });
+  if (sec < 86400) return t("priceTracker.hourAgo", { n: Math.floor(sec / 3600) });
+  return t("priceTracker.dayAgo", { n: Math.floor(sec / 86400) });
 }
 
 function Sparkline({ history }: { history: PriceTrackItem["history"] }) {
+  const t = useT();
   if (history.length < 2) {
-    return <div className="h-10 text-[0.7143rem] text-text-faint">Yeterli geçmiş yok</div>;
+    return <div className="h-10 text-[0.7143rem] text-text-faint">{t("priceTracker.notEnoughHistory")}</div>;
   }
   const prices = history.map((h) => h.price);
   const min = Math.min(...prices);
@@ -63,6 +65,7 @@ function Sparkline({ history }: { history: PriceTrackItem["history"] }) {
 }
 
 function ItemCard({ item }: { item: PriceTrackItem }) {
+  const t = useT();
   const remove = usePriceTrackStore((s) => s.remove);
   const recordScrape = usePriceTrackStore((s) => s.recordScrape);
   const updateMeta = usePriceTrackStore((s) => s.updateMeta);
@@ -77,7 +80,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
     try {
       const result = await scrapePrice(item.url);
       if (result.price === null) {
-        recordScrape(item.id, { price: null, error: `Fiyat çıkarılamadı (${result.source})` });
+        recordScrape(item.id, { price: null, error: t("priceTracker.extractFailedShort", { source: result.source }) });
       } else {
         recordScrape(item.id, { price: result.price, currency: result.currency || item.currency });
       }
@@ -131,7 +134,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
             onClick={checkNow}
             disabled={checking}
             className="rounded-md p-1.5 text-text-faint hover:bg-hover hover:text-text disabled:opacity-50"
-            title="Şimdi kontrol et"
+            title={t("priceTracker.checkNow")}
           >
             {checking ? (
               <Loader2 size={13} className="animate-spin" />
@@ -142,10 +145,10 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
           <button
             type="button"
             onClick={() => {
-              if (confirm(`"${item.name}" takipten çıkarılsın mı?`)) remove(item.id);
+              if (confirm(t("priceTracker.removeConfirm", { name: item.name }))) remove(item.id);
             }}
             className="rounded-md p-1.5 text-text-faint hover:bg-hover hover:text-red-400"
-            title="Takipten çıkar"
+            title={t("priceTracker.removeFromTracking")}
           >
             <Trash2 size={13} strokeWidth={1.6} />
           </button>
@@ -159,7 +162,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
           </div>
           {item.lowestPrice !== null && item.lowestPrice !== item.currentPrice && (
             <div className="mt-0.5 text-[0.7857rem] text-text-faint">
-              En düşük: {formatPrice(item.lowestPrice, item.currency)}
+              {t("priceTracker.lowest")} {formatPrice(item.lowestPrice, item.currency)}
             </div>
           )}
         </div>
@@ -168,12 +171,12 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
 
       {item.history.length >= 2 && (
         <div className={`mt-2 text-[0.7857rem] ${delta < 0 ? "text-green-400" : delta > 0 ? "text-red-400" : "text-text-faint"}`}>
-          {delta < 0 ? "↓" : delta > 0 ? "↑" : "•"} {Math.abs(delta).toFixed(2)} {item.currency} ({deltaPct.toFixed(1)}%) — takibe alındığından beri
+          {delta < 0 ? "↓" : delta > 0 ? "↑" : "•"} {Math.abs(delta).toFixed(2)} {item.currency} ({deltaPct.toFixed(1)}%) — {t("priceTracker.sinceTracking")}
         </div>
       )}
 
       <div className="mt-3 flex items-center gap-2 border-t border-border pt-3 text-[0.7857rem] text-text-faint">
-        <span>Hedef:</span>
+        <span>{t("priceTracker.target")}</span>
         {editingTarget ? (
           <form
             onSubmit={(e) => {
@@ -188,7 +191,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
               onChange={(e) => setTargetValue(e.target.value)}
               onBlur={saveTarget}
               onKeyDown={(e) => e.key === "Escape" && setEditingTarget(false)}
-              placeholder="örn 1500"
+              placeholder={t("priceTracker.targetInlinePlaceholder")}
               className="w-20 rounded bg-surface-2 px-1.5 py-0.5 text-[0.7857rem] text-text outline-none focus:ring-1 focus:ring-accent"
             />
             <span>{item.currency}</span>
@@ -202,7 +205,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
             }}
             className="text-text-secondary underline-offset-2 hover:underline"
           >
-            {item.targetPrice !== null ? `${item.targetPrice} ${item.currency}` : "ayarla"}
+            {item.targetPrice !== null ? `${item.targetPrice} ${item.currency}` : t("priceTracker.setTarget")}
           </button>
         )}
         <span className="ml-auto">{formatRelative(item.lastChecked)}</span>
@@ -219,6 +222,7 @@ function ItemCard({ item }: { item: PriceTrackItem }) {
 }
 
 function AddForm() {
+  const t = useT();
   const add = usePriceTrackStore((s) => s.add);
   const [url, setUrl] = useState("");
   const [target, setTarget] = useState("");
@@ -240,7 +244,7 @@ function AddForm() {
     try {
       const result = await scrapePrice(cleanUrl);
       if (result.price === null) {
-        setError(`Fiyat çıkarılamadı (yöntem: ${result.source}). Site dinamik yüklüyor olabilir.`);
+        setError(t("priceTracker.extractFailedForm", { source: result.source }));
         return;
       }
       const finalName = name.trim() || result.title || new URL(cleanUrl).hostname;
@@ -255,7 +259,7 @@ function AddForm() {
       setUrl("");
       setTarget("");
       setName("");
-      setSuccess(`✓ "${finalName}" — ${result.price} ${result.currency || "TRY"} takibe alındı`);
+      setSuccess(t("priceTracker.addedSuccess", { name: finalName, price: result.price, currency: result.currency || "TRY" }));
       setTimeout(() => setSuccess(null), 4000);
     } catch (e) {
       setError(String(e));
@@ -267,13 +271,13 @@ function AddForm() {
   return (
     <form onSubmit={submit} className="rounded-lg border border-border bg-surface-1 p-4">
       <div className="mb-3 text-[0.7857rem] uppercase tracking-wider text-text-faint">
-        Yeni ürün ekle
+        {t("priceTracker.addProduct")}
       </div>
       <div className="flex flex-col gap-2">
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://hepsiburada.com/... veya başka bir e-ticaret URL'si"
+          placeholder={t("priceTracker.urlPlaceholder")}
           disabled={busy}
           className="rounded-md bg-surface-2 px-3 py-2 text-[0.9286rem] text-text outline-none focus:bg-surface-3 transition-colors focus:ring-accent"
         />
@@ -281,14 +285,14 @@ function AddForm() {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="İsim (opsiyonel — otomatik bulunur)"
+            placeholder={t("priceTracker.namePlaceholder")}
             disabled={busy}
             className="flex-1 rounded-md bg-surface-2 px-3 py-2 text-[0.9286rem] text-text outline-none focus:bg-surface-3 transition-colors focus:ring-accent"
           />
           <input
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            placeholder="Hedef fiyat (opsiyonel)"
+            placeholder={t("priceTracker.targetPlaceholder")}
             disabled={busy}
             className="w-44 rounded-md bg-surface-2 px-3 py-2 text-[0.9286rem] text-text outline-none focus:bg-surface-3 transition-colors focus:ring-accent"
           />
@@ -300,11 +304,9 @@ function AddForm() {
             {busy ? (
               <Loader2 size={13} className="animate-spin" />
             ) : (
-              <Plus size={13} strokeWidth={3} />
+              <Plus size={13} strokeWidth={1.8} />
             )}
-            <span style={{
-              height: 20
-            }}>Ekle</span>
+            <span>{t("priceTracker.add")}</span>
           </button>
         </div>
       </div>
@@ -321,6 +323,7 @@ function AddForm() {
 }
 
 export function PriceTrackerPage() {
+  const t = useT();
   const items = usePriceTrackStore((s) => s.items);
   const sorted = [...items].sort((a, b) => b.addedAt - a.addedAt);
 
@@ -328,19 +331,19 @@ export function PriceTrackerPage() {
     <div className="h-full min-h-0 overflow-y-auto bg-base">
       <div className="mx-auto max-w-5xl px-8 py-8">
         <PageHeader
-          title="Fiyat Takibi"
-          subtitle="Ürünlerin fiyatlarını otomatik takip et. Düşüş olursa bildirim atılır."
+          title={t("nav.priceTracker")}
+          subtitle={t("priceTracker.subtitle")}
         />
 
         <AddForm />
 
         <div className="mt-6 mb-3 flex items-baseline justify-between">
           <span className="text-[0.7857rem] uppercase tracking-wider text-text-faint">
-            Takip edilen ({items.length})
+            {t("priceTracker.tracked", { count: items.length })}
           </span>
           {items.length > 0 && (
             <span className="text-[0.7143rem] text-text-faint">
-              Her ürün saat başı otomatik kontrol edilir
+              {t("priceTracker.hourlyCheck")}
             </span>
           )}
         </div>
@@ -348,9 +351,9 @@ export function PriceTrackerPage() {
         {items.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-surface-1/40 px-6 py-12 text-center">
             <TrendingDown size={28} className="text-text-faint" strokeWidth={1.3} />
-            <div className="text-sm text-text-secondary">Henüz takip edilen ürün yok</div>
+            <div className="text-sm text-text-secondary">{t("priceTracker.noProducts")}</div>
             <div className="max-w-md text-[0.8571rem] text-text-faint">
-              Yukarıdaki forma bir ürün URL'si yapıştır, ya da sohbette AI'a "şu linki takip et" diyerek de ekleyebilirsin.
+              {t("priceTracker.noProductsHint")}
             </div>
           </div>
         ) : (
