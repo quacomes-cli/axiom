@@ -35,7 +35,7 @@ import type {
 
 const TABS = [
   { id: "ollama", label: "Ollama", icon: HardDrive },
-  { id: "cloud", label: "Bulut API", icon: Cloud },
+  { id: "cloud", label: "Cloud API", icon: Cloud },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -65,7 +65,7 @@ export function ModelList() {
     >
       <div className="mb-6 flex items-start justify-between">
         <PageHeader
-          title="Modeller"
+          title={t("models.title")}
           subtitle={t("models.manageSubtitle")}
         />
         {tab === "ollama" && ollamaStatus?.installed && ollamaStatus?.running && (
@@ -74,7 +74,7 @@ export function ModelList() {
             className="flex items-center gap-1.5 rounded-xl bg-surface-2 px-3.5 py-2 text-sm text-text-secondary transition-all duration-200 hover:bg-surface-3 hover:text-text"
           >
             <Plus size={15} strokeWidth={1.4} />
-            Model Çek
+            {t("models.pullModel")}
           </button>
         )}
       </div>
@@ -147,12 +147,12 @@ function OllamaSection() {
             <Download size={22} strokeWidth={1.3} className="text-text-faint" />
           </div>
           <h3 className="mb-1 text-[1rem] font-medium text-text">
-            Ollama Kurulu Değil
+            {t("models.ollamaNotInstalled")}
           </h3>
           <p className="mb-4 text-[0.9286rem] text-text-faint">
-            Yerel modelleri çalıştırmak için Ollama gerekli.
+            {t("models.ollamaNeeded")}
             <br />
-            Arka planda otomatik olarak kurulacak.
+            {t("models.ollamaAutoInstall")}
           </p>
           <button
             onClick={installOllama}
@@ -162,18 +162,18 @@ function OllamaSection() {
             {ollamaInstalling ? (
               <>
                 <Loader2 size={14} strokeWidth={1.4} className="animate-spin" />
-                Kuruluyor…
+                {t("models.installing")}
               </>
             ) : (
               <>
                 <Download size={14} strokeWidth={1.4} />
-                Ollama'yı Kur
+                {t("models.installOllama")}
               </>
             )}
           </button>
           {ollamaInstalling && (
             <p className="mt-3 text-[0.7857rem] text-text-faint">
-              winget ile arka planda indiriliyor. Bu birkaç dakika sürebilir.
+              {t("models.wingetNote")}
             </p>
           )}
         </div>
@@ -194,7 +194,7 @@ function OllamaSection() {
         <div className="flex items-center gap-2 rounded-xl bg-surface-2 px-3.5 py-2.5">
           <Loader2 size={14} strokeWidth={1.4} className="animate-spin text-warn" />
           <span className="text-[0.9286rem] text-text-secondary">
-            Ollama başlatılıyor…
+            {t("models.ollamaStarting")}
           </span>
         </div>
       </div>
@@ -209,20 +209,20 @@ function OllamaSection() {
           <>
             <Wifi size={14} strokeWidth={1.4} className="text-success" />
             <span className="text-[0.9286rem] text-text-secondary">
-              Ollama çalışıyor
+              {t("models.ollamaRunning")}
             </span>
           </>
         ) : (
           <>
             <WifiOff size={14} strokeWidth={1.4} className="text-danger" />
             <span className="text-[0.9286rem] text-text-secondary">
-              Ollama bağlantısı yok
+              {t("models.ollamaNoConn")}
             </span>
             <button
               onClick={startOllama}
               className="ml-auto rounded-lg bg-surface-3 px-2.5 py-1 text-[0.7857rem] text-text-secondary transition-colors hover:bg-hover-strong hover:text-text"
             >
-              Başlat
+              {t("models.start")}
             </button>
           </>
         )}
@@ -559,7 +559,7 @@ function PullModelDialog({ onClose }: { onClose: () => void }) {
       >
         <h3 className="mb-1 text-sm font-medium text-text">{t("models.pullModel")}</h3>
         <p className="mb-4 text-[0.8571rem] text-text-faint">
-          Ollama model adını gir (ör. llama3.2, mistral, codellama)
+          {t("models.pullPrompt")}
         </p>
 
         <input
@@ -577,7 +577,7 @@ function PullModelDialog({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="rounded-lg px-3 py-1.5 text-[0.9286rem] text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
           >
-            İptal
+            {t("common.cancel")}
           </button>
           <button
             onClick={handlePull}
@@ -587,12 +587,12 @@ function PullModelDialog({ onClose }: { onClose: () => void }) {
             {pulling ? (
               <>
                 <Loader2 size={13} strokeWidth={1.4} className="animate-spin" />
-                İndiriliyor…
+                {t("models.downloadingEllipsis")}
               </>
             ) : (
               <>
                 <Download size={13} strokeWidth={1.4} />
-                Çek
+                {t("models.pull")}
               </>
             )}
           </button>
@@ -642,6 +642,7 @@ const CLOUD_PRESETS: Record<string, { label: string; defaultModels: CloudModelDe
 };
 
 function CloudSection() {
+  const t = useT();
   const cloudProviders = useModelStore((s) => s.cloudProviders);
   const models = useModelStore((s) => s.models);
   const saveCloud = useModelStore((s) => s.saveCloudProviders);
@@ -670,7 +671,7 @@ function CloudSection() {
 
       {cloudProviders.length === 0 && !showAdd && (
         <div className="rounded-2xl bg-surface px-6 py-10 text-center text-sm text-text-faint">
-          Henüz bulut API sağlayıcısı eklenmedi.
+          {t("models.noCloudProviders")}
         </div>
       )}
 
@@ -680,7 +681,7 @@ function CloudSection() {
         className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-border py-3 text-[0.9286rem] text-text-faint transition-colors hover:border-border-hover hover:text-text-secondary"
       >
         <Plus size={14} strokeWidth={1.4} />
-        Sağlayıcı Ekle
+        {t("models.addProvider")}
       </button>
 
       <AnimatePresence>
@@ -768,7 +769,7 @@ function CloudProviderCard({
               {/* API Key */}
               <div className="space-y-1">
                 <label className="text-[0.7857rem] uppercase tracking-widest text-text-faint">
-                  API Anahtarı
+                  {t("models.apiKey")}
                 </label>
                 {editingKey ? (
                   <div className="flex gap-1.5">
@@ -795,7 +796,7 @@ function CloudProviderCard({
                       }}
                       className="rounded-lg px-2 py-1.5 text-[0.8571rem] text-text-faint transition-colors hover:bg-hover"
                     >
-                      İptal
+                      {t("common.cancel")}
                     </button>
                   </div>
                 ) : (
@@ -803,7 +804,7 @@ function CloudProviderCard({
                     onClick={() => setEditingKey(true)}
                     className="w-full rounded-lg bg-surface px-2.5 py-1.5 text-left text-[0.8571rem] text-text-faint transition-colors hover:bg-hover"
                   >
-                    {maskedKey} — düzenle
+                    {maskedKey} — {t("models.editKey")}
                   </button>
                 )}
               </div>
@@ -856,7 +857,7 @@ function CloudProviderCard({
                   onClick={onRemove}
                   className="rounded-lg px-2.5 py-1 text-[0.8571rem] text-danger transition-colors hover:bg-danger/10"
                 >
-                  Kaldır
+                  {t("common.remove")}
                 </button>
               </div>
             </div>
@@ -878,6 +879,7 @@ function AddCloudProviderDialog({
   onAdd: (cfg: CloudProviderConfig) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const available = Object.entries(CLOUD_PRESETS).filter(
     ([key]) => !existing.includes(key)
   );
@@ -914,7 +916,7 @@ function AddCloudProviderDialog({
           onClick={(e) => e.stopPropagation()}
         >
           <p className="mb-3 text-sm text-text-faint">
-            Tüm sağlayıcılar zaten eklenmiş.
+            {t("models.allProvidersAdded")}
           </p>
           <button
             onClick={onClose}
@@ -944,10 +946,10 @@ function AddCloudProviderDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="mb-1 text-sm font-medium text-text">
-          Bulut Sağlayıcı Ekle
+          {t("models.addCloudProvider")}
         </h3>
         <p className="mb-4 text-[0.8571rem] text-text-faint">
-          API anahtarını gir, modeller otomatik eklenecek.
+          {t("models.addCloudHint")}
         </p>
 
         {/* Provider select */}
@@ -989,7 +991,7 @@ function AddCloudProviderDialog({
             onClick={onClose}
             className="rounded-lg px-3 py-1.5 text-[0.9286rem] text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
           >
-            İptal
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleAdd}
