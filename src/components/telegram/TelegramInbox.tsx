@@ -1,4 +1,4 @@
-// Telegram gelen kutusu — auto mode'da bot ile yapılan konuşmaları toplu
+﻿// Telegram gelen kutusu — auto mode'da bot ile yapılan konuşmaları toplu
 // gösterir. Sol: chat listesi (en son aktiviteye göre sıralı). Sağ: seçili
 // sohbetin tüm mesajları, kullanıcı/bot baloncukları halinde.
 
@@ -7,13 +7,14 @@ import { Trash2, Send } from "lucide-react";
 import { PageHeader } from "../shared/PageHeader";
 import { useTelegramStore, type TelegramChat } from "../../stores/telegramStore";
 import { useAppStore } from "../../stores/appStore";
+import { useT, t as translate } from "../../i18n";
 
 function formatRelative(ts: number): string {
   const diffSec = (Date.now() - ts) / 1000;
-  if (diffSec < 60) return "şimdi";
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} dk`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} sa`;
-  return new Date(ts).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+  if (diffSec < 60) return translate("tasks.justNow");
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} ${translate("tasks.unitMin")}`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} ${translate("tasks.unitHour")}`;
+  return new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
 function formatTime(ts: number): string {
@@ -26,7 +27,7 @@ function ChatListItem({ chat, active, onClick }: {
   onClick: () => void;
 }) {
   const lastMsg = chat.messages[chat.messages.length - 1];
-  const preview = lastMsg ? lastMsg.content.replace(/\n+/g, " ").slice(0, 60) : "(boş)";
+  const preview = lastMsg ? lastMsg.content.replace(/\n+/g, " ").slice(0, 60) : translate("telegram.chatPreviewEmpty");
   return (
     <button
       type="button"
@@ -41,7 +42,7 @@ function ChatListItem({ chat, active, onClick }: {
       </div>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[0.7857rem] text-text-faint">
-          {lastMsg?.role === "assistant" ? "Sen: " : ""}{preview}
+          {lastMsg?.role === "assistant" ? translate("telegram.youPrefix") : ""}{preview}
         </span>
         {chat.unread > 0 && (
           <span className="shrink-0 rounded-full bg-accent px-1.5 py-0.5 text-[0.7143rem] font-medium text-white">
@@ -77,6 +78,7 @@ function MessageBubble({ msg, sender }: {
 }
 
 function ConversationView({ chat }: { chat: TelegramChat }) {
+  const t = useT();
   const clearChat = useTelegramStore((s) => s.clearChat);
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastMsgKey = chat.messages.length > 0
@@ -130,12 +132,12 @@ function ConversationView({ chat }: { chat: TelegramChat }) {
         <button
           type="button"
           onClick={() => {
-            if (confirm(`${chat.sender} ile olan tüm konuşmayı silmek istiyor musun?`)) {
+            if (confirm(t("telegram.deleteConfirm", { name: chat.sender }))) {
               clearChat(chat.chatId);
             }
           }}
           className="rounded-md p-1.5 text-text-faint hover:bg-hover hover:text-text"
-          title="Konuşmayı sil"
+          title={t("telegram.deleteConversation")}
         >
           <Trash2 size={14} strokeWidth={1.6} />
         </button>
@@ -144,7 +146,7 @@ function ConversationView({ chat }: { chat: TelegramChat }) {
       <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
         {chat.messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-faint">
-            Bu konuşmada henüz mesaj yok.
+            {t("telegram.noMessages")}
           </div>
         ) : (
           chat.messages.map((msg, i) => (
@@ -159,6 +161,7 @@ function ConversationView({ chat }: { chat: TelegramChat }) {
 }
 
 function ReplyComposer({ onSend }: { onSend: (text: string) => void | Promise<void> }) {
+  const t = useT();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   function submit() {
@@ -174,7 +177,7 @@ function ReplyComposer({ onSend }: { onSend: (text: string) => void | Promise<vo
         <textarea
           ref={inputRef}
           rows={1}
-          placeholder="Bot adına bir mesaj yaz..."
+          placeholder={t("telegram.inputPlaceholder")}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
@@ -187,7 +190,7 @@ function ReplyComposer({ onSend }: { onSend: (text: string) => void | Promise<vo
           type="button"
           onClick={submit}
           className="rounded-full bg-accent/40 p-2 text-white hover:bg-accent/60 px-2.5 py-2.5"
-          title="Gönder (Enter)"
+          title={t("telegram.send")}
         >
           <Send size={15} strokeWidth={1.8} />
         </button>
@@ -197,6 +200,7 @@ function ReplyComposer({ onSend }: { onSend: (text: string) => void | Promise<vo
 }
 
 export function TelegramInbox() {
+  const t = useT();
   const chatsObj = useTelegramStore((s) => s.chats);
   const selectedChatId = useTelegramStore((s) => s.selectedChatId);
   const selectChat = useTelegramStore((s) => s.selectChat);
@@ -221,13 +225,13 @@ export function TelegramInbox() {
     <div className="flex h-full min-h-0 flex-col bg-base">
       <div className="px-8 pt-8">
         <PageHeader
-          title="Telegram"
+          title={t("nav.telegram")}
           subtitle={
             telegramEnabled
               ? autoMode
-                ? "Bot'la yapılan konuşmalar (auto mode aktif)"
-                : "Bot bağlı ama otomatik mod kapalı. Uygulamalar → Telegram'dan aç."
-              : "Telegram entegrasyonu kapalı. Uygulamalar sekmesinden etkinleştir."
+                ? t("telegram.subtitleAuto")
+                : t("telegram.subtitleManualOff")
+              : t("telegram.subtitleDisabled")
           }
         />
       </div>
@@ -242,7 +246,7 @@ export function TelegramInbox() {
           <div className="flex-1 space-y-0.5 overflow-y-auto p-2">
             {chats.length === 0 ? (
               <div className="px-3 py-6 text-center text-xs text-text-faint">
-                Henüz konuşma yok. Bot'a Telegram'dan mesaj at, burada görünsün.
+                {t("telegram.noConversations")}
               </div>
             ) : (
               chats.map((c) => (
@@ -262,7 +266,7 @@ export function TelegramInbox() {
             <ConversationView chat={selectedChat} />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-text-faint">
-              Soldan bir sohbet seç.
+              {t("telegram.selectChat")}
             </div>
           )}
         </section>
