@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Rocket,
@@ -21,19 +21,20 @@ import { useOptimizationStore } from "../../stores/optimizationStore";
 import { ipc } from "../../lib/ipc";
 import type { ModelInfo } from "../../types";
 import { useUiStore } from "../../stores/uiStore";
+import { useT } from "../../i18n";
 
 // Quantization hedefleri (kaynak F16/F32 olmalı)
 const QUANT_TARGETS = [
-  { id: "q8_0", label: "Q8_0", desc: "En yüksek kalite, hafif hızlanma" },
-  { id: "q5_K_M", label: "Q5_K_M", desc: "Dengeli, az kalite kaybı" },
-  { id: "q4_K_M", label: "Q4_K_M", desc: "Önerilen — iyi hız/kalite dengesi" },
-  { id: "q3_K_M", label: "Q3_K_M", desc: "Agresif, küçük & hızlı, kalite düşer" },
+  { id: "q8_0", label: "Q8_0", descKey: "accelerate.q8Desc" },
+  { id: "q5_K_M", label: "Q5_K_M", descKey: "accelerate.q5Desc" },
+  { id: "q4_K_M", label: "Q4_K_M", descKey: "accelerate.q4Desc" },
+  { id: "q3_K_M", label: "Q3_K_M", descKey: "accelerate.q3Desc" },
 ];
 
 const KV_TYPES = [
-  { id: "f16", label: "F16", desc: "Varsayılan, sıkıştırma yok" },
-  { id: "q8_0", label: "Q8_0", desc: "~%50 KV bellek tasarrufu" },
-  { id: "q4_0", label: "Q4_0", desc: "~%75 tasarruf, uzun bağlamda hızlı" },
+  { id: "f16", label: "F16", descKey: "accelerate.kvF16Desc" },
+  { id: "q8_0", label: "Q8_0", descKey: "accelerate.kvQ8Desc" },
+  { id: "q4_0", label: "Q4_0", descKey: "accelerate.kvQ4Desc" },
 ];
 
 function isF16(quant?: string | null) {
@@ -91,6 +92,7 @@ function Card({
 }
 
 export function AcceleratePage() {
+  const t = useT();
   const models = useModelStore((s) => s.models);
   const loadModels = useModelStore((s) => s.loadModels);
   const checkOllama = useModelStore((s) => s.checkOllama);
@@ -184,14 +186,14 @@ export function AcceleratePage() {
   async function confirmF16Download() {
     setF16Modal(false);
     setErr(null);
-    setBusyMsg("F16 kaynağı indiriliyor...");
+    setBusyMsg(t("accelerate.busyF16"));
     try {
       await pullModel("ollama", f16Tag);
       setBusyMsg(null);
       await runQuantize(f16Tag);
     } catch (e) {
       setBusyMsg(null);
-      setErr(`F16 kaynağı indirilemedi: ${String(e)}. Tag'i kontrol et veya modelin F16 varyantı olmayabilir.`);
+      setErr(t("accelerate.f16Failed", { err: String(e) }));
     }
   }
 
@@ -251,17 +253,17 @@ export function AcceleratePage() {
           <ArrowLeft size={16} strokeWidth={1.4} />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-text">Model Hızlandırma</h1>
+          <h1 className="text-lg font-semibold text-text">{t("accelerate.title")}</h1>
         </div>
       </div>
       <PageHeader
-        title="Hızlandır"
-        subtitle="Yüklü modelleri quantization, KV-cache ve flash attention ile hızlandır."
+        title={t("models.accelerate")}
+        subtitle={t("accelerate.subtitle")}
       />
 
       {!ollamaOnline && (
         <div className="mb-4 rounded-xl bg-warn/8 px-3.5 py-2.5 text-[0.9286rem] text-warn">
-          Ollama çalışmıyor — hızlandırma için önce Ollama'yı başlat.
+          {t("accelerate.ollamaNotRunning")}
         </div>
       )}
 
@@ -274,11 +276,11 @@ export function AcceleratePage() {
       {/* Model seçici */}
       <div className="mb-5">
         <div className="mb-2 text-[0.7143rem] font-medium uppercase tracking-widest text-text-faint">
-          Model seç
+          {t("accelerate.selectModel")}
         </div>
         {ollamaModels.length === 0 ? (
           <div className="rounded-xl bg-surface-2 py-8 text-center text-xs text-text-faint">
-            Yüklü Ollama modeli yok. Önce Modeller sayfasından indir.
+            {t("accelerate.noModels")}
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -311,7 +313,7 @@ export function AcceleratePage() {
           <Card
             icon={<Layers size={18} strokeWidth={1.6} />}
             title="Quantization"
-            subtitle={`Modelden daha düşük-bit bir varyant üret. Mevcut: ${selected.quantization ?? "bilinmiyor"}. Yeni model olarak kaydedilir.`}
+            subtitle={t("accelerate.quantSubtitle", { current: selected.quantization ?? t("accelerate.currentUnknown") })}
           >
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               {QUANT_TARGETS.map((q) => {
@@ -320,7 +322,7 @@ export function AcceleratePage() {
                   <button
                     key={q.id}
                     onClick={() => setTargetQuant(q.id)}
-                    title={q.desc}
+                    title={t(q.descKey)}
                     className={`rounded-lg px-2 py-2 text-center transition-colors ${on ? "bg-accent/15 text-accent ring-1 ring-accent/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
                       }`}
                   >
@@ -329,7 +331,7 @@ export function AcceleratePage() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[0.7857rem] text-text-faint">{QUANT_TARGETS.find((q) => q.id === targetQuant)?.desc}</p>
+            <p className="mt-2 text-[0.7857rem] text-text-faint">{t(QUANT_TARGETS.find((q) => q.id === targetQuant)?.descKey ?? "")}</p>
 
             {(activeQuantProgress || f16PullProgress) ? (
               progressBar(f16PullProgress ?? activeQuantProgress)
@@ -340,7 +342,7 @@ export function AcceleratePage() {
                 className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-accent/15 py-2.5 text-sm text-accent transition-colors hover:bg-accent/25 disabled:opacity-40"
               >
                 <Rocket size={14} strokeWidth={1.6} />
-                {`${targetTag || "model"} olarak hızlandır`}
+                {t("accelerate.accelerateAs", { tag: targetTag || "model" })}
               </button>
             )}
             {busyMsg && <p className="mt-2 text-[0.7857rem] text-text-faint">{busyMsg}</p>}
@@ -350,7 +352,7 @@ export function AcceleratePage() {
           <Card
             icon={<Database size={18} strokeWidth={1.6} />}
             title="KV-cache Quantization"
-            subtitle="Bağlam (KV) önbelleğini sıkıştır — uzun sohbetlerde bellek tasarrufu ve hız. Sunucu geneli ayardır, tüm modelleri etkiler."
+            subtitle={t("accelerate.kvSubtitle")}
             accent="bg-purple-500/15 text-purple-400"
           >
             <div className="grid grid-cols-3 gap-1.5">
@@ -360,7 +362,7 @@ export function AcceleratePage() {
                   <button
                     key={k.id}
                     onClick={() => setKvTarget(k.id)}
-                    title={k.desc}
+                    title={t(k.descKey)}
                     className={`rounded-lg px-2 py-2 text-center transition-colors ${on ? "bg-purple-500/15 text-purple-300 ring-1 ring-purple-400/30" : "bg-surface-2 text-text-secondary hover:bg-surface-3"
                       }`}
                   >
@@ -369,10 +371,10 @@ export function AcceleratePage() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[0.7857rem] text-text-faint">{KV_TYPES.find((k) => k.id === kvTarget)?.desc}</p>
+            <p className="mt-2 text-[0.7857rem] text-text-faint">{t(KV_TYPES.find((k) => k.id === kvTarget)?.descKey ?? "")}</p>
             {kvTarget !== "f16" && !config?.flashAttention && (
               <div className="mt-2 flex items-center gap-1.5 text-[0.7857rem] text-amber-400">
-                <AlertTriangle size={12} /> Flash Attention gerekiyor — uygulanınca birlikte açılacak.
+                <AlertTriangle size={12} /> {t("accelerate.flashRequired")}
               </div>
             )}
             <button
@@ -381,20 +383,20 @@ export function AcceleratePage() {
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-purple-500/15 py-2.5 text-sm text-purple-300 transition-colors hover:bg-purple-500/25 disabled:opacity-40"
             >
               <Database size={14} strokeWidth={1.6} />
-              Uygula (Ollama yeniden başlar)
+              {t("accelerate.applyRestart")}
             </button>
           </Card>
 
           {/* Flash Attention + optimum */}
           <Card
             icon={<Zap size={18} strokeWidth={1.6} />}
-            title="Flash Attention + Optimum Ayar"
-            subtitle="Donanımına göre en hızlı profili (GPU offload, batch, flash attention) hesaplayıp uygula. Sunucu geneli ayardır."
+            title={t("accelerate.flashSetTitle")}
+            subtitle={t("accelerate.autoSubtitle")}
             accent="bg-amber-500/15 text-amber-400"
           >
             <div className="flex items-center gap-2 text-[0.7857rem] text-text-faint">
               <Gauge size={12} />
-              Flash Attention: {config?.flashAttention ? "Açık" : "Kapalı"} · Profil: {config?.preset ?? "—"}
+              {t("accelerate.flashStatusLabel")} {config?.flashAttention ? t("accelerate.flashOn") : t("accelerate.flashOff")} · {t("accelerate.profileLabel")} {config?.preset ?? "—"}
             </div>
             <button
               onClick={() => setRestartModal("speed")}
@@ -402,7 +404,7 @@ export function AcceleratePage() {
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500/15 py-2.5 text-sm text-amber-300 transition-colors hover:bg-amber-500/25 disabled:opacity-40"
             >
               <Zap size={14} strokeWidth={1.6} />
-              En hızlıya ayarla
+              {t("accelerate.setFastest")}
             </button>
           </Card>
 
@@ -416,13 +418,11 @@ export function AcceleratePage() {
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-semibold text-text-secondary">Speculative Decoding</h3>
                   <span className="rounded bg-surface-3 px-1.5 py-0.5 text-[0.6429rem] font-medium uppercase text-text-faint">
-                    Deneysel · Yakında
+                    {t("accelerate.experimentalSoon")}
                   </span>
                 </div>
                 <p className="mt-0.5 text-[0.8571rem] leading-relaxed text-text-faint">
-                  Küçük bir "taslak" modelle büyük modeli hızlandırma. Ollama API'si bunu henüz
-                  sunmuyor (llama.cpp draft-model desteği gerekiyor). İleride yerel llama.cpp
-                  backend'i eklenince etkinleşecek.
+                  {t("accelerate.draftDesc")}
                 </p>
               </div>
             </div>
@@ -446,17 +446,16 @@ export function AcceleratePage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15">
                   <Download size={18} className="text-amber-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-text">F16 kaynağı gerekiyor</h3>
+                <h3 className="text-sm font-semibold text-text">{t("accelerate.f16Needed")}</h3>
               </div>
               <p className="mb-3 text-xs leading-relaxed text-text-faint">
-                <span className="text-text-secondary">{selected.id}</span> zaten sıkıştırılmış
-                ({selected.quantization ?? "?"}). Quantization için sıkıştırılmamış (F16) bir kaynak
-                gerekir. Aşağıda registry'de bulunan gerçek F16 tag'leri listelenir; birini seç veya elle düzenle.
+                <span className="text-text-secondary">{selected.id}</span> {t("accelerate.f16ExplainMid")}
+                ({selected.quantization ?? "?"}). {t("accelerate.f16ExplainRest")}
               </p>
 
               {f16Loading ? (
                 <div className="mb-3 flex items-center gap-2 text-xs text-text-faint">
-                  <Loader2 size={13} className="animate-spin" /> Registry tag'leri aranıyor...
+                  <Loader2 size={13} className="animate-spin" /> {t("accelerate.searchingTags")}
                 </div>
               ) : f16Suggestions.length > 0 ? (
                 <div className="mb-3 flex flex-wrap gap-1.5">
@@ -475,7 +474,7 @@ export function AcceleratePage() {
                 </div>
               ) : (
                 <p className="mb-3 text-[0.7857rem] text-amber-400/80">
-                  Registry'de F16 tag'i bulunamadı (özel/yerel model olabilir). Tag'i elle gir.
+                  {t("accelerate.noF16Tag")}
                 </p>
               )}
 
@@ -483,21 +482,21 @@ export function AcceleratePage() {
                 value={f16Tag}
                 onChange={(e) => setF16Tag(e.target.value)}
                 className="mb-4 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text outline-none focus:border-accent"
-                placeholder="örn. gemma3:4b-it-fp16"
+                placeholder={t("accelerate.f16Placeholder")}
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => setF16Modal(false)}
                   className="flex-1 rounded-xl bg-surface-3 py-2 text-sm text-text-secondary transition-colors hover:bg-hover"
                 >
-                  İptal
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={confirmF16Download}
                   disabled={!f16Tag.trim()}
                   className="flex-1 rounded-xl bg-accent/15 py-2 text-sm text-accent transition-colors hover:bg-accent/25 disabled:opacity-40"
                 >
-                  İndir ve Hızlandır
+                  {t("accelerate.downloadAccelerate")}
                 </button>
               </div>
             </motion.div>
@@ -521,11 +520,10 @@ export function AcceleratePage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15">
                   <AlertTriangle size={18} className="text-amber-400" />
                 </div>
-                <h3 className="text-sm font-semibold text-text">Ollama yeniden başlatılsın mı?</h3>
+                <h3 className="text-sm font-semibold text-text">{t("accelerate.restartQ")}</h3>
               </div>
               <p className="mb-4 text-xs leading-relaxed text-text-faint">
-                Bu ayarın uygulanması için Ollama sunucusunun yeniden başlatılması gerekiyor.
-                Aktif bir üretim varsa kesilir. Devam edilsin mi?
+                {t("accelerate.restartExplain")}
               </p>
               <div className="flex gap-2">
                 <button
@@ -533,7 +531,7 @@ export function AcceleratePage() {
                   onClick={() => setRestartModal(null)}
                   className="flex-1 rounded-xl bg-surface-3 py-2 text-sm text-text-secondary transition-colors hover:bg-hover"
                 >
-                  Hayır
+                  {t("optimization.no")}
                 </button>
                 <button
                   disabled={restarting}
@@ -543,12 +541,12 @@ export function AcceleratePage() {
                   {restarting ? (
                     <>
                       <Loader2 size={14} className="animate-spin" />
-                      Yeniden başlatılıyor...
+                      {t("optimization.restarting")}
                     </>
                   ) : (
                     <>
                       <CheckCircle2 size={14} />
-                      Evet, Uygula
+                      {t("accelerate.yesApply")}
                     </>
                   )}
                 </button>
