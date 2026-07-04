@@ -4,13 +4,14 @@ import { Bell, X, CheckCheck, MessageSquarePlus, AlertCircle } from "lucide-reac
 import { useNotificationStore, type AgentNotification } from "../../stores/notificationStore";
 import { useChatStore } from "../../stores/chatStore";
 import { useUiStore } from "../../stores/uiStore";
+import { useT, t as translate } from "../../i18n";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
-  if (diff < 60_000) return "az önce";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} dk`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} sa`;
-  return new Date(ts).toLocaleDateString("tr-TR");
+  if (diff < 60_000) return translate("tasks.justNow");
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} ${translate("tasks.unitMin")}`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} ${translate("tasks.unitHour")}`;
+  return new Date(ts).toLocaleDateString();
 }
 
 function NotificationItem({
@@ -22,6 +23,7 @@ function NotificationItem({
   onOpen: () => void;
   onDismiss: () => void;
 }) {
+  const t = useT();
   const markRead = useNotificationStore((s) => s.markRead);
   const remove = useNotificationStore((s) => s.remove);
   return (
@@ -61,7 +63,7 @@ function NotificationItem({
               className="mt-1.5 inline-flex items-center gap-1 text-[0.8571rem] text-blue-400 transition-colors hover:text-blue-300"
             >
               <MessageSquarePlus size={11} />
-              Yeni sohbet olarak aç
+              {t("notif.openAsNewChat")}
             </button>
           )}
         </div>
@@ -72,7 +74,7 @@ function NotificationItem({
             remove(n.id);
           }}
           className="opacity-0 transition-opacity group-hover:opacity-100"
-          title="Sil"
+          title={t("common.delete")}
         >
           <X size={12} className="text-text-faint hover:text-text-secondary" />
         </button>
@@ -82,6 +84,7 @@ function NotificationItem({
 }
 
 export function NotificationCenter() {
+  const t = useT();
   const notifications = useNotificationStore((s) => s.notifications);
   const markAllRead = useNotificationStore((s) => s.markAllRead);
   const clear = useNotificationStore((s) => s.clear);
@@ -138,14 +141,14 @@ export function NotificationCenter() {
             className="absolute right-0 top-full mt-1 w-80 overflow-hidden rounded-xl border border-border bg-surface-2 shadow-xl"
           >
             <div className="flex items-center justify-between border-b border-border px-3 py-2">
-              <span className="text-xs font-semibold text-text-secondary">Bildirimler</span>
+              <span className="text-xs font-semibold text-text-secondary">{t("settings.sections.notifications")}</span>
               <div className="flex items-center gap-2">
                 {notifications.length > 0 && (
                   <>
                     <button
                       type="button"
                       onClick={markAllRead}
-                      title="Tümünü okundu işaretle"
+                      title={t("notif.markAllRead")}
                       className="text-text-faint transition-colors hover:text-text-secondary"
                     >
                       <CheckCheck size={13} />
@@ -153,7 +156,7 @@ export function NotificationCenter() {
                     <button
                       type="button"
                       onClick={clear}
-                      title="Tümünü sil"
+                      title={t("notif.deleteAll")}
                       className="text-text-faint transition-colors hover:text-red-400"
                     >
                       <X size={13} />
@@ -165,9 +168,9 @@ export function NotificationCenter() {
             <div className="max-h-96 overflow-y-auto p-1.5 scrollbar-thin">
               {notifications.length === 0 ? (
                 <div className="px-3 py-8 text-center text-xs text-text-faint">
-                  Henüz bildirim yok.
+                  {t("notif.empty")}
                   <br />
-                  Görevler sekmesinden zamanlanmış bir agent görevi oluştur.
+                  {t("notif.emptyHint")}
                 </div>
               ) : (
                 <div className="space-y-1">

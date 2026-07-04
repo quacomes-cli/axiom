@@ -15,11 +15,12 @@ import { useUiStore } from "../../stores/uiStore";
 import { useChatStore } from "../../stores/chatStore";
 import { ipc } from "../../lib/ipc";
 import type { ChatSearchHit, ViewId } from "../../types";
+import { t as translate } from "../../i18n";
 
 interface PageResult {
   kind: "page";
   id: ViewId;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
 }
 
@@ -31,17 +32,17 @@ interface MessageResult {
 type Result = PageResult | MessageResult;
 
 const PAGES: PageResult[] = [
-  { kind: "page", id: "chat", label: "Sohbet", icon: MessageCircle },
-  { kind: "page", id: "models", label: "Modeller", icon: Box },
-  { kind: "page", id: "apps", label: "Uygulamalar", icon: LayoutGrid },
-  { kind: "page", id: "skills", label: "Yetenekler", icon: Sparkles },
-  { kind: "page", id: "tasks", label: "Görevler", icon: SquareCheckBig },
-  { kind: "page", id: "settings", label: "Ayarlar", icon: Settings2 },
+  { kind: "page", id: "chat", labelKey: "nav.chat", icon: MessageCircle },
+  { kind: "page", id: "models", labelKey: "nav.models", icon: Box },
+  { kind: "page", id: "apps", labelKey: "nav.apps", icon: LayoutGrid },
+  { kind: "page", id: "skills", labelKey: "nav.skills", icon: Sparkles },
+  { kind: "page", id: "tasks", labelKey: "nav.tasks", icon: SquareCheckBig },
+  { kind: "page", id: "settings", labelKey: "sidebar.settings", icon: Settings2 },
 ];
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
-  if (diff < 60_000) return "az önce";
+  if (diff < 60_000) return translate("tasks.justNow");
   if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} dk`;
   if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} sa`;
   return new Date(ts).toLocaleDateString("tr-TR");
@@ -125,7 +126,7 @@ export function SearchModal() {
   const q = query.toLowerCase().trim();
   const matchedPages: Result[] =
     q.length > 0
-      ? PAGES.filter((p) => p.label.toLowerCase().includes(q) || p.id.includes(q))
+      ? PAGES.filter((p) => translate(p.labelKey).toLowerCase().includes(q) || p.id.includes(q))
       : [];
   const messageResults: Result[] = hits.map((hit) => ({ kind: "message" as const, hit }));
   const results: Result[] = [...matchedPages, ...messageResults];
@@ -191,7 +192,7 @@ export function SearchModal() {
                     setSelectedIdx(0);
                   }}
                   onKeyDown={onKeyDown}
-                  placeholder="Sohbet geçmişinde ara..."
+                  placeholder={translate("search.placeholder")}
                   className="flex-1 bg-transparent text-sm text-text outline-none placeholder:text-text-faint"
                 />
                 <kbd className="rounded bg-kbd px-1.5 py-0.5 text-[0.7143rem] text-text-faint">ESC</kbd>
@@ -224,8 +225,8 @@ export function SearchModal() {
                         }`}
                       >
                         <Icon size={15} strokeWidth={1.3} />
-                        <span className="flex-1 text-sm">{r.label}</span>
-                        <span className="text-[0.7143rem] text-text-faint">Sayfa</span>
+                        <span className="flex-1 text-sm">{translate(r.labelKey)}</span>
+                        <span className="text-[0.7143rem] text-text-faint">{translate("search.page")}</span>
                       </button>
                     );
                   }

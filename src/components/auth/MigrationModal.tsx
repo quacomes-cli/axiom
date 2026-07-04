@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { motion } from "framer-motion";
 import { CloudUpload, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useChatStore } from "../../stores/chatStore";
@@ -6,10 +6,12 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useUserProfileStore } from "../../stores/userProfileStore";
 import { useAuthStore } from "../../stores/authStore";
 import { migrateAllData } from "../../lib/syncService";
+import { useT } from "../../i18n";
 
 type MigrationStep = "ask" | "migrating" | "done" | "error";
 
 export function MigrationModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const [step, setStep] = useState<MigrationStep>("ask");
   const [progress, setProgress] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -21,16 +23,16 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
     if (!user) return;
     setStep("migrating");
     try {
-      setProgress("Sohbetler hazırlanıyor...");
+      setProgress(t("migration.preparingChats"));
       const chats = useChatStore.getState().chats.filter((c) => c.messages.length > 0);
 
-      setProgress("Ayarlar toplanıyor...");
+      setProgress(t("migration.collectingSettings"));
       const settings = useSettingsStore.getState().settings;
 
-      setProgress("Profil bilgileri alınıyor...");
+      setProgress(t("migration.gettingProfile"));
       const profile = useUserProfileStore.getState().profile;
 
-      setProgress(`${chats.length} sohbet yükleniyor...`);
+      setProgress(t("migration.loadingChats", { count: chats.length }));
       await migrateAllData(user.uid, {
         chats,
         settings: settings as unknown as Record<string, unknown>,
@@ -63,17 +65,17 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
                 <CloudUpload size={24} className="text-primary" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-text">Verileri Buluta Taşı</h2>
-                <p className="text-sm text-text-secondary">Mevcut verilerini hesabınla eşitle</p>
+                <h2 className="text-lg font-semibold text-text">{t("migration.title")}</h2>
+                <p className="text-sm text-text-secondary">{t("migration.subtitle")}</p>
               </div>
             </div>
 
             <div className="rounded-xl bg-surface-2 p-4 text-sm text-text-secondary space-y-2">
-              <p>Aşağıdaki veriler bulut hesabına aktarılacak:</p>
+              <p>{t("migration.willTransfer")}</p>
               <ul className="ml-4 list-disc space-y-1">
-                <li><span className="text-text">{chatCount}</span> sohbet geçmişi (resimler dahil)</li>
-                <li>Uygulama ayarları ve tercihleri</li>
-                <li>Profil bilgileri ve kimlik tanıma verileri</li>
+                <li><span className="text-text">{chatCount}</span> {t("migration.chatHistory")}</li>
+                <li>{t("migration.appSettings")}</li>
+                <li>{t("migration.profileData")}</li>
               </ul>
             </div>
 
@@ -82,13 +84,13 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm text-text-secondary transition-colors hover:bg-hover"
               >
-                Şimdi Değil
+                {t("migration.notNow")}
               </button>
               <button
                 onClick={handleMigrate}
                 className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/80"
               >
-                Taşımayı Başlat
+                {t("migration.startMigration")}
               </button>
             </div>
           </div>
@@ -98,7 +100,7 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col items-center gap-4 py-6">
             <Loader2 size={32} className="animate-spin text-primary" />
             <div className="text-center">
-              <p className="font-medium text-text">Veriler taşınıyor...</p>
+              <p className="font-medium text-text">{t("migration.migrating")}</p>
               <p className="mt-1 text-sm text-text-secondary">{progress}</p>
             </div>
           </div>
@@ -108,14 +110,14 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col items-center gap-4 py-6">
             <CheckCircle size={32} className="text-emerald-400" />
             <div className="text-center">
-              <p className="font-medium text-text">Taşıma Tamamlandı</p>
-              <p className="mt-1 text-sm text-text-secondary">Tüm verilerin bulut hesabına aktarıldı.</p>
+              <p className="font-medium text-text">{t("migration.done")}</p>
+              <p className="mt-1 text-sm text-text-secondary">{t("migration.doneDesc")}</p>
             </div>
             <button
               onClick={onClose}
               className="rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/80"
             >
-              Tamam
+              {t("migration.ok")}
             </button>
           </div>
         )}
@@ -124,12 +126,12 @@ export function MigrationModal({ onClose }: { onClose: () => void }) {
           <div className="flex flex-col items-center gap-4 py-6">
             <XCircle size={32} className="text-red-400" />
             <div className="text-center">
-              <p className="font-medium text-text">Taşıma Başarısız</p>
+              <p className="font-medium text-text">{t("migration.failed")}</p>
               <p className="mt-1 text-sm text-text-secondary">{errorMsg}</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={onClose} className="rounded-xl border border-border px-4 py-2.5 text-sm text-text-secondary hover:bg-hover">Kapat</button>
-              <button onClick={handleMigrate} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/80">Tekrar Dene</button>
+              <button onClick={onClose} className="rounded-xl border border-border px-4 py-2.5 text-sm text-text-secondary hover:bg-hover">{t("migration.close")}</button>
+              <button onClick={handleMigrate} className="rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/80">{t("migration.retry")}</button>
             </div>
           </div>
         )}
