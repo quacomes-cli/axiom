@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use crate::runtime::cloud::types::CloudProviderConfig;
 
 fn default_true() -> bool { true }
+/// Dil kodu veya "system" (ilk açılışta OS dilini algıla, desteklenmiyorsa EN).
+fn default_language() -> String { "system".to_string() }
 use crate::runtime::optimizer::OptimizationConfig;
 use crate::runtime::registry::ActiveModelRef;
 
@@ -10,6 +12,9 @@ use crate::runtime::registry::ActiveModelRef;
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     pub theme: Theme,
+    /// Arayüz dili: ISO kodu ("en", "tr", ...) veya "system" (OS'ten algıla).
+    #[serde(default = "default_language")]
+    pub language: String,
     pub font_size: u8,
     pub font_family: FontFamily,
     pub launch_at_startup: bool,
@@ -209,6 +214,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             theme: Theme::Dark,
+            language: default_language(),
             font_size: 14,
             font_family: FontFamily::Inter,
             launch_at_startup: false,

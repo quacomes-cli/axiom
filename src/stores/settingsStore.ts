@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AppSettings } from "../types";
 import { ipc } from "../lib/ipc";
+import { applyLocaleFromSetting } from "../i18n";
 
 interface SettingsState {
   settings: AppSettings | null;
@@ -12,6 +13,7 @@ interface SettingsState {
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
+  language: "system",
   fontSize: 14,
   fontFamily: "inter",
   launchAtStartup: false,
@@ -108,4 +110,5 @@ function applyToDOM(s: AppSettings) {
   root.style.fontSize = `${s.fontSize}px`;
   root.style.fontFamily = FONT_MAP[s.fontFamily] ?? FONT_MAP.inter;
   root.setAttribute("data-theme", s.theme);
+  applyLocaleFromSetting(s.language);
 }

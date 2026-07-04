@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useMcpStore } from "../../stores/mcpStore";
+import { useT } from "../../i18n";
 import type { McpServerConfig } from "../../types";
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -32,6 +33,7 @@ function emptyDraft(): { name: string; commandLine: string } {
 }
 
 export function McpSettings() {
+  const t = useT();
   const { servers, statuses, connecting, lastError, toolsByServer, load, addServer, removeServer, updateServer, connectServer, disconnectServer } =
     useMcpStore();
   const [draft, setDraft] = useState(emptyDraft());
@@ -59,16 +61,16 @@ export function McpSettings() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[0.9286rem] font-medium text-text">MCP Sunucuları</div>
+          <div className="text-[0.9286rem] font-medium text-text">{t("mcp.title")}</div>
           <div className="mt-0.5 text-xs text-text-faint">
-            Model Context Protocol araç sunucuları (filesystem, git, vb.). Bağlanınca araçları sohbette kullanılabilir.
+            {t("mcp.hint")}
           </div>
         </div>
         <button
           onClick={() => setShowAdd((v) => !v)}
           className="shrink-0 rounded-lg bg-surface-2 px-3 py-1.5 text-[0.8571rem] text-text-secondary transition-colors hover:bg-surface-3 hover:text-text"
         >
-          {showAdd ? "İptal" : "+ Ekle"}
+          {showAdd ? t("mcp.cancel") : t("mcp.add")}
         </button>
       </div>
 
@@ -77,13 +79,13 @@ export function McpSettings() {
           <input
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            placeholder="Sunucu adı (örn. filesystem)"
+            placeholder={t("mcp.serverNamePh")}
             className="w-full rounded-lg bg-surface px-3 py-2 text-[0.9286rem] text-text outline-none placeholder:text-text-faint"
           />
           <input
             value={draft.commandLine}
             onChange={(e) => setDraft({ ...draft, commandLine: e.target.value })}
-            placeholder='Komut (örn. npx -y @modelcontextprotocol/server-filesystem C:/Users/...)'
+            placeholder={t("mcp.commandPh")}
             className="w-full rounded-lg bg-surface px-3 py-2 font-mono text-[0.8571rem] text-text outline-none placeholder:text-text-faint"
           />
           <button
@@ -91,14 +93,14 @@ export function McpSettings() {
             disabled={!draft.name.trim() || !draft.commandLine.trim()}
             className="w-full rounded-lg bg-surface-3 py-2 text-[0.8571rem] font-medium text-text transition-colors hover:bg-border-hover disabled:opacity-40"
           >
-            Ekle ve Bağlan
+            {t("mcp.addAndConnect")}
           </button>
         </div>
       )}
 
       {servers.length === 0 && !showAdd && (
         <div className="rounded-xl bg-surface-2 px-3.5 py-6 text-center text-[0.8571rem] text-text-faint">
-          Henüz MCP sunucusu yok. "+ Ekle" ile bir tane tanımla.
+          {t("mcp.empty")}
         </div>
       )}
 
@@ -120,9 +122,9 @@ export function McpSettings() {
                   />
                   <span className="truncate text-[0.9286rem] text-text">{s.name}</span>
                   {status?.connected && (
-                    <span className="shrink-0 text-xs text-text-faint">{status.toolCount} araç</span>
+                    <span className="shrink-0 text-xs text-text-faint">{t("mcp.toolsCount", { count: status.toolCount })}</span>
                   )}
-                  {isConnecting && <span className="shrink-0 text-xs text-text-faint">bağlanıyor…</span>}
+                  {isConnecting && <span className="shrink-0 text-xs text-text-faint">{t("mcp.connecting")}</span>}
                 </div>
                 <div className="mt-1 truncate font-mono text-xs text-text-faint">
                   {s.command} {s.args.join(" ")}
@@ -147,7 +149,7 @@ export function McpSettings() {
                   onClick={() => disconnectServer(s.name)}
                   className="rounded-lg bg-surface px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text"
                 >
-                  Bağlantıyı kes
+                  {t("mcp.disconnect")}
                 </button>
               ) : (
                 <button
@@ -155,7 +157,7 @@ export function McpSettings() {
                   disabled={isConnecting}
                   className="rounded-lg bg-surface px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text disabled:opacity-40"
                 >
-                  Bağlan
+                  {t("mcp.connect")}
                 </button>
               )}
               {tools.length > 0 && (
@@ -163,14 +165,14 @@ export function McpSettings() {
                   onClick={() => setExpanded(isOpen ? null : s.name)}
                   className="rounded-lg bg-surface px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-surface-3 hover:text-text"
                 >
-                  {isOpen ? "Araçları gizle" : "Araçları göster"}
+                  {isOpen ? t("mcp.hideTools") : t("mcp.showTools")}
                 </button>
               )}
               <button
                 onClick={() => removeServer(s.name)}
                 className="ml-auto rounded-lg px-2.5 py-1 text-xs text-text-faint transition-colors hover:text-danger"
               >
-                Sil
+                {t("mcp.remove")}
               </button>
             </div>
 

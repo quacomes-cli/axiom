@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { ipc } from "../../lib/ipc";
+import { useT, SUPPORTED_LOCALES } from "../../i18n";
 import type { AlarmSoundSource, FontFamily, Theme } from "../../types";
 
 function SettingRow({
@@ -645,6 +646,7 @@ function AlarmSoundSettings() {
 }
 
 export function GeneralSettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const loaded = useSettingsStore((s) => s.loaded);
   const update = useSettingsStore((s) => s.update);
@@ -660,22 +662,40 @@ export function GeneralSettings() {
     <div className="space-y-1.5">
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Görünüm
+          {t("settings.sections.language")}
+        </div>
+        <SettingRow label={t("settings.language.label")} hint={t("settings.language.hint")}>
+          <select
+            value={settings.language}
+            onChange={(e) => update({ language: e.target.value })}
+            className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-[0.8571rem] text-text outline-none"
+          >
+            <option value="system">{t("settings.language.system")}</option>
+            {SUPPORTED_LOCALES.map((l) => (
+              <option key={l.code} value={l.code}>{l.label}</option>
+            ))}
+          </select>
+        </SettingRow>
+      </div>
+
+      <div className="rounded-2xl bg-surface p-4">
+        <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
+          {t("settings.sections.appearance")}
         </div>
         <div className="space-y-1">
-          <SettingRow label="Tema">
+          <SettingRow label={t("settings.appearance.theme")}>
             <SegmentedControl<Theme>
               layoutId="seg-theme"
               options={[
-                { value: "dark", label: "Koyu" },
-                { value: "light", label: "Açık" },
+                { value: "dark", label: t("settings.appearance.themeDark") },
+                { value: "light", label: t("settings.appearance.themeLight") },
               ]}
               value={settings.theme}
               onChange={(v) => update({ theme: v })}
             />
           </SettingRow>
 
-          <SettingRow label="Font boyutu" hint={`${settings.fontSize}px`}>
+          <SettingRow label={t("settings.appearance.fontSize")} hint={`${settings.fontSize}px`}>
             <div className="flex items-center gap-2">
               <button
                 onClick={() =>
@@ -699,12 +719,12 @@ export function GeneralSettings() {
             </div>
           </SettingRow>
 
-          <SettingRow label="Font ailesi">
+          <SettingRow label={t("settings.appearance.fontFamily")}>
             <SegmentedControl<FontFamily>
               layoutId="seg-font"
               options={[
                 { value: "inter", label: "Inter" },
-                { value: "system", label: "Sistem" },
+                { value: "system", label: t("settings.appearance.fontSystem") },
                 { value: "jetbrains", label: "JetBrains" },
               ]}
               value={settings.fontFamily}
@@ -716,12 +736,12 @@ export function GeneralSettings() {
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Sistem
+          {t("settings.sections.system")}
         </div>
         <div className="space-y-1">
           <SettingRow
-            label="Başlangıçta başlat"
-            hint="Windows açılışında Axiom'u otomatik başlat"
+            label={t("settings.system.launchAtStartup")}
+            hint={t("settings.system.launchAtStartupHint")}
           >
             <Toggle
               checked={settings.launchAtStartup}
@@ -729,8 +749,8 @@ export function GeneralSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Kapatınca tepside küçült"
-            hint="Kapatma tuşuna basınca sistem tepsisine küçültür, tamamen kapatmaz"
+            label={t("settings.system.closeToTray")}
+            hint={t("settings.system.closeToTrayHint")}
           >
             <Toggle
               checked={settings.closeToTray}
@@ -742,12 +762,12 @@ export function GeneralSettings() {
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Bildirimler
+          {t("settings.sections.notifications")}
         </div>
         <div className="space-y-1">
           <SettingRow
-            label="Yanıt bildirimi"
-            hint="Uygulama arka plandayken AI yanıtı geldiğinde bildirim gönder"
+            label={t("settings.notifications.response")}
+            hint={t("settings.notifications.responseHint")}
           >
             <Toggle
               checked={settings.notifyResponse}
@@ -755,8 +775,8 @@ export function GeneralSettings() {
             />
           </SettingRow>
           <SettingRow
-            label="Model indirme bildirimi"
-            hint="Bir model indirmesi tamamlandığında bildirim gönder"
+            label={t("settings.notifications.modelDownload")}
+            hint={t("settings.notifications.modelDownloadHint")}
           >
             <Toggle
               checked={settings.notifyModelDownload}
@@ -768,28 +788,28 @@ export function GeneralSettings() {
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Alarm Sesi
+          {t("settings.sections.alarmSound")}
         </div>
         <AlarmSoundSettings />
       </div>
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Ses Girişi (Mikrofon)
+          {t("settings.sections.voiceInput")}
         </div>
         <VoiceSettings />
       </div>
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Bellek (Uzun Süreli Hafıza)
+          {t("settings.sections.memory")}
         </div>
         <MemorySettings />
       </div>
 
       <div className="rounded-2xl bg-surface p-4">
         <div className="mb-3 text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Sesli Yanıt (TTS)
+          {t("settings.sections.tts")}
         </div>
         <TtsSettings />
       </div>

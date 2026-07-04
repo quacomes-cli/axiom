@@ -7,19 +7,21 @@ import { PermissionGrid } from "./PermissionGrid";
 import { ProfileSettings } from "./ProfileSettings";
 import { UpdaterSettings } from "./UpdaterSettings";
 import { McpSettings } from "./McpSettings";
+import { useT } from "../../i18n";
 
 const TABS = [
-  { id: "general", label: "Genel" },
-  { id: "profile", label: "Profil" },
-  { id: "shortcuts", label: "Kısayollar" },
-  { id: "permissions", label: "İzinler" },
-  { id: "mcp", label: "MCP" },
-  { id: "updater", label: "Güncelleme" },
+  { id: "general", labelKey: "settings.tabs.general" },
+  { id: "profile", labelKey: "settings.tabs.profile" },
+  { id: "shortcuts", labelKey: "settings.tabs.shortcuts" },
+  { id: "permissions", labelKey: "settings.tabs.permissions" },
+  { id: "mcp", labelKey: "settings.tabs.mcp" },
+  { id: "updater", labelKey: "settings.tabs.updater" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 export function SettingsPage() {
+  const t = useT();
   const [tab, setTab] = useState<TabId>("general");
 
   return (
@@ -27,15 +29,15 @@ export function SettingsPage() {
       className="h-full overflow-y-auto p-6"
       style={{ scrollbarWidth: "none" }}
     >
-      <PageHeader title="Ayarlar" />
+      <PageHeader title={t("settings.title")} />
 
       <div className="mb-6 flex gap-1 rounded-lg bg-surface p-1">
-        {TABS.map((t) => {
-          const active = tab === t.id;
+        {TABS.map((tt) => {
+          const active = tab === tt.id;
           return (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tt.id}
+              onClick={() => setTab(tt.id)}
               className={`relative flex-1 rounded-lg px-3 py-1.5 text-[0.9286rem] font-medium transition-colors duration-150 ${
                 active
                   ? "text-text"
@@ -49,7 +51,7 @@ export function SettingsPage() {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <span className="relative">{t.label}</span>
+              <span className="relative">{t(tt.labelKey)}</span>
             </button>
           );
         })}

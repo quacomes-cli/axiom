@@ -100,6 +100,8 @@ export interface AlarmSoundConfig {
 
 export interface AppSettings {
   theme: Theme;
+  /** Arayüz dili: ISO kodu ("en", "tr", ...) veya "system" (OS'ten algıla). */
+  language: string;
   fontSize: number;
   fontFamily: FontFamily;
   launchAtStartup: boolean;

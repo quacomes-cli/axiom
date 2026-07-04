@@ -27,17 +27,19 @@ import { useAuthStore } from "../../stores/authStore";
 import { useTelegramStore } from "../../stores/telegramStore";
 import { useAppStore } from "../../stores/appStore";
 import { UpdateReadyButton } from "./UpdateReadyButton";
+import { useT } from "../../i18n";
 import type { ViewId } from "../../types";
 
-const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
-  { id: "chat", label: "Sohbet", icon: MessageCircle },
-  // { id: "code", label: "Kod", icon: Terminal },
-  { id: "models", label: "Modeller", icon: Box },
-  { id: "apps", label: "Uygulamalar", icon: LayoutGrid },
-  { id: "skills", label: "Yetenekler", icon: Sparkles },
-  { id: "tasks", label: "Görevler", icon: SquareCheckBig },
-  { id: "telegram", label: "Telegram", icon: Send },
-  { id: "price-tracker", label: "Fiyat Takibi", icon: TrendingDown },
+// label = i18n anahtarı (nav.*); render sırasında t() ile çözülür.
+const NAV: { id: ViewId; labelKey: string; icon: LucideIcon }[] = [
+  { id: "chat", labelKey: "nav.chat", icon: MessageCircle },
+  // { id: "code", labelKey: "nav.code", icon: Terminal },
+  { id: "models", labelKey: "nav.models", icon: Box },
+  { id: "apps", labelKey: "nav.apps", icon: LayoutGrid },
+  { id: "skills", labelKey: "nav.skills", icon: Sparkles },
+  { id: "telegram", labelKey: "nav.telegram", icon: Send },
+  { id: "price-tracker", labelKey: "nav.priceTracker", icon: TrendingDown },
+  { id: "tasks", labelKey: "nav.tasks", icon: SquareCheckBig },
 ];
 
 const textVariants = {
@@ -84,6 +86,7 @@ function ChatContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(chat?.title ?? "");
+  const t = useT();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -99,7 +102,7 @@ function ChatContextMenu({
     return (
       <div
         ref={menuRef}
-        className="fixed z-50 w-48 rounded-lg bg-surface-2 p-1 shadow-xl ring-1 ring-border"
+        className="fixed z-50 w-60 rounded-lg bg-surface-2 p-0 shadow-xl ring-1 ring-border"
         style={{ top: anchorRect.bottom + 4, left: anchorRect.left }}
       >
         <form
@@ -116,7 +119,7 @@ function ChatContextMenu({
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && onClose()}
-            className="flex-1 rounded bg-surface-3 px-2 py-1 text-xs text-text outline-none"
+            className="flex-1 rounded-md bg-surface-3 px-1 py-1 text-[0.9286rem] text-text outline-none"
           />
         </form>
       </div>
@@ -126,25 +129,25 @@ function ChatContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 w-40 rounded-lg bg-surface-2/60 p-1 shadow-xl ring-1 ring-border"
-      style={{ top: anchorRect.bottom + 4, left: anchorRect.left, backdropFilter: "blur(10px)" }}
+      className="fixed z-50 w-50 rounded-lg bg-surface-2 p-1 shadow-xl ring-1 ring-accent/15"
+      style={{ top: anchorRect.bottom + 4, left: anchorRect.left }}
     >
       <button
         onClick={() => setRenaming(true)}
-        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-text-secondary hover:bg-hover hover:text-text"
+        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[0.9286rem] text-text-secondary hover:bg-hover hover:text-text"
       >
-        <Pencil size={12} strokeWidth={1.4} />
-        Yeniden Adlandır
+        <Pencil size={15} strokeWidth={1.4} />
+        {t("sidebar.rename")}
       </button>
       <button
         onClick={() => {
           deleteChat(chatId);
           onClose();
         }}
-        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-400 hover:bg-hover hover:text-red-300"
+        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[0.9286rem] text-red-400 hover:bg-hover hover:text-red-300"
       >
-        <Trash2 size={12} strokeWidth={1.4} />
-        Sil
+        <Trash2 size={15} strokeWidth={1.4} />
+        {t("sidebar.delete")}
       </button>
     </div>
   );
@@ -169,6 +172,7 @@ function CodeSessionContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(session?.title ?? "");
+  const t = useT();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -219,7 +223,7 @@ function CodeSessionContextMenu({
         className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-text-secondary hover:bg-hover hover:text-text"
       >
         <Pencil size={12} strokeWidth={1.4} />
-        Yeniden Adlandır
+        {t("sidebar.rename")}
       </button>
       <button
         onClick={() => {
@@ -229,7 +233,7 @@ function CodeSessionContextMenu({
         className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-400 hover:bg-hover hover:text-red-300"
       >
         <Trash2 size={12} strokeWidth={1.4} />
-        Sil
+        {t("sidebar.delete")}
       </button>
     </div>
   );
@@ -243,6 +247,7 @@ function AccountButton({ open, onOpenAuth }: { open: boolean; onOpenAuth: () => 
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [menuPos, setMenuPos] = useState<{ bottom: number; left: number } | null>(null);
+  const t = useT();
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -261,28 +266,28 @@ function AccountButton({ open, onOpenAuth }: { open: boolean; onOpenAuth: () => 
       <>
         <button
           onClick={() => setView("settings")}
-          title="Ayarlar"
-          className="flex items-center rounded-[10px] text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
+          title={t("sidebar.settings")}
+          className="flex items-center rounded-md text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
           style={{ height: 36 }}
         >
           <span className="flex shrink-0 items-center justify-center" style={{ width: 40, height: 36 }}>
             <Settings2 size={17} strokeWidth={1.4} />
           </span>
           <AnimatePresence>
-            {open && <FadingLabel text="Ayarlar" delay={0.02} />}
+            {open && <FadingLabel text={t("sidebar.settings")} delay={0.02} />}
           </AnimatePresence>
         </button>
         <button
           onClick={onOpenAuth}
-          title="Oturum Aç"
-          className="flex items-center rounded-[10px] text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
+          title={t("sidebar.signIn")}
+          className="flex items-center rounded-md text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
           style={{ height: 36 }}
         >
           <span className="flex shrink-0 items-center justify-center" style={{ width: 40, height: 36 }}>
             <LogIn size={17} strokeWidth={1.4} />
           </span>
           <AnimatePresence>
-            {open && <FadingLabel text="Oturum Aç" delay={0.03} />}
+            {open && <FadingLabel text={t("sidebar.signIn")} delay={0.03} />}
           </AnimatePresence>
         </button>
       </>
@@ -302,8 +307,8 @@ function AccountButton({ open, onOpenAuth }: { open: boolean; onOpenAuth: () => 
           }
           setMenuOpen(!menuOpen);
         }}
-        title={(user.displayName ?? user.email ?? "Hesap") + "\n" + (user?.email)}
-        className="group flex w-full items-center rounded-[10px] text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
+        title={(user.displayName ?? user.email ?? t("sidebar.account")) + "\n" + (user?.email)}
+        className="group flex w-full items-center rounded-md text-text-faint transition-colors duration-200 hover:bg-hover hover:text-text-secondary"
         style={{ height: 36 }}
       >
         <span className="flex shrink-0 items-center justify-center" style={{ width: 40, height: 36 }}>
@@ -365,13 +370,13 @@ function AccountButton({ open, onOpenAuth }: { open: boolean; onOpenAuth: () => 
               onClick={() => { setMenuOpen(false); setView("settings"); }}
               className="flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left text-[0.9286rem] text-text-secondary transition-colors hover:bg-hover"
             >
-              <Settings2 size={15} strokeWidth={1.4} /> Ayarlar
+              <Settings2 size={15} strokeWidth={1.4} /> {t("sidebar.settings")}
             </button>
             <button
               onClick={() => { setMenuOpen(false); signOut(); }}
               className="flex w-full items-center gap-2.5 rounded-md px-3 py-[7px] text-left text-[0.9286rem] text-red-400 transition-colors hover:bg-hover"
             >
-              <LogOut size={15} strokeWidth={1.4} /> Çıkış Yap
+              <LogOut size={15} strokeWidth={1.4} /> {t("sidebar.signOut")}
             </button>
           </motion.div>
         )}
@@ -381,6 +386,7 @@ function AccountButton({ open, onOpenAuth }: { open: boolean; onOpenAuth: () => 
 }
 
 export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
+  const t = useT();
   const view = useUiStore((s) => s.view);
   const setView = useUiStore((s) => s.setView);
   const open = useUiStore((s) => s.sidebarOpen);
@@ -420,7 +426,7 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
   async function handleNewCodeSession() {
     const selected = await dialogOpen({
       directory: true,
-      title: "Proje Klasörü Seç",
+      title: t("sidebar.pickProjectFolder"),
     });
     if (selected && typeof selected === "string") {
       await newCodeSession(selected);
@@ -449,15 +455,16 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
       <motion.nav
         animate={{ width: open ? 180 : 52 }}
         transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-        className="flex shrink-0 flex-col overflow-hidden bg-base pt-0 pb-3"
+        className="flex shrink-0 flex-col overflow-hidden bg-base pt-0 pb-2"
       >
         {/* Nav items */}
         <div className="flex flex-col gap-[2px] px-[6px]">
-          {NAV.map(({ id, label, icon: Icon }, i) => {
+          {NAV.map(({ id, labelKey, icon: Icon }, i) => {
             // Telegram entegrasyonu kapalıyken sekmeyi tamamen gizle
             if (id === "telegram" && !telegramAvailable) return null;
             // Fiyat takibi app'i kapalıyken sekmeyi gizle
             if (id === "price-tracker" && !priceTrackerAvailable) return null;
+            const label = t(labelKey);
             const active = view === id;
             const badge = id === "telegram" && telegramUnread > 0 ? telegramUnread : 0;
             return (
@@ -465,7 +472,7 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
                 key={id}
                 onClick={() => setView(id)}
                 title={open ? undefined : label}
-                className={`relative flex items-center rounded-[10px] transition-colors duration-200 ${
+                className={`relative flex items-center rounded-md ${
                   active
                     ? "bg-hover-strong text-text"
                     : "text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -506,11 +513,11 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
             >
               <div className="mb-1 flex items-center justify-between px-1">
                 <span className="text-[0.7143rem] font-medium uppercase tracking-wider text-text-faint">
-                  Sohbetler
+                  {t("sidebar.chats")}
                 </span>
                 <button
                   onClick={handleNewChat}
-                  title="Yeni Sohbet"
+                  title={t("sidebar.newChat")}
                   className="flex h-5 w-5 items-center justify-center rounded text-text-faint transition-colors hover:bg-hover hover:text-text"
                 >
                   <Plus size={12} strokeWidth={1.6} />
@@ -524,7 +531,7 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
                       <button
                         key={chat.id}
                         onClick={() => handleChatClick(chat.id)}
-                        className={`group flex items-center rounded-xl px-2.5 py-1.75 pr-1.75 text-left transition-colors duration-150 ${
+                        className={`group flex items-center rounded-md px-3 py-2 pr-2 text-left transition-colors duration-150 ${
                           isActive
                             ? "bg-hover text-text"
                             : "text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -535,7 +542,7 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
                         </span>
                         <span
                           onClick={(e) => handleContextMenu(chat.id, "chat", e)}
-                          className="ml-1 flex h-4 w-4 shrink-0 items-center justify-center rounded opacity-0 transition-opacity group-hover:opacity-100 hover:bg-hover-strong"
+                          className="ml-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md opacity-0 transition-opacity group-hover:opacity-100 hover:bg-hover-strong"
                         >
                           <Ellipsis size={13} strokeWidth={1.8} />
                         </span>
@@ -560,11 +567,11 @@ export function Sidebar({ onOpenAuth }: { onOpenAuth: () => void }) {
             >
               <div className="mb-1 flex items-center justify-between px-1">
                 <span className="text-[0.7143rem] font-medium uppercase tracking-wider text-text-faint">
-                  Oturumlar
+                  {t("sidebar.sessions")}
                 </span>
                 <button
                   onClick={handleNewCodeSession}
-                  title="Yeni Oturum"
+                  title={t("sidebar.newSession")}
                   className="flex h-5 w-5 items-center justify-center rounded text-text-faint transition-colors hover:bg-hover hover:text-text"
                 >
                   <Plus size={12} strokeWidth={1.6} />

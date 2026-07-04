@@ -8,6 +8,7 @@ import { useDocumentStore } from "../../stores/documentStore";
 import { useModelStore, modelSupportsVision } from "../../stores/modelStore";
 import { ipc } from "../../lib/ipc";
 import { NotificationCenter } from "./NotificationCenter";
+import { useT } from "../../i18n";
 
 const appWindow = getCurrentWindow();
 
@@ -92,8 +93,8 @@ async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
 }
 
 export function TitleBar() {
+  const t = useT();
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
-  const searchOpen = useUiStore((s) => s.searchOpen);
   const sidebarOpen = useUiStore((s) => s.sidebarOpen);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const shortcuts = useSettingsStore((s) => s.settings?.shortcuts);
@@ -123,25 +124,19 @@ export function TitleBar() {
   return (
     <header
       data-tauri-drag-region
-      className="relative flex h-[40px] shrink-0 items-center bg-transparent z-999999"
+      className="relative flex h-[40px] shrink-0 items-center bg-transparent"
     >
       {/* Left — Axiom branding + sidebar toggle. Tüm boyutlar font-size'dan bağımsız. */}
       <div
         data-tauri-drag-region
         className="flex shrink-0 items-center gap-1"
-        style={{ paddingLeft: 14 }}
+        style={{ paddingLeft: 6 }}
       >
-        <span
-          className="font-extrabold tracking-tight text-text-secondary"
-          style={{ zIndex: 1001, fontSize: 13 }}
-        >
-          Axiom
-        </span>
         <button
           onClick={toggleSidebar}
-          title={(sidebarOpen ? "Daralt" : "Genişlet")+" (Ctrl+B)"}
-          className="flex items-center justify-center rounded-md text-text-faint transition-colors duration-150 hover:bg-hover hover:text-text-secondary"
-          style={{ zIndex: 1001, height: 28, width: 28 }}
+          title={(sidebarOpen ? t("titlebar.collapse") : t("titlebar.expand")) + " (Ctrl+B)"}
+          className="flex items-center justify-center rounded-md text-text-faint hover:bg-surface-dark hover:text-text-secondary mr-0.5"
+          style={{ height: 30, width: 30 }}
         >
           {sidebarOpen ? (
             <PanelLeftClose size={15} strokeWidth={1.4} />
@@ -152,29 +147,17 @@ export function TitleBar() {
       </div>
 
       {/* Center — search trigger */}
-      {searchOpen == false && (
-        <div
-          className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          style={{
-            zIndex: "1000",
-          }}
-        >
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="pointer-events-auto flex w-full max-w-sm cursor-text items-center gap-2 rounded-lg bg-hover px-3 py-1.5 pr-1.75 text-text-faint transition-colors duration-200 hover:bg-hover-strong hover:text-text-secondary"
-            style={{ fontSize: 12 }}
-          >
-            <Search size={13} strokeWidth={1.4} />
-            <span>Ara...</span>
-            <kbd className="ml-auto rounded bg-kbd px-1.5 py-0.5 text-text-faint" style={{ fontSize: 10 }}>
-              {shortcuts ? formatShortcutDisplay(shortcuts.search) : "Ctrl K"}
-            </kbd>
-          </button>
-        </div>
-      )}
+      <button
+        onClick={() => setSearchOpen(true)}
+        className="flex items-center justify-center rounded-md text-text-faint hover:bg-surface-dark hover:text-text-secondary"
+        style={{ fontSize: 12, height: 30, width: 30 }}
+        title={`${t("titlebar.search")} (Ctrl+K)`}
+      >
+        <Search size={15} strokeWidth={1.4} className="ml-0.5"/>
+      </button>
 
       {/* Right spacer */}
-      <div data-tauri-drag-region className="min-w-0 flex-1" />
+      <div data-tauri-drag-region className="min-w-0 flex-1" style={{zIndex: 999999}}/>
 
       {/* Right — notifications + screenshot + window controls */}
       <div className="flex shrink-0 items-center">
@@ -183,7 +166,7 @@ export function TitleBar() {
           <button
             onClick={quickScreenshot}
             disabled={capturing}
-            title={`Hızlı ekran yakala${shortcuts ? ` (${formatShortcutDisplay(shortcuts.toggleScreenVision)})` : ""}`}
+            title={`${t("titlebar.quickScreenshot")}${shortcuts ? ` (${formatShortcutDisplay(shortcuts.toggleScreenVision)})` : ""}`}
             className="flex items-center gap-1.5 px-3 py-1 text-text-faint transition-all duration-200 hover:text-text-secondary disabled:opacity-50"
             style={{ fontSize: 11 }}
           >
