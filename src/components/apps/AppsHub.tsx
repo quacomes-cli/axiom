@@ -615,7 +615,7 @@ function AppCard({ app }: { app: AppIntegration }) {
               <StatusDot app={app} />
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-xs text-text-faint">
-              <span>{app.description}</span>
+              <span>{t(`appDesc.${app.id}`)}</span>
             </div>
             {hasTools && (
               <div className="mt-1 text-[0.7143rem] text-text-faint">
