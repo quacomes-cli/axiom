@@ -89,20 +89,21 @@ function Toggle({
   );
 }
 
-const WHISPER_MODELS: { id: string; label: string; size: string }[] = [
-  { id: "tiny", label: "Tiny (en hızlı)", size: "~75 MB" },
-  { id: "base", label: "Base (önerilen)", size: "~150 MB" },
-  { id: "small", label: "Small (daha doğru)", size: "~500 MB" },
-  { id: "medium", label: "Medium (en doğru)", size: "~1.5 GB" },
+const WHISPER_MODELS: { id: string; labelKey: string; size: string }[] = [
+  { id: "tiny", labelKey: "settings.voice.modelTiny", size: "~75 MB" },
+  { id: "base", labelKey: "settings.voice.modelBase", size: "~150 MB" },
+  { id: "small", labelKey: "settings.voice.modelSmall", size: "~500 MB" },
+  { id: "medium", labelKey: "settings.voice.modelMedium", size: "~1.5 GB" },
 ];
 
-const VOICE_LANGS: { id: string; label: string }[] = [
-  { id: "auto", label: "Otomatik" },
-  { id: "tr", label: "Türkçe" },
-  { id: "en", label: "İngilizce" },
+const VOICE_LANGS: { id: string; labelKey: string }[] = [
+  { id: "auto", labelKey: "settings.voice.langAuto" },
+  { id: "tr", labelKey: "settings.voice.langTr" },
+  { id: "en", labelKey: "settings.voice.langEn" },
 ];
 
 function VoiceSettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const [installed, setInstalled] = useState<Record<string, boolean>>({});
@@ -148,8 +149,8 @@ function VoiceSettings() {
   return (
     <div className="space-y-1">
       <SettingRow
-        label="Ses girişi etkin"
-        hint="Sohbet ve kod aracı girdi formundaki mikrofon butonu"
+        label={t("settings.voice.enabled")}
+        hint={t("settings.voice.enabledHint")}
       >
         <Toggle
           checked={voice.enabled}
@@ -158,19 +159,19 @@ function VoiceSettings() {
       </SettingRow>
 
       <SettingRow
-        label="Konuşma dili"
-        hint="Whisper model algılaması — auto karışık dilleri tespit eder"
+        label={t("settings.voice.language")}
+        hint={t("settings.voice.languageHint")}
       >
         <SegmentedControl<string>
           layoutId="seg-voice-lang"
-          options={VOICE_LANGS.map((l) => ({ value: l.id, label: l.label }))}
+          options={VOICE_LANGS.map((l) => ({ value: l.id, label: t(l.labelKey) }))}
           value={voice.language}
           onChange={(v) => update({ voice: { ...voice, language: v } })}
         />
       </SettingRow>
 
       <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-        <div className="text-[0.9286rem] text-text-secondary mb-2">Whisper modeli</div>
+        <div className="text-[0.9286rem] text-text-secondary mb-2">{t("settings.voice.whisperModel")}</div>
         <div className="space-y-1.5">
           {WHISPER_MODELS.map((m) => {
             const isActive = voice.model === m.id;
@@ -188,20 +189,20 @@ function VoiceSettings() {
                   onClick={() => update({ voice: { ...voice, model: m.id } })}
                   className="flex flex-1 items-center gap-2 text-left"
                 >
-                  <span className={isActive ? "text-text" : "text-text-secondary"}>{m.label}</span>
+                  <span className={isActive ? "text-text" : "text-text-secondary"}>{t(m.labelKey)}</span>
                   <span className="text-text-faint">· {m.size}</span>
                 </button>
                 {isInstalled ? (
-                  <span className="text-[0.7143rem] text-green-400">İndirildi</span>
+                  <span className="text-[0.7143rem] text-green-400">{t("settings.voice.downloaded")}</span>
                 ) : isDownloading ? (
-                  <span className="text-[0.7143rem] text-blue-400">İndiriliyor...</span>
+                  <span className="text-[0.7143rem] text-blue-400">{t("settings.voice.downloading")}</span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => downloadModel(m.id)}
                     className="rounded-md bg-active px-2 py-0.5 text-[0.7143rem] text-text-secondary hover:bg-border-hover hover:text-text"
                   >
-                    İndir
+                    {t("settings.voice.download")}
                   </button>
                 )}
               </div>
@@ -214,6 +215,7 @@ function VoiceSettings() {
 }
 
 function TtsSettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -249,9 +251,7 @@ function TtsSettings() {
   function testVoice() {
     if (!supported) return;
     window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(
-      "Merhaba, bu bir test mesajıdır. Sesli yanıt ayarın çalışıyor.",
-    );
+    const u = new SpeechSynthesisUtterance(t("settings.tts.testMessage"));
     const v = voices.find((x) => x.name === tts.voice);
     if (v) u.voice = v;
     else {
@@ -269,12 +269,12 @@ function TtsSettings() {
     <div className="space-y-1">
       {!supported && (
         <div className="rounded-xl bg-red-500/10 px-3.5 py-3 text-xs text-red-300">
-          Tarayıcı sesli yanıtı desteklemiyor (SpeechSynthesis yok).
+          {t("settings.tts.unsupported")}
         </div>
       )}
       <SettingRow
-        label="TTS etkin"
-        hint="Asistan mesajlarına 'sesli oku' butonu ekle"
+        label={t("settings.tts.enabled")}
+        hint={t("settings.tts.enabledHint")}
       >
         <Toggle
           checked={tts.enabled}
@@ -283,8 +283,8 @@ function TtsSettings() {
       </SettingRow>
 
       <SettingRow
-        label="Otomatik oku"
-        hint="Asistan yanıtı bittiğinde kendiliğinden seslendir"
+        label={t("settings.tts.autoSpeak")}
+        hint={t("settings.tts.autoSpeakHint")}
       >
         <Toggle
           checked={tts.autoSpeak}
@@ -294,14 +294,14 @@ function TtsSettings() {
 
       <div className="rounded-xl bg-surface-2 px-3.5 py-3">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[0.9286rem] text-text-secondary">Ses</span>
+          <span className="text-[0.9286rem] text-text-secondary">{t("settings.tts.voice")}</span>
           <button
             type="button"
             onClick={testVoice}
             disabled={!supported || testing}
             className="rounded-md bg-active px-2 py-0.5 text-[0.7143rem] text-text-secondary transition-colors hover:bg-border-hover hover:text-text disabled:opacity-30"
           >
-            {testing ? "Çalıyor..." : "Test et"}
+            {testing ? t("settings.tts.playing") : t("settings.tts.test")}
           </button>
         </div>
         <select
@@ -309,7 +309,7 @@ function TtsSettings() {
           onChange={(e) => update({ tts: { ...tts, voice: e.target.value } })}
           className="w-full rounded-lg bg-surface px-2 py-1.5 text-xs text-text outline-none"
         >
-          <option value="">(Otomatik — Türkçe varsa öncelik)</option>
+          <option value="">{t("settings.tts.voiceAuto")}</option>
           {voices.map((v) => (
             <option key={v.name} value={v.name}>
               {v.name} — {v.lang}
@@ -320,7 +320,7 @@ function TtsSettings() {
 
       <div className="rounded-xl bg-surface-2 px-3.5 py-3">
         <div className="mb-2 flex items-center justify-between text-[0.9286rem] text-text-secondary">
-          <span>Konuşma hızı</span>
+          <span>{t("settings.tts.rate")}</span>
           <span className="text-text-faint tabular-nums">{tts.rate.toFixed(2)}×</span>
         </div>
         <input
@@ -340,6 +340,7 @@ function TtsSettings() {
 }
 
 function MemorySettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const [stats, setStats] = useState<{
@@ -388,8 +389,8 @@ function MemorySettings() {
   return (
     <div className="space-y-1">
       <SettingRow
-        label="Bellek etkin"
-        hint="Her sohbet sonrası mesajları embedle ve gelecek sohbetlerde ilgiliyi hatırla"
+        label={t("settings.memory.enabled")}
+        hint={t("settings.memory.enabledHint")}
       >
         <Toggle
           checked={memory.enabled}
@@ -398,8 +399,8 @@ function MemorySettings() {
       </SettingRow>
 
       <SettingRow
-        label="Sohbetler arası hatırla"
-        hint="Açıkken farklı sohbetlerden çağırır. Kapalıyken sadece mevcut sohbet."
+        label={t("settings.memory.crossChat")}
+        hint={t("settings.memory.crossChatHint")}
       >
         <Toggle
           checked={memory.crossChat}
@@ -408,8 +409,8 @@ function MemorySettings() {
       </SettingRow>
 
       <SettingRow
-        label="Embedding modeli"
-        hint="Ollama'da yüklü olmalı. nomic-embed-text varsayılan ve hızlı."
+        label={t("settings.memory.embeddingModel")}
+        hint={t("settings.memory.embeddingModelHint")}
       >
         <input
           type="text"
@@ -420,8 +421,8 @@ function MemorySettings() {
       </SettingRow>
 
       <SettingRow
-        label="Üst K"
-        hint="Her sorgu için kaç parça hatırlasın (1-20)"
+        label={t("settings.memory.topK")}
+        hint={t("settings.memory.topKHint")}
       >
         <input
           type="number"
@@ -436,8 +437,8 @@ function MemorySettings() {
       </SettingRow>
 
       <SettingRow
-        label="Benzerlik eşiği"
-        hint="Cosine alt sınırı (0-1). Yüksek = daha kesin, düşük = daha geniş."
+        label={t("settings.memory.threshold")}
+        hint={t("settings.memory.thresholdHint")}
       >
         <input
           type="number"
@@ -455,20 +456,20 @@ function MemorySettings() {
       {stats && (
         <div className="rounded-xl bg-surface-2 px-3.5 py-3 text-xs text-text-faint">
           <div className="flex justify-between">
-            <span>Toplam parça:</span>
-            <span className="text-text-secondary tabular-nums">{stats.totalChunks.toLocaleString("tr-TR")}</span>
+            <span>{t("settings.memory.totalChunks")}</span>
+            <span className="text-text-secondary tabular-nums">{stats.totalChunks.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
-            <span>Farklı sohbet:</span>
+            <span>{t("settings.memory.distinctChats")}</span>
             <span className="text-text-secondary tabular-nums">{stats.totalChats}</span>
           </div>
           <div className="flex justify-between">
-            <span>DB boyutu:</span>
+            <span>{t("settings.memory.dbSize")}</span>
             <span className="text-text-secondary tabular-nums">{(stats.dbSizeBytes / 1024 / 1024).toFixed(2)} MB</span>
           </div>
           {stats.embeddingModel && (
             <div className="flex justify-between">
-              <span>Son model:</span>
+              <span>{t("settings.memory.lastModel")}</span>
               <span className="text-text-secondary truncate ml-2">{stats.embeddingModel}</span>
             </div>
           )}
@@ -482,7 +483,7 @@ function MemorySettings() {
             onClick={() => setConfirmClear(true)}
             className="w-full rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400 transition-colors hover:bg-red-500/20"
           >
-            Tüm belleği temizle
+            {t("settings.memory.clearAll")}
           </button>
         ) : (
           <div className="flex gap-2">
@@ -492,14 +493,14 @@ function MemorySettings() {
               disabled={clearing}
               className="flex-1 rounded-lg bg-red-500/30 px-3 py-2 text-xs text-red-300 transition-colors hover:bg-red-500/40 disabled:opacity-50"
             >
-              {clearing ? "Temizleniyor..." : "Eminim, sil"}
+              {clearing ? t("settings.memory.clearing") : t("settings.memory.confirmClear")}
             </button>
             <button
               type="button"
               onClick={() => setConfirmClear(false)}
               className="flex-1 rounded-lg bg-surface px-3 py-2 text-xs text-text-secondary transition-colors hover:bg-border-hover"
             >
-              Vazgeç
+              {t("settings.memory.cancelClear")}
             </button>
           </div>
         )}
@@ -509,6 +510,7 @@ function MemorySettings() {
 }
 
 function AlarmSoundSettings() {
+  const t = useT();
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const [ytUrl, setYtUrl] = useState(settings?.alarmSound?.youtubeUrl ?? "");
@@ -538,7 +540,7 @@ function AlarmSoundSettings() {
   async function pickLocalFile() {
     const selected = await open({
       multiple: false,
-      filters: [{ name: "Ses Dosyası", extensions: ["mp3", "wav", "ogg", "m4a"] }],
+      filters: [{ name: t("settings.alarm.audioFile"), extensions: ["mp3", "wav", "ogg", "m4a"] }],
     });
     if (!selected) return;
     const filePath = typeof selected === "string" ? selected : selected;
@@ -558,13 +560,13 @@ function AlarmSoundSettings() {
 
   return (
     <div className="space-y-1">
-      <SettingRow label="Ses kaynağı" hint="Alarm çaldığında hangi ses çalsın">
+      <SettingRow label={t("settings.alarm.source")} hint={t("settings.alarm.sourceHint")}>
         <SegmentedControl<AlarmSoundSource>
           layoutId="seg-alarm-source"
           options={[
-            { value: "default", label: "Varsayılan" },
-            { value: "youtube", label: "YouTube" },
-            { value: "local", label: "Dosya" },
+            { value: "default", label: t("settings.alarm.sourceDefault") },
+            { value: "youtube", label: t("settings.alarm.sourceYoutube") },
+            { value: "local", label: t("settings.alarm.sourceFile") },
           ]}
           value={alarm.source}
           onChange={(v) => update({ alarmSound: { ...alarm, source: v } })}
@@ -573,7 +575,7 @@ function AlarmSoundSettings() {
 
       {alarm.source === "youtube" && (
         <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-          <div className="text-[0.9286rem] text-text-secondary mb-2">YouTube URL</div>
+          <div className="text-[0.9286rem] text-text-secondary mb-2">{t("settings.alarm.youtubeUrl")}</div>
           <div className="flex gap-2">
             <input
               type="text"
@@ -587,11 +589,11 @@ function AlarmSoundSettings() {
               disabled={caching || !ytUrl.trim()}
               className="rounded-lg bg-active px-3 py-1.5 text-xs text-text transition-colors hover:bg-border-hover disabled:opacity-30"
             >
-              {caching ? "Ekleniyor..." : "Ekle"}
+              {caching ? t("settings.alarm.adding") : t("settings.alarm.add")}
             </button>
           </div>
           {alarm.cachedPath && alarm.source === "youtube" && (
-            <div className="mt-1.5 text-[0.7143rem] text-emerald-400">Eklendi</div>
+            <div className="mt-1.5 text-[0.7143rem] text-emerald-400">{t("settings.alarm.added")}</div>
           )}
           {cacheError && (
             <div className="mt-1.5 text-[0.7143rem] text-red-400">{cacheError}</div>
@@ -601,14 +603,14 @@ function AlarmSoundSettings() {
 
       {alarm.source === "local" && (
         <div className="rounded-xl bg-surface-2 px-3.5 py-3">
-          <div className="text-[0.9286rem] text-text-secondary mb-2">Ses dosyası</div>
+          <div className="text-[0.9286rem] text-text-secondary mb-2">{t("settings.alarm.audioFile")}</div>
           <div className="flex items-center gap-2">
             <button
               onClick={pickLocalFile}
               disabled={caching}
               className="rounded-lg bg-active px-3 py-1.5 text-xs text-text transition-colors hover:bg-border-hover disabled:opacity-30"
             >
-              {caching ? "Kopyalanıyor..." : "Dosya Seç"}
+              {caching ? t("settings.alarm.copying") : t("settings.alarm.pickFile")}
             </button>
             {alarm.localPath && (
               <span className="truncate text-[0.7857rem] text-text-faint">
@@ -617,7 +619,7 @@ function AlarmSoundSettings() {
             )}
           </div>
           {alarm.cachedPath && alarm.source === "local" && (
-            <div className="mt-1.5 text-[0.7143rem] text-emerald-400">Hazır</div>
+            <div className="mt-1.5 text-[0.7143rem] text-emerald-400">{t("settings.alarm.ready")}</div>
           )}
           {cacheError && (
             <div className="mt-1.5 text-[0.7143rem] text-red-400">{cacheError}</div>
@@ -625,7 +627,7 @@ function AlarmSoundSettings() {
         </div>
       )}
 
-      <SettingRow label="Çalma süresi" hint={`${alarm.duration} saniye (1–60)`}>
+      <SettingRow label={t("settings.alarm.duration")} hint={t("settings.alarm.durationHint", { sec: alarm.duration })}>
         <div className="flex items-center gap-2">
           <input
             type="range"
