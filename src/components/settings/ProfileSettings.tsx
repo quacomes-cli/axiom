@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { User, Trash2, ShieldCheck, Plus, X, Download } from "lucide-react";
 import { useUserProfileStore } from "../../stores/userProfileStore";
+import { useT } from "../../i18n";
 
 function Toggle({
   checked,
@@ -87,18 +88,19 @@ function CustomFieldRow({
   onUpdate: (key: string, value: string) => void;
   onRemove: () => void;
 }) {
+  const t = useT();
   return (
     <div className="mb-1.5 flex items-center gap-1.5">
       <input
         value={field.key}
         onChange={(e) => onUpdate(e.target.value, field.value)}
-        placeholder="Anahtar"
+        placeholder={t("profile.key")}
         className="w-[35%] rounded-lg bg-surface-3 px-2.5 py-1.5 text-[0.8571rem] text-text outline-none placeholder:text-text-faint/50 focus:ring-1 focus:ring-blue-400/40"
       />
       <input
         value={field.value}
         onChange={(e) => onUpdate(field.key, e.target.value)}
-        placeholder="Değer"
+        placeholder={t("profile.value")}
         className="flex-1 rounded-lg bg-surface-3 px-2.5 py-1.5 text-[0.8571rem] text-text outline-none placeholder:text-text-faint/50 focus:ring-1 focus:ring-blue-400/40"
       />
       <button
@@ -112,6 +114,7 @@ function CustomFieldRow({
 }
 
 export function ProfileSettings() {
+  const t = useT();
   const profile = useUserProfileStore((s) => s.profile);
   const enabled = useUserProfileStore((s) => s.enabled);
   const setEnabled = useUserProfileStore((s) => s.setEnabled);
@@ -127,8 +130,8 @@ export function ProfileSettings() {
 
   const lastUpdatedText =
     profile.lastUpdated > 0
-      ? new Date(profile.lastUpdated).toLocaleString("tr-TR")
-      : "henüz güncellenmedi";
+      ? new Date(profile.lastUpdated).toLocaleString()
+      : t("profile.notUpdated");
 
   function handleReset() {
     if (!confirming) {
@@ -172,7 +175,7 @@ export function ProfileSettings() {
             <div className="min-w-0">
               <div className="text-[0.9286rem] text-text">Identification Engine</div>
               <div className="mt-0.5 text-xs text-text-faint">
-                Konuşmalardan otomatik öğrenir, sohbetlere kişiselleştirme ekler.
+                {t("profile.engineHint")}
               </div>
             </div>
           </div>
@@ -188,45 +191,43 @@ export function ProfileSettings() {
           className="mt-0.5 shrink-0 text-emerald-400/80"
         />
         <div className="text-xs leading-relaxed text-text-faint">
-          Profil verileri sadece bu cihazda yerel olarak tutulur. Çıkarım yapılırken
-          local Ollama (<code className="text-text-secondary">llama3.2:1b</code>)
-          kullanılır, hiçbir uzak sunucuya gönderilmez.
+          {t("profile.privacyBefore")}<code className="text-text-secondary">llama3.2:1b</code>{t("profile.privacyAfter")}
         </div>
       </div>
 
       {/* Manual fields */}
       <div className="rounded-xl bg-surface-2 px-4 py-3.5">
-        <div className="mb-3 text-[0.9286rem] text-text">Kişisel Bilgiler</div>
+        <div className="mb-3 text-[0.9286rem] text-text">{t("profile.personalInfo")}</div>
         <div className="grid grid-cols-2 gap-x-3">
           <FieldInput
-            label="Ad"
+            label={t("profile.name")}
             value={profile.name ?? ""}
-            placeholder="Adınız"
+            placeholder={t("profile.namePlaceholder")}
             onChange={(v) => updateManualField("name", v)}
           />
           <FieldInput
-            label="Soyad"
+            label={t("profile.surname")}
             value={profile.surname ?? ""}
-            placeholder="Soyadınız"
+            placeholder={t("profile.surnamePlaceholder")}
             onChange={(v) => updateManualField("surname", v)}
           />
         </div>
         <FieldInput
-          label="E-posta"
+          label={t("profile.email")}
           value={profile.email ?? ""}
-          placeholder="örnek@mail.com"
+          placeholder={t("profile.emailPlaceholder")}
           type="email"
           onChange={(v) => updateManualField("email", v)}
         />
         <div className="grid grid-cols-2 gap-x-3">
           <FieldInput
-            label="Konum"
+            label={t("profile.location")}
             value={profile.location ?? ""}
-            placeholder="İstanbul, Türkiye"
+            placeholder={t("profile.locationPlaceholder")}
             onChange={(v) => updateManualField("location", v)}
           />
           <FieldInput
-            label="Doğum Günü"
+            label={t("profile.birthday")}
             value={profile.birthDate || ""}
             placeholder="01.01.2000"
             onChange={(val) => {
@@ -243,9 +244,9 @@ export function ProfileSettings() {
           />
         </div>
         <FieldInput
-          label="Meslek"
+          label={t("profile.profession")}
           value={profile.profession ?? ""}
-          placeholder="Yazılım Mühendisi"
+          placeholder={t("profile.professionPlaceholder")}
           onChange={(v) => updateManualField("profession", v)}
         />
       </div>
@@ -253,19 +254,19 @@ export function ProfileSettings() {
       {/* Custom key-value fields */}
       <div className="rounded-xl bg-surface-2 px-4 py-3.5">
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-[0.9286rem] text-text">Özel Alanlar</div>
+          <div className="text-[0.9286rem] text-text">{t("profile.customFields")}</div>
           <button
             onClick={handleAddCustom}
             className="flex items-center gap-1 rounded-lg px-2 py-1 text-[0.7857rem] text-text-faint hover:bg-surface-3 hover:text-text-secondary transition-colors"
           >
             <Plus size={12} strokeWidth={1.5} />
-            Ekle
+            {t("profile.add")}
           </button>
         </div>
 
         {customFields.length === 0 ? (
           <div className="py-4 text-center text-xs text-text-faint">
-            Özel anahtar-değer ikilileri ekleyebilirsiniz.
+            {t("profile.customEmpty")}
           </div>
         ) : (
           customFields.map((field, i) => (
@@ -282,37 +283,37 @@ export function ProfileSettings() {
       {/* Auto-extracted profile content */}
       <div className="rounded-xl bg-surface-2 px-4 py-3.5">
         <div className="mb-3 flex items-center justify-between">
-          <div className="text-[0.9286rem] text-text">Otomatik Çıkarılan</div>
+          <div className="text-[0.9286rem] text-text">{t("profile.autoExtracted")}</div>
           <div className="text-xs text-text-faint">
-            {profile.factCount} fact &middot; {lastUpdatedText}
+            {t("profile.factsCount", { count: profile.factCount })} &middot; {lastUpdatedText}
           </div>
         </div>
 
         {!profile.languagePreference && profile.interests.length === 0 && profile.jargon.length === 0 && profile.recurringTopics.length === 0 && profile.notes.length === 0 && !profile.responseStyle ? (
           <div className="py-4 text-center text-xs text-text-faint">
-            Henüz otomatik bilgi çıkarılmadı. Birkaç sohbet sonrası burada görünür.
+            {t("profile.autoEmpty")}
           </div>
         ) : (
           <div>
             {profile.languagePreference && (
               <div className="mb-2.5 flex items-baseline gap-2">
-                <span className="text-[0.7857rem] uppercase tracking-wider text-text-faint">Dil:</span>
+                <span className="text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("profile.languageLabel")}</span>
                 <span className="text-[0.9286rem] text-text-secondary">{profile.languagePreference}</span>
               </div>
             )}
             {profile.responseStyle && (
               <div className="mb-2.5 flex items-baseline gap-2">
-                <span className="text-[0.7857rem] uppercase tracking-wider text-text-faint">Yanıt tarzı:</span>
+                <span className="text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("profile.responseStyle")}</span>
                 <span className="text-[0.9286rem] text-text-secondary">{profile.responseStyle}</span>
               </div>
             )}
-            <ChipRow label="İlgi alanları" items={profile.interests} />
-            <ChipRow label="Jargon" items={profile.jargon} />
-            <ChipRow label="Sık konular" items={profile.recurringTopics} />
+            <ChipRow label={t("profile.interests")} items={profile.interests} />
+            <ChipRow label={t("profile.jargon")} items={profile.jargon} />
+            <ChipRow label={t("profile.recurringTopics")} items={profile.recurringTopics} />
             {profile.notes.length > 0 && (
               <div className="mt-2">
                 <div className="mb-1.5 text-[0.7857rem] uppercase tracking-wider text-text-faint">
-                  Notlar
+                  {t("profile.notes")}
                 </div>
                 <div className="space-y-1">
                   {profile.notes.map((note, i) => (
@@ -337,7 +338,7 @@ export function ProfileSettings() {
           className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-surface-2 px-4 py-2.5 text-[0.9286rem] font-medium text-text-faint transition-colors hover:bg-surface-3 hover:text-text-secondary"
         >
           <Download size={13} strokeWidth={1.5} />
-          JSON Olarak Dışa Aktar
+          {t("profile.exportJson")}
         </button>
 
         {profile.factCount > 0 && (
@@ -349,7 +350,7 @@ export function ProfileSettings() {
               }`}
           >
             <Trash2 size={13} strokeWidth={1.5} />
-            {confirming ? "Onaylamak için tekrar tıkla" : "Profili Sıfırla"}
+            {confirming ? t("profile.confirmReset") : t("profile.resetProfile")}
           </button>
         )}
       </div>
