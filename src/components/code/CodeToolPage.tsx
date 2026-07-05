@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+﻿import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Terminal,
   FolderOpen,
@@ -38,6 +38,7 @@ import { ToolBlock } from "./ToolMessage";
 import type { FileEntry, DocumentAttachment } from "../../types";
 import { FileIcon, FolderIcon } from "./FileIcons";
 import 'highlight.js/styles/atom-one-dark.css';
+import { useT, t as translate } from "../../i18n";
 
 const EMPTY_DOCS: DocumentAttachment[] = [];
 
@@ -130,7 +131,7 @@ function FileTreeNode({
               className="py-1 text-[0.7857rem] text-text-faint italic"
               style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
             >
-              (boş)
+              {translate("code.emptyDir")}
             </div>
           )}
         </div>
@@ -145,6 +146,7 @@ function FileSidebar({
   projectPath: string;
   onClose: () => void;
 }) {
+  const t = useT();
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -180,7 +182,7 @@ function FileSidebar({
     >
       <div className="flex items-center justify-between border-b border-border/30 px-3 py-2">
         <span className="text-[0.7857rem] uppercase tracking-widest text-text-faint">
-          Dosyalar
+          {t("code.files")}
         </span>
       </div>
       <div className="flex-1 overflow-y-auto py-1 px-1 scrollbar-thin">
@@ -189,7 +191,7 @@ function FileSidebar({
             <Loader2 size={16} className="animate-spin text-text-faint" />
           </div>
         ) : entries.length === 0 ? (
-          <div className="px-3 py-4 text-xs text-text-faint italic">Dosya bulunamadı</div>
+          <div className="px-3 py-4 text-xs text-text-faint italic">{t("code.fileNotFound")}</div>
         ) : (
           entries.map((entry) => (
             <FileTreeNode
@@ -214,6 +216,7 @@ function removeToolBlocks(text: string): string {
 }
 
 export function CodeToolPage() {
+  const t = useT();
   const session = useCodeStore((s) => s.activeSession());
   const isProcessing = useCodeStore((s) => s.isProcessing);
   const setProject = useCodeStore((s) => s.setProject);
@@ -342,7 +345,7 @@ export function CodeToolPage() {
   async function handlePickFolder() {
     const selected = await dialogOpen({
       directory: true,
-      title: "Proje Klasörü Seç",
+      title: t("sidebar.pickProjectFolder"),
     });
     if (selected && typeof selected === "string") {
       if (session) {
@@ -384,7 +387,7 @@ export function CodeToolPage() {
             <img src="logo.svg" alt="Axiom Logo" className="h-10 w-10" />
             <h1 className="text-2xl h-10 font-semibold opacity-60 text-text">Axiom Code</h1>
           </div>
-          <h1 className="flex items-center gap-2 rounded-xl bg-surface-2 px-5 py-2.5 text-sm font-medium text-text">Kapalı Beta</h1>
+          <h1 className="flex items-center gap-2 rounded-xl bg-surface-2 px-5 py-2.5 text-sm font-medium text-text">{t("code.closedBeta")}</h1>
         </div>
       );
     } else {
@@ -395,7 +398,7 @@ export function CodeToolPage() {
             strokeWidth={1.2}
             className="mb-4 text-text-faint"
           />
-          <h1 className="text-lg font-semibold text-text">Kod Aracı</h1>
+          <h1 className="text-lg font-semibold text-text">{t("code.codeTool")}</h1>
           <p className="mt-2 mb-6 max-w-sm text-center text-sm text-text-faint">
             AI kod asistanı. Dosya okuma/yazma ve komut
             çalıştırma yapabilir.
@@ -429,7 +432,7 @@ export function CodeToolPage() {
           </button>
           <button
             onClick={() => setShowFiles((v) => !v)}
-            title={showFiles ? "Dosya panelini kapat" : "Dosya panelini aç"}
+            title={showFiles ? "Dosya panelini kapat" : t("code.openFilePanel")}
             className={`rounded-lg p-1.5 transition-colors ${showFiles
               ? "bg-accent/15 text-accent"
               : "text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -440,7 +443,7 @@ export function CodeToolPage() {
           {messages.length > 0 && (
             <button
               onClick={clearMessages}
-              title="Geçmişi temizle"
+              title={t("code.clearHistory")}
               className="rounded-lg p-1.5 text-text-faint hover:bg-hover hover:text-red-400 transition-colors"
             >
               <Trash2 size={14} strokeWidth={1.4} />
@@ -454,7 +457,7 @@ export function CodeToolPage() {
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-text-faint">
                 <Terminal size={28} strokeWidth={1.2} className="mb-3 opacity-40" />
-                <p className="text-sm">Ne yapmamı istersin?</p>
+                <p className="text-sm">{t("code.whatToDo")}</p>
               </div>
             )}
 
@@ -635,7 +638,7 @@ export function CodeToolPage() {
               messages[messages.length - 1].text === "" && (
                 <div className="flex items-center gap-2 text-text-faint text-sm py-2">
                   <Loader2 size={14} className="animate-spin" />
-                  <span>Model hazırlanıyor...</span>
+                  <span>{t("chat.modelPreparing")}</span>
                 </div>
               )}
 
@@ -704,7 +707,7 @@ export function CodeToolPage() {
                 className="pointer-events-none absolute inset-x-5 bottom-3 top-[14px] z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-accent/50 bg-accent/[0.08] backdrop-blur-sm"
               >
                 <span className="flex items-center gap-2 text-sm text-text-secondary">
-                  <Paperclip size={14} strokeWidth={1.6} /> Dosyaları bırak — belge ve resimler eklenir
+                  <Paperclip size={14} strokeWidth={1.6} /> {t("code.dropFiles")}
                 </span>
               </motion.div>
             )}
@@ -723,7 +726,7 @@ export function CodeToolPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder={activeModel ? "Talimat yaz..." : "Model seçilmedi — bir model seç"}
+                placeholder={activeModel ? "Talimat yaz..." : t("chat.noModel")}
                 rows={1}
                 disabled={isProcessing}
                 className="flex-1 resize-none bg-transparent text-sm text-text outline-none placeholder:text-text-faint scrollbar-none disabled:opacity-60"
@@ -802,7 +805,7 @@ export function CodeToolPage() {
                 onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                 className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-[0.7857rem] transition-all duration-200 ${webSearchEnabled ? "bg-accent-muted text-text-secondary" : "text-text-faint hover:bg-hover hover:text-text-secondary"
                   }`}
-                title={webSearchEnabled ? "Web araması açık — kapat" : "Web araması kapalı — aç"}
+                title={webSearchEnabled ? t("code.webSearchOn") : t("code.webSearchOff")}
               >
                 <Globe size={12} strokeWidth={1.6} />
                 <span style={{ height: 20, fontSize: 13 }}>Web</span>
