@@ -6,7 +6,6 @@ import { AnimatedView } from "./components/shared/AnimatedView";
 import { SearchModal } from "./components/shared/SearchModal";
 import { Launchpad } from "./components/shared/Launchpad";
 import { AboutDialog } from "./components/shared/AboutDialog";
-import { PhoneConnectDialog } from "./components/shared/PhoneConnectDialog";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
 import { MigrationModal } from "./components/auth/MigrationModal";
@@ -188,7 +187,6 @@ export default function App() {
       <SearchModal />
       <Launchpad />
       <AboutDialog />
-      <PhoneConnectDialog />
       <ApprovalPrompt />
 
       <AnimatePresence>

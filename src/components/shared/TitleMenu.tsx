@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   Minus,
   ChevronDown,
+  ChevronRight,
   Settings,
   RefreshCcwDot,
   Info,
@@ -21,6 +22,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useUiStore } from "../../stores/uiStore";
 import { useChatStore } from "../../stores/chatStore";
 import { performCheckAndDownload } from "../../hooks/useUpdater";
+import { PhoneConnectPanel } from "./PhoneConnectPanel";
 import { useT } from "../../i18n";
 
 const appWindow = getCurrentWindow();
@@ -32,9 +34,9 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
   const setView = useUiStore((s) => s.setView);
   const setLaunchpadOpen = useUiStore((s) => s.setLaunchpadOpen);
   const setAboutOpen = useUiStore((s) => s.setAboutOpen);
-  const setPhoneConnectOpen = useUiStore((s) => s.setPhoneConnectOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const [sysOpen, setSysOpen] = useState(false);
+  const [phoneOpen, setPhoneOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -100,8 +102,26 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
           <MenuItem
             icon={Smartphone}
             label={t("menu.connectPhone")}
-            onClick={act(() => setPhoneConnectOpen(true))}
+            arrow
+            active={phoneOpen}
+            onClick={() => setPhoneOpen((v) => !v)}
           />
+
+          {/* Sağa açılan QR flyout — menü açık kalır (bu div menü ref'i içinde). */}
+          <AnimatePresence>
+            {phoneOpen && (
+              <motion.div
+                initial={{ opacity: 0, x: -8, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -8, scale: 0.98 }}
+                transition={{ duration: 0.14, ease: "easeOut" }}
+                className="absolute left-full top-0 ml-2"
+                style={{ transformOrigin: "left top" }}
+              >
+                <PhoneConnectPanel onClose={() => setPhoneOpen(false)} />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div className="my-1 h-px bg-border" />
 
@@ -160,7 +180,7 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="mt-1 flex items-center justify-center border-t border-border pt-2 pb-0.5">
             <button
               onClick={act(() => void openUrl(WEBSITE))}
-              className="flex items-center gap-1.5 text-[0.75rem] tracking-[0.14em] text-text-faint hover:text-text-secondary"
+              className="flex items-center gap-1.5 text-[12px] h-5 tracking-[0.14em] text-text-faint hover:text-text-secondary"
             >
               AXIOM <ExternalLink size={12} strokeWidth={1.6} />
             </button>
@@ -178,6 +198,8 @@ function MenuItem({
   onClick,
   danger,
   indent,
+  arrow,
+  active,
 }: {
   icon: typeof Plus;
   label: string;
@@ -185,19 +207,30 @@ function MenuItem({
   onClick: () => void;
   danger?: boolean;
   indent?: boolean;
+  arrow?: boolean;
+  active?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-lg py-2 text-[0.8214rem] transition-colors ${indent ? "pl-9 pr-2.5" : "px-2.5"
+      className={`flex w-full items-center gap-2.5 rounded-lg py-2 text-[0.8214rem] ${indent ? "pl-9 pr-2.5" : "px-2.5"
         } ${danger
           ? "text-danger hover:bg-danger/10"
-          : "text-text-secondary hover:bg-base hover:text-text"
+          : active
+            ? "bg-base text-text"
+            : "text-text-secondary hover:bg-base hover:text-text"
         }`}
     >
       <Icon size={16} strokeWidth={1.5} className="shrink-0" />
       <span>{label}</span>
       {kbd && <span className="ml-auto text-[0.7857rem] text-text-faint">{kbd}</span>}
+      {arrow && (
+        <ChevronRight
+          size={14}
+          strokeWidth={1.6}
+          className={`ml-auto shrink-0 ${active ? "text-text" : "text-text-faint"}`}
+        />
+      )}
     </button>
   );
 }
