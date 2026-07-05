@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useUiStore } from "../../stores/uiStore";
 import { PageHeader } from "../shared/PageHeader";
 import { GeneralSettings } from "./GeneralSettings";
 import { ShortcutSettings } from "./ShortcutSettings";
@@ -20,9 +21,21 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+const TAB_IDS = TABS.map((tt) => tt.id);
+
 export function SettingsPage() {
   const t = useT();
-  const [tab, setTab] = useState<TabId>("general");
+  const settingsTab = useUiStore((s) => s.settingsTab);
+  const [tab, setTab] = useState<TabId>(
+    (TAB_IDS as string[]).includes(settingsTab) ? (settingsTab as TabId) : "general",
+  );
+
+  // Menüden derin bağlantıyla açılınca istenen sekmeye geç.
+  useEffect(() => {
+    if ((TAB_IDS as string[]).includes(settingsTab)) {
+      setTab(settingsTab as TabId);
+    }
+  }, [settingsTab]);
 
   return (
     <div

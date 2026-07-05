@@ -4,6 +4,8 @@ import { Sidebar } from "./components/shared/Sidebar";
 import { TitleBar } from "./components/shared/TitleBar";
 import { AnimatedView } from "./components/shared/AnimatedView";
 import { SearchModal } from "./components/shared/SearchModal";
+import { Launchpad } from "./components/shared/Launchpad";
+import { AboutDialog } from "./components/shared/AboutDialog";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
 import { MigrationModal } from "./components/auth/MigrationModal";
@@ -106,6 +108,14 @@ export default function App() {
     return unsubscribe;
   }, [authInit]);
 
+  const view = useUiStore((s) => s.view);
+  const setView = useUiStore((s) => s.setView);
+
+  function handleNewChat() {
+    newChat();
+    if (view !== "chat") setView("chat");
+  }
+
   useEffect(() => {
     async function init() {
       // Settings hızlı — dosya okuma. loadModels Ollama'ya bağlıyorsa
@@ -144,6 +154,9 @@ export default function App() {
       } else if (matchesShortcut(e, shortcuts!.search)) {
         e.preventDefault();
         setSearchOpen(true);
+      } else if (matchesShortcut(e, shortcuts!.newChat)) {
+        e.preventDefault();
+        handleNewChat();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -172,6 +185,8 @@ export default function App() {
         </main>
       </div>
       <SearchModal />
+      <Launchpad />
+      <AboutDialog />
       <ApprovalPrompt />
 
       <AnimatePresence>

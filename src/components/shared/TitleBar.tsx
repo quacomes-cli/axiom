@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Search, Camera, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useUiStore } from "../../stores/uiStore";
@@ -8,7 +8,10 @@ import { useDocumentStore } from "../../stores/documentStore";
 import { useModelStore, modelSupportsVision } from "../../stores/modelStore";
 import { ipc } from "../../lib/ipc";
 import { NotificationCenter } from "./NotificationCenter";
+import { TitleMenu } from "./TitleMenu";
+import { applySavedZoom } from "../../lib/zoom";
 import { useT } from "../../i18n";
+import { HiOutlineMenuAlt2 } from "react-icons/hi";
 
 const appWindow = getCurrentWindow();
 
@@ -23,7 +26,7 @@ function WindowControls() {
         onClick={() => appWindow.minimize()}
         className={`${btnBase} hover:bg-hover-strong`}
         style={{
-          zIndex: 1001,
+          zIndex: 9999,
         }}
       >
         <svg width="12" height="1">
@@ -34,7 +37,7 @@ function WindowControls() {
         onClick={() => appWindow.toggleMaximize()}
         className={`${btnBase} hover:bg-hover-strong`}
         style={{
-          zIndex: 1001,
+          zIndex: 9999,
         }}
       >
         <svg width="10" height="10">
@@ -54,7 +57,7 @@ function WindowControls() {
         onClick={() => appWindow.close()}
         className={`${btnBase} hover:bg-[rgba(232,78,78,0.9)] hover:text-white`}
         style={{
-          zIndex: 1001,
+          zIndex: 9999,
         }}
       >
         <svg width="12" height="12">
@@ -101,6 +104,12 @@ export function TitleBar() {
   const activeModel = useModelStore((s) => s.models.find((m) => m.isActive));
   const visionOk = modelSupportsVision(activeModel);
   const [capturing, setCapturing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Kaydedilmiş yakınlaştırmayı açılışta uygula.
+  useEffect(() => {
+    applySavedZoom();
+  }, []);
 
   async function quickScreenshot() {
     const chatId = useChatStore.getState().activeChatId;
@@ -129,9 +138,18 @@ export function TitleBar() {
       {/* Left — Axiom branding + sidebar toggle. Tüm boyutlar font-size'dan bağımsız. */}
       <div
         data-tauri-drag-region
-        className="flex shrink-0 items-center gap-1"
+        className="flex shrink-0 items-center"
         style={{ paddingLeft: 6 }}
       >
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          className={`flex items-center justify-center rounded-md hover:bg-surface-dark hover:text-text-secondary mr-0.5 ${menuOpen ? "bg-surface-dark text-text-secondary" : "text-text-faint"}`}
+          style={{ fontSize: 12, height: 30, width: 30 }}
+          title="Axiom"
+        >
+          <HiOutlineMenuAlt2 size={17} strokeWidth={1.4} />
+        </button>
+        <TitleMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
         <button
           onClick={toggleSidebar}
           title={(sidebarOpen ? t("titlebar.collapse") : t("titlebar.expand")) + " (Ctrl+B)"}
@@ -144,20 +162,20 @@ export function TitleBar() {
             <PanelLeftOpen size={15} strokeWidth={1.4} />
           )}
         </button>
+        {/* Center — search trigger */}
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="flex items-center justify-center rounded-md text-text-faint hover:bg-surface-dark hover:text-text-secondary"
+          style={{ fontSize: 12, height: 30, width: 30 }}
+          title={`${t("titlebar.search")} (Ctrl+K)`}
+        >
+          <Search size={15} strokeWidth={1.4} className="ml-0.5" />
+        </button>
       </div>
 
-      {/* Center — search trigger */}
-      <button
-        onClick={() => setSearchOpen(true)}
-        className="flex items-center justify-center rounded-md text-text-faint hover:bg-surface-dark hover:text-text-secondary"
-        style={{ fontSize: 12, height: 30, width: 30 }}
-        title={`${t("titlebar.search")} (Ctrl+K)`}
-      >
-        <Search size={15} strokeWidth={1.4} className="ml-0.5"/>
-      </button>
 
       {/* Right spacer */}
-      <div data-tauri-drag-region className="min-w-0 flex-1" style={{zIndex: 999999}}/>
+      <div data-tauri-drag-region className="min-w-0 flex-1" style={{ zIndex: 9999 }} />
 
       {/* Right — notifications + screenshot + window controls */}
       <div className="flex shrink-0 items-center">
