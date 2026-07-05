@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, memo, useMemo, startTransition } from "react";
+﻿import { useState, useEffect, useRef, useCallback, memo, useMemo, startTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUp, Globe, ExternalLink, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
@@ -63,7 +63,7 @@ import { ScreenshotButton } from "../shared/ScreenshotButton";
 import { useTTS } from "../../hooks/useTTS";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useAppStore } from "../../stores/appStore";
-import { useT } from "../../i18n";
+import { useT, t as translate, getLocale } from "../../i18n";
 import { FaGithub, FaTelegram, FaDiscord } from "react-icons/fa6";
 import { RiNotionFill } from "react-icons/ri";
 import { ToolBlock } from "../code/ToolMessage";
@@ -281,10 +281,9 @@ function FullSearchResults({ msg }: { msg: ChatMessage }) {
   );
 }
 
-function turkishDay(dateStr: string): string {
-  const days = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+function localDay(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
-  return days[d.getDay()] ?? "";
+  return d.toLocaleDateString(getLocale(), { weekday: "short" });
 }
 
 function WeatherIcon({ code, size = 24 }: { code: string; size?: number }) {
@@ -327,7 +326,7 @@ function WeatherCard({ data }: { data: WeatherData }) {
           {data.tempC}°
         </span>
         <span className="text-sm text-text-faint">
-          Hissedilen {data.feelsLikeC}°
+          {translate("chat.weatherFeelsLike")} {data.feelsLikeC}°
         </span>
       </div>
 
@@ -348,7 +347,7 @@ function WeatherCard({ data }: { data: WeatherData }) {
               className="flex flex-1 flex-col items-center gap-1 text-center"
             >
               <span className="text-[1.1429rem] font-medium text-text-faint">
-                {i === 0 ? "Bugün" : turkishDay(day.date)}
+                {i === 0 ? translate("chat.weatherToday") : localDay(day.date)}
               </span>
               <WeatherIcon code={day.icon} size={16} />
               <span className="text-[1.1429rem] text-text">
@@ -506,6 +505,7 @@ function CitationPills({ links }: { links: ExtractedLink[] }) {
 }
 
 function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming: boolean }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(false);
   const thinkingRef = useRef<HTMLPreElement>(null);
 
@@ -527,7 +527,7 @@ function ThinkingBlock({ content, isStreaming }: { content: string; isStreaming:
         ) : (
           <Brain size={12} strokeWidth={1.6} />
         )}
-        <span style={{ height: "14.25px" }}>Düşünüyor</span>
+        <span style={{ height: "14.25px" }}>{t("chat.thinking")}</span>
         {expanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
       </button>
       <AnimatePresence>
@@ -578,6 +578,7 @@ function StreamingMarkdown({ text }: { text: string }) {
 }
 
 function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: string; onEdit: () => void }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState(false);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
@@ -597,19 +598,19 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
   const handleReport = useCallback(() => {
     const model = useModelStore.getState().models.find((m) => m.isActive);
     const report = [
-      "## Axiom Yanıt Raporu",
-      `Tarih: ${new Date().toLocaleString("tr-TR")}`,
-      `Model: ${model ? `${model.id} (${model.provider})` : "bilinmiyor"}`,
-      `Uygulama: v${AppVersion}`,
+      t("chat.reportTitle"),
+      `${t("chat.reportDate")}: ${new Date().toLocaleString()}`,
+      `${t("chat.reportModel")}: ${model ? `${model.id} (${model.provider})` : t("chat.reportUnknownModel")}`,
+      `${t("chat.reportApp")}: v${AppVersion}`,
       "",
-      "### Sorunlu yanıt",
+      t("chat.reportProblem"),
       msg.text,
     ].join("\n");
     navigator.clipboard.writeText(report);
     useNotificationStore.getState().add({
       taskId: `report-${msg.id}`,
-      title: "Yanıt raporlandı",
-      content: "Rapor şablonu panoya kopyalandı — geliştiriciye iletebilirsin.",
+      title: t("chat.reportedTitle"),
+      content: t("chat.reportedContent"),
     });
     setReported(true);
     setTimeout(() => setReported(false), 1500);
@@ -628,7 +629,7 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
             onClick={() => switchMessageVersion(chatId, msg.id, -1)}
             disabled={versionIdx === 0}
             className="rounded-md p-0.5 hover:bg-hover hover:text-text-secondary disabled:opacity-30"
-            title="Önceki sürüm"
+            title={t("chat.prevVersion")}
           >
             <ChevronLeft size={12} strokeWidth={1.8} />
           </button>
@@ -637,14 +638,14 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
             onClick={() => switchMessageVersion(chatId, msg.id, 1)}
             disabled={versionIdx >= versionCount - 1}
             className="rounded-md p-0.5 hover:bg-hover hover:text-text-secondary disabled:opacity-30"
-            title="Sonraki sürüm"
+            title={t("chat.nextVersion")}
           >
             <ChevronRight size={12} strokeWidth={1.8} />
           </button>
         </span>
       )}
       {msg.role === "agent" && (
-        <Tooltip label="Yeniden oluştur">
+        <Tooltip label={t("chat.regenerate")}>
           <button
             onClick={() => void regenerateMessage(chatId, msg.id)}
             disabled={thinking}
@@ -655,7 +656,7 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
         </Tooltip>
       )}
       {msg.role === "agent" && (
-        <Tooltip label="Yanıtı raporla">
+        <Tooltip label={t("chat.reportResponse")}>
           <button
             onClick={handleReport}
             className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -665,7 +666,7 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
         </Tooltip>
       )}
       {showTtsBtn && (
-        <Tooltip label={isSpeakingThis ? "Durdur" : "Sesli oku"}>
+        <Tooltip label={isSpeakingThis ? t("chat.stop") : t("chat.readAloud")}>
           <button
             onClick={() => speak(msg.id, msg.text)}
             className={`rounded-md p-1 ${isSpeakingThis
@@ -681,7 +682,7 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
           </button>
         </Tooltip>
       )}
-      <Tooltip label={copied ? "Kopyalandı" : "Kopyala"}>
+      <Tooltip label={copied ? t("chat.copied") : t("chat.copy")}>
         <button
           onClick={handleCopy}
           className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -691,7 +692,7 @@ function MessageActions({ msg, chatId, onEdit }: { msg: ChatMessage; chatId: str
       </Tooltip>
       {msg.role === "user" && (
         <>
-          <Tooltip label="Düzenle">
+          <Tooltip label={t("chat.edit")}>
             <button
               onClick={onEdit}
               className="rounded-md p-1 text-text-faint hover:bg-hover hover:text-text-secondary"
@@ -795,6 +796,7 @@ const MessageBubble = memo(function MessageBubble({
   isStreaming: boolean;
   onToggleAction?: (idx: number) => void;
 }) {
+  const t = useT();
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(msg.text);
   const editMessage = useChatStore((s) => s.editMessage);
@@ -846,8 +848,8 @@ const MessageBubble = memo(function MessageBubble({
               autoFocus
             />
             <div className="flex justify-end gap-1.5">
-              <button onClick={handleCancelEdit} className="rounded-lg px-3 py-1 text-xs text-text-secondary hover:bg-hover">İptal</button>
-              <button onClick={handleSaveEdit} className="rounded-lg bg-primary px-3 py-1 text-xs text-white hover:bg-primary/80">Kaydet</button>
+              <button onClick={handleCancelEdit} className="rounded-lg px-3 py-1 text-xs text-text-secondary hover:bg-hover">{t("common.cancel")}</button>
+              <button onClick={handleSaveEdit} className="rounded-lg bg-primary px-3 py-1 text-xs text-white hover:bg-primary/80">{t("common.save")}</button>
             </div>
           </div>
         </div>
@@ -953,26 +955,25 @@ const APP_SLASH_ICONS: Record<string, React.ReactNode> = {
   notion: <RiNotionFill size={14} />,
 };
 
-const BASE_SLASH_COMMANDS: SlashCommand[] = [
-  {
-    command: "/compact",
-    label: "Sıkıştır",
-    description: "Konuşma bağlamını sıkıştır",
-    icon: <MessageCircle size={14} strokeWidth={1.6} />,
-  },
-];
-
 function useSlashCommands(): SlashCommand[] {
   const apps = useAppStore((s) => s.apps);
+  const baseCommands: SlashCommand[] = [
+    {
+      command: "/compact",
+      label: translate("chat.compress"),
+      description: translate("chat.compressContext"),
+      icon: <MessageCircle size={14} strokeWidth={1.6} />,
+    },
+  ];
   const appCommands: SlashCommand[] = apps
     .filter((a) => a.tools.length > 0)
     .map((a) => ({
       command: `/${a.id}`,
       label: a.name,
-      description: a.description,
+      description: translate(`appDesc.${a.id}`),
       icon: APP_SLASH_ICONS[a.id] ?? <Wrench size={14} strokeWidth={1.6} />,
     }));
-  return [...BASE_SLASH_COMMANDS, ...appCommands];
+  return [...baseCommands, ...appCommands];
 }
 
 const MODE_OPTIONS: { value: ChatMode; icon: typeof Zap; labelKey: string }[] = [
@@ -1185,6 +1186,7 @@ function ModelGroupRow({
 }
 
 export function ModelSelector() {
+  const t = useT();
   const models = useModelStore((s) => s.models);
   const activeModel = useModelStore((s) => s.models.find((m) => m.isActive));
   const setActive = useModelStore((s) => s.setActive);
@@ -1226,7 +1228,7 @@ export function ModelSelector() {
       >
         <Cpu size={12} strokeWidth={1.6} />
         <span className="max-w-[120px] truncate" style={{ height: 20, fontSize: 13 }}>
-          {activeModel ? modelFamily(activeModel.id) : "Model seç"}
+          {activeModel ? modelFamily(activeModel.id) : t("chat.selectModel")}
         </span>
         {open ? <ChevronUp size={11} strokeWidth={2} /> : <ChevronDown size={11} strokeWidth={2} />}
       </button>
@@ -1242,7 +1244,7 @@ export function ModelSelector() {
           >
             <div className="max-h-64 overflow-y-auto scrollbar-none py-0">
               {groups.length === 0 && (
-                <p className="px-3 py-2 text-xs text-text-faint">Model bulunamadı</p>
+                <p className="px-3 py-2 text-xs text-text-faint">{t("chat.modelNotFound")}</p>
               )}
               {groups.map((group) => {
                 // Tek boyutlu aile veya cloud → doğrudan seçilebilir satır
@@ -1721,7 +1723,7 @@ export function ChatPanel() {
           {modelSupportsTools(activeModel) && toolUseEnabled && modelWeakAtTools(activeModel) && (
             <div
               className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-[0.7857rem] text-amber-500"
-              title="Bu model küçük (≈14B altı) ve araç çağırmada güvenilmez olabilir: olmayan araç/parametre uydurabilir. Sağlıklı araç kullanımı için daha güçlü bir model (örn. qwen2.5:14b, llama3.3:70b veya bir cloud modeli) seç."
+              title={t("chat.toolWarning")}
             >
               <AlertTriangle size={12} strokeWidth={1.8} />
               <span style={{ height: 20, fontSize: 12 }}>zayıf model</span>
@@ -1870,7 +1872,7 @@ export function ChatPanel() {
                       strokeWidth={1.4}
                       className="animate-spin"
                     />
-                    <span>{thinkingStatus || "Model hazırlanıyor..."}</span>
+                    <span>{thinkingStatus || t("chat.modelPreparing")}</span>
                   </div>
                 )}
                 <div ref={bottomRef} />
