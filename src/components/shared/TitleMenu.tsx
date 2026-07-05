@@ -22,6 +22,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useUiStore } from "../../stores/uiStore";
 import { useChatStore } from "../../stores/chatStore";
 import { useAuthStore } from "../../stores/authStore";
+import { useRemoteStore } from "../../stores/remoteStore";
 import { performCheckAndDownload } from "../../hooks/useUpdater";
 import { PhoneConnectPanel } from "./PhoneConnectPanel";
 import { useT } from "../../i18n";
@@ -37,6 +38,7 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
   const setAboutOpen = useUiStore((s) => s.setAboutOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const loggedIn = useAuthStore((s) => !!s.user);
+  const remotePaired = useRemoteStore((s) => s.status === "paired");
   const [sysOpen, setSysOpen] = useState(false);
   const [phoneOpen, setPhoneOpen] = useState(false);
 
@@ -106,6 +108,7 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
             label={t("menu.connectPhone")}
             arrow={loggedIn}
             active={phoneOpen}
+            dot={remotePaired}
             disabled={!loggedIn}
             title={!loggedIn ? t("phoneConnect.needSignIn") : undefined}
             onClick={() => loggedIn && setPhoneOpen((v) => !v)}
@@ -206,6 +209,7 @@ function MenuItem({
   active,
   disabled,
   title,
+  dot,
 }: {
   icon: typeof Plus;
   label: string;
@@ -217,6 +221,7 @@ function MenuItem({
   active?: boolean;
   disabled?: boolean;
   title?: string;
+  dot?: boolean;
 }) {
   return (
     <button
@@ -235,13 +240,18 @@ function MenuItem({
     >
       <Icon size={16} strokeWidth={1.5} className="shrink-0" />
       <span>{label}</span>
-      {kbd && <span className="ml-auto text-[0.7857rem] text-text-faint">{kbd}</span>}
-      {arrow && (
-        <ChevronRight
-          size={16}
-          strokeWidth={1.6}
-          className={`ml-auto shrink-0 ${active ? "text-text" : "text-text-faint"}`}
-        />
+      {(dot || kbd || arrow) && (
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          {dot && <span className="h-1.5 w-1.5 rounded-full bg-success" />}
+          {kbd && <span className="text-[0.7857rem] text-text-faint">{kbd}</span>}
+          {arrow && (
+            <ChevronRight
+              size={16}
+              strokeWidth={1.6}
+              className={active ? "text-text" : "text-text-faint"}
+            />
+          )}
+        </span>
       )}
     </button>
   );

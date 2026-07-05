@@ -89,6 +89,7 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
   let verified = false;
   const unsubs: Unsubscribe[] = [];
   let closed = false;
+  let verifyTimer: number | undefined;
 
   const setStatus = (s: RtcStatus, info?: { deviceName?: string; error?: string }) =>
     cb.onStatus?.(s, info);
@@ -109,6 +110,7 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
   const close = () => {
     if (closed) return;
     closed = true;
+    if (verifyTimer) clearTimeout(verifyTimer);
     unsubs.forEach((u) => u());
     try {
       channel.close();
@@ -142,10 +144,16 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
   channel.onopen = () => {
     setStatus("verifying");
     void cleanupSignaling();
+    // Güvenlik: doğrulama 30 sn içinde gelmezse bağlantıyı kapat.
+    verifyTimer = window.setTimeout(() => {
+      if (!verified) close();
+    }, 30000);
   };
 
   channel.onclose = () => {
-    if (!closed) setStatus("idle");
+    if (closed) return;
+    // Doğrulanmış bağlantı koptu → hata; henüz doğrulanmadıysa boşa düş.
+    setStatus(verified ? "error" : "idle", verified ? { error: "disconnected" } : undefined);
   };
 
   channel.onmessage = (ev) => {
@@ -159,10 +167,13 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
     if (!verified) {
       if (msg.type === "hello" && msg.secret === secret) {
         verified = true;
+        if (verifyTimer) clearTimeout(verifyTimer);
         setStatus("paired", { deviceName: msg.deviceName });
         send({ type: "paired", ok: true });
       } else if (msg.type === "hello") {
+        // Yanlış secret — reddet ve kapat.
         send({ type: "error", msg: "bad_secret" });
+        close();
       }
       return;
     }

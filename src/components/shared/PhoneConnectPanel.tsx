@@ -14,13 +14,14 @@ export function PhoneConnectPanel({ onClose }: { onClose: () => void }) {
   const qrPayload = useRemoteStore((s) => s.qrPayload);
   const deviceName = useRemoteStore((s) => s.deviceName);
   const startPairing = useRemoteStore((s) => s.startPairing);
+  const ensurePairing = useRemoteStore((s) => s.ensurePairing);
   const stopPairing = useRemoteStore((s) => s.stopPairing);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
-  // Panel açıkken eşleştir; kapanınca durdur.
+  // Panel açılınca: aktif oturum yoksa başlat. Panel kapanınca DURDURMA —
+  // eşleşme, menü kapansa da bağlı kalsın (yalnızca "Bağlantıyı kes" durdurur).
   useEffect(() => {
-    void startPairing();
-    return () => stopPairing();
+    void ensurePairing();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -58,7 +59,7 @@ export function PhoneConnectPanel({ onClose }: { onClose: () => void }) {
       {/* QR / durum */}
       <div className="flex flex-col items-center">
         {paired ? (
-          <div className="flex flex-col items-center gap-2 py-7">
+          <div className="flex flex-col items-center gap-2 py-5">
             <div className="flex h-12 w-12 items-center justify-center rounded-full border border-success/40 bg-success/10 text-success">
               <Check size={22} strokeWidth={1.8} />
             </div>
@@ -67,6 +68,15 @@ export function PhoneConnectPanel({ onClose }: { onClose: () => void }) {
                 ? t("phoneConnect.deviceConnected", { name: deviceName })
                 : t("phoneConnect.paired")}
             </p>
+            <button
+              onClick={() => {
+                stopPairing();
+                onClose();
+              }}
+              className="mt-1 rounded-lg border border-border-hover px-3 py-1.5 text-[0.7857rem] text-text-secondary hover:bg-surface-3"
+            >
+              {t("phoneConnect.disconnect")}
+            </button>
           </div>
         ) : status === "error" ? (
           <p className="py-10 text-center text-[0.7857rem] text-danger">

@@ -16,6 +16,8 @@ interface RemoteState {
   messageHandler: MessageHandler | null;
 
   startPairing: () => Promise<void>;
+  /** Aktif oturum yoksa (idle/error) eşleştirmeyi başlatır; paired/waiting ise dokunmaz. */
+  ensurePairing: () => Promise<void>;
   stopPairing: () => void;
   setMessageHandler: (h: MessageHandler | null) => void;
   /** Doğrulanmış istemciye mesaj yolla (relay için). */
@@ -51,6 +53,11 @@ export const useRemoteStore = create<RemoteState>()((set, get) => ({
     } catch (e) {
       set({ status: "error", error: String(e) });
     }
+  },
+
+  ensurePairing: async () => {
+    const s = get().status;
+    if (s === "idle" || s === "error") await get().startPairing();
   },
 
   stopPairing: () => {
