@@ -51,6 +51,7 @@ export const en = {
   },
   phoneConnect: {
     title: "Connect phone",
+    needSignIn: "Sign in to connect a phone",
     instructions: "Scan this code in the Axiom mobile app",
     waiting: "Waiting for phone…",
     connecting: "Connecting…",

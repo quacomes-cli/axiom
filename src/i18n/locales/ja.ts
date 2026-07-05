@@ -50,6 +50,7 @@ export const ja: typeof en = {
   },
   phoneConnect: {
     title: "スマホを接続",
+    needSignIn: "スマホを接続するにはサインインしてください",
     instructions: "Axiom モバイルアプリでこのコードをスキャン",
     waiting: "スマホを待っています…",
     connecting: "接続中…",

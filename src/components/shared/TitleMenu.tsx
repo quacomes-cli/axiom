@@ -21,6 +21,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useUiStore } from "../../stores/uiStore";
 import { useChatStore } from "../../stores/chatStore";
+import { useAuthStore } from "../../stores/authStore";
 import { performCheckAndDownload } from "../../hooks/useUpdater";
 import { PhoneConnectPanel } from "./PhoneConnectPanel";
 import { useT } from "../../i18n";
@@ -35,6 +36,7 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
   const setLaunchpadOpen = useUiStore((s) => s.setLaunchpadOpen);
   const setAboutOpen = useUiStore((s) => s.setAboutOpen);
   const openSettings = useUiStore((s) => s.openSettings);
+  const loggedIn = useAuthStore((s) => !!s.user);
   const [sysOpen, setSysOpen] = useState(false);
   const [phoneOpen, setPhoneOpen] = useState(false);
 
@@ -102,18 +104,20 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
           <MenuItem
             icon={Smartphone}
             label={t("menu.connectPhone")}
-            arrow
+            arrow={loggedIn}
             active={phoneOpen}
-            onClick={() => setPhoneOpen((v) => !v)}
+            disabled={!loggedIn}
+            title={!loggedIn ? t("phoneConnect.needSignIn") : undefined}
+            onClick={() => loggedIn && setPhoneOpen((v) => !v)}
           />
 
           {/* Sağa açılan QR flyout — menü açık kalır (bu div menü ref'i içinde). */}
           <AnimatePresence>
-            {phoneOpen && (
+            {phoneOpen && loggedIn && (
               <motion.div
-                initial={{ opacity: 0, x: -8, scale: 0.98 }}
-                animate={{ opacity: 1, x: 0, scale: 1 }}
-                exit={{ opacity: 0, x: -8, scale: 0.98 }}
+                initial={{ opacity: 0, x: -8 , y: 135, scale: 0.98 }}
+                animate={{ opacity: 1, x: 0, y: 135, scale: 1 }}
+                exit={{ opacity: 0, x: -8 , y: 135, scale: 0.98 }}
                 transition={{ duration: 0.14, ease: "easeOut" }}
                 className="absolute left-full top-0 ml-2"
                 style={{ transformOrigin: "left top" }}
@@ -200,6 +204,8 @@ function MenuItem({
   indent,
   arrow,
   active,
+  disabled,
+  title,
 }: {
   icon: typeof Plus;
   label: string;
@@ -209,16 +215,22 @@ function MenuItem({
   indent?: boolean;
   arrow?: boolean;
   active?: boolean;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={`flex w-full items-center gap-2.5 rounded-lg py-2 text-[0.8214rem] ${indent ? "pl-9 pr-2.5" : "px-2.5"
-        } ${danger
-          ? "text-danger hover:bg-danger/10"
-          : active
-            ? "bg-base text-text"
-            : "text-text-secondary hover:bg-base hover:text-text"
+        } ${disabled
+          ? "cursor-not-allowed text-text-faint/60"
+          : danger
+            ? "text-danger hover:bg-danger/10"
+            : active
+              ? "bg-base text-text"
+              : "text-text-secondary hover:bg-base hover:text-text"
         }`}
     >
       <Icon size={16} strokeWidth={1.5} className="shrink-0" />
@@ -226,7 +238,7 @@ function MenuItem({
       {kbd && <span className="ml-auto text-[0.7857rem] text-text-faint">{kbd}</span>}
       {arrow && (
         <ChevronRight
-          size={14}
+          size={16}
           strokeWidth={1.6}
           className={`ml-auto shrink-0 ${active ? "text-text" : "text-text-faint"}`}
         />

@@ -50,6 +50,7 @@ export const tr: typeof en = {
   },
   phoneConnect: {
     title: "Telefonu bağla",
+    needSignIn: "Telefon bağlamak için oturum aç",
     instructions: "Bu kodu Axiom mobil uygulamasında okut",
     waiting: "Telefon bekleniyor…",
     connecting: "Bağlanıyor…",

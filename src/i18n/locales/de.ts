@@ -50,6 +50,7 @@ export const de: typeof en = {
   },
   phoneConnect: {
     title: "Telefon verbinden",
+    needSignIn: "Zum Verbinden eines Telefons anmelden",
     instructions: "Scanne diesen Code in der Axiom-App",
     waiting: "Warte auf Telefon…",
     connecting: "Verbinde…",

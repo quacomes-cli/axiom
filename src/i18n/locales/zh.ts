@@ -50,6 +50,7 @@ export const zh: typeof en = {
   },
   phoneConnect: {
     title: "连接手机",
+    needSignIn: "登录后可连接手机",
     instructions: "在 Axiom 手机应用中扫描此码",
     waiting: "等待手机…",
     connecting: "连接中…",

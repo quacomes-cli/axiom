@@ -50,6 +50,7 @@ export const ru: typeof en = {
   },
   phoneConnect: {
     title: "Подключить телефон",
+    needSignIn: "Войдите, чтобы подключить телефон",
     instructions: "Отсканируйте код в приложении Axiom",
     waiting: "Ожидание телефона…",
     connecting: "Подключение…",
