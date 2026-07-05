@@ -56,6 +56,7 @@ export const fr: typeof en = {
     paired: "Téléphone connecté",
     deviceConnected: "{{name}} connecté",
     error: "Échec de la connexion",
+    regenerate: "Régénérer",
     retry: "Réessayer",
   },
   common: {
@@ -638,6 +639,7 @@ export const fr: typeof en = {
     ok: "OK",
     failed: "Échec de la migration",
     close: "Fermer",
+    regenerate: "Régénérer",
     retry: "Réessayer",
   },
   priceTracker: {

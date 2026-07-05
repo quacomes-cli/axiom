@@ -56,6 +56,7 @@ export const ru: typeof en = {
     paired: "Телефон подключён",
     deviceConnected: "{{name}} подключён",
     error: "Сбой подключения",
+    regenerate: "Обновить код",
     retry: "Повторить",
   },
   common: {
@@ -638,6 +639,7 @@ export const ru: typeof en = {
     ok: "ОК",
     failed: "Перенос не удался",
     close: "Закрыть",
+    regenerate: "Обновить код",
     retry: "Повторить",
   },
   priceTracker: {

@@ -56,6 +56,7 @@ export const tr: typeof en = {
     paired: "Telefon bağlandı",
     deviceConnected: "{{name}} bağlandı",
     error: "Bağlantı başarısız",
+    regenerate: "Yeniden oluştur",
     retry: "Tekrar dene",
   },
   common: {
@@ -638,6 +639,7 @@ export const tr: typeof en = {
     ok: "Tamam",
     failed: "Taşıma Başarısız",
     close: "Kapat",
+    regenerate: "Yeniden oluştur",
     retry: "Tekrar Dene",
   },
   priceTracker: {

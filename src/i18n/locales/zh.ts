@@ -56,6 +56,7 @@ export const zh: typeof en = {
     paired: "手机已连接",
     deviceConnected: "{{name}} 已连接",
     error: "连接失败",
+    regenerate: "重新生成",
     retry: "重试",
   },
   common: {
@@ -638,6 +639,7 @@ export const zh: typeof en = {
     ok: "确定",
     failed: "迁移失败",
     close: "关闭",
+    regenerate: "重新生成",
     retry: "重试",
   },
   priceTracker: {

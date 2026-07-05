@@ -56,6 +56,7 @@ export const ja: typeof en = {
     paired: "スマホが接続されました",
     deviceConnected: "{{name}} が接続されました",
     error: "接続に失敗しました",
+    regenerate: "再生成",
     retry: "再試行",
   },
   common: {
@@ -638,6 +639,7 @@ export const ja: typeof en = {
     ok: "OK",
     failed: "移行に失敗しました",
     close: "閉じる",
+    regenerate: "再生成",
     retry: "再試行",
   },
   priceTracker: {

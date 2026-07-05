@@ -57,6 +57,7 @@ export const en = {
     paired: "Phone connected",
     deviceConnected: "{{name}} connected",
     error: "Connection failed",
+    regenerate: "Regenerate",
     retry: "Retry",
   },
   common: {
@@ -639,6 +640,7 @@ export const en = {
     ok: "OK",
     failed: "Migration Failed",
     close: "Close",
+    regenerate: "Regenerate",
     retry: "Retry",
   },
   priceTracker: {
