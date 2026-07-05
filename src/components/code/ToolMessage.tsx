@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Wrench } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ToolAction } from "../../types";
+import { t as translate } from "../../i18n";
 import hljs from "highlight.js";
 import "highlight.js/styles/atom-one-dark.css";
 
@@ -60,10 +61,10 @@ function toolLabel(action: ToolAction): { prefix: string; value: string } {
     case "delete_file": return { prefix: "delete", value: basename(action.path) };
     case "rename_file": return { prefix: "rename", value: `${basename(action.path)} → ${basename(action.toPath)}` };
     case "create_task": return { prefix: "task", value: `+ ${(action.content?.match(/"(.+?)"/)?.[1]) || ""}` };
-    case "list_tasks": return { prefix: "task", value: "liste" };
-    case "update_task": return { prefix: "task", value: "güncelle" };
-    case "complete_task": return { prefix: "task", value: "✓ tamamla" };
-    case "delete_task": return { prefix: "task", value: "sil" };
+    case "list_tasks": return { prefix: "task", value: translate("tasks.labelList") };
+    case "update_task": return { prefix: "task", value: translate("tasks.labelUpdate") };
+    case "complete_task": return { prefix: "task", value: translate("tasks.labelComplete") };
+    case "delete_task": return { prefix: "task", value: translate("tasks.labelDelete") };
     case "schedule_task": return { prefix: "timer", value: action.content?.match(/"(.+?)"/)?.[1] || "" };
     default: return { prefix: action.kind, value: "" };
   }

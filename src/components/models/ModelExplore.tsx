@@ -21,7 +21,7 @@ import { useModelStore } from "../../stores/modelStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ipc } from "../../lib/ipc";
 import { lookupContextWindow, formatContext } from "./modelCatalog";
-import { useT } from "../../i18n";
+import { useT, t as translate } from "../../i18n";
 import type { HardwareProfile, LibraryModel, MemoryEstimate } from "../../types";
 
 // Yetenek bazlı filtreler (çoklu seçilebilir)
@@ -263,7 +263,7 @@ export function ModelExplore() {
       {/* Error */}
       {catalogError && !catalogLoading && (
         <div className="py-16 text-center">
-          <p className="mb-2 text-sm text-danger">Model kataloğu yüklenemedi</p>
+          <p className="mb-2 text-sm text-danger">{t("models.catalogLoadFailed")}</p>
           <p className="text-[0.8571rem] text-text-faint">{catalogError}</p>
           <button
             onClick={() => {
@@ -419,10 +419,10 @@ function assessFit(est: MemoryEstimate, hw: HardwareProfile | null): FitLevel {
 }
 
 const FIT_META: Record<FitLevel, { label: string; cls: string; dot: string }> = {
-  great: { label: "Mükemmel", cls: "text-emerald-400", dot: "bg-emerald-400" },
-  ok: { label: "İyi çalışır", cls: "text-blue-400", dot: "bg-blue-400" },
-  tight: { label: "Yavaş olabilir", cls: "text-amber-400", dot: "bg-amber-400" },
-  no: { label: "Yetersiz bellek", cls: "text-red-400", dot: "bg-red-400" },
+  great: { label: "models.fitGreat", cls: "text-emerald-400", dot: "bg-emerald-400" },
+  ok: { label: "models.fitOk", cls: "text-blue-400", dot: "bg-blue-400" },
+  tight: { label: "models.fitTight", cls: "text-amber-400", dot: "bg-amber-400" },
+  no: { label: "models.fitNo", cls: "text-red-400", dot: "bg-red-400" },
 };
 
 function formatGb(mb: number): string {
@@ -432,12 +432,12 @@ function formatGb(mb: number): string {
 
 function translatePullStatus(status: string): string {
   const s = status.toLowerCase();
-  if (s.includes("manifest")) return "Manifest alınıyor";
-  if (s.includes("downloading") || s.includes("pulling")) return "İndiriliyor";
-  if (s.includes("verifying")) return "Doğrulanıyor";
-  if (s.includes("writing")) return "Yazılıyor";
-  if (s.includes("success")) return "Tamamlandı";
-  return status || "İndiriliyor";
+  if (s.includes("manifest")) return translate("models.pullManifest");
+  if (s.includes("downloading") || s.includes("pulling")) return translate("models.pullDownloading");
+  if (s.includes("verifying")) return translate("models.pullVerifying");
+  if (s.includes("writing")) return translate("models.pullWriting");
+  if (s.includes("success")) return translate("models.pullDone");
+  return status || translate("models.pullDownloading");
 }
 
 // ---- Detail Modal -----------------------------------------------------------
@@ -620,7 +620,7 @@ function ModelDetailModal({
                             <div className="mt-1 flex items-center gap-1.5">
                               <span className={`h-1.5 w-1.5 rounded-full ${FIT_META[fit.level].dot}`} />
                               <span className={`text-[0.7857rem] ${FIT_META[fit.level].cls}`}>
-                                {FIT_META[fit.level].label}
+                                {t(FIT_META[fit.level].label)}
                               </span>
                               <span className="text-[0.7857rem] text-text-faint">
                                 · ~{formatGb(fit.estimate.totalMb)} bellek
@@ -643,7 +643,7 @@ function ModelDetailModal({
                             {isPulling ? (
                               <>
                                 <Loader2 size={13} strokeWidth={1.4} className="animate-spin" />
-                                {progress && progress.percent >= 0 ? `%${progress.percent}` : "İndiriliyor"}
+                                {progress && progress.percent >= 0 ? `%${progress.percent}` : t("models.pullDownloading")}
                               </>
                             ) : (
                               <>

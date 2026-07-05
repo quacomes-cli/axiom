@@ -237,7 +237,7 @@ function AddForm() {
     setSuccess(null);
     const cleanUrl = url.trim();
     if (!cleanUrl || !/^https?:\/\//i.test(cleanUrl)) {
-      setError("URL http:// veya https:// ile başlamalı");
+      setError(t("priceTracker.urlMustStart"));
       return;
     }
     setBusy(true);

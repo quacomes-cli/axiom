@@ -1726,7 +1726,7 @@ export function ChatPanel() {
               title={t("chat.toolWarning")}
             >
               <AlertTriangle size={12} strokeWidth={1.8} />
-              <span style={{ height: 20, fontSize: 12 }}>zayıf model</span>
+              <span style={{ height: 20, fontSize: 12 }}>{t("chat.weakModel")}</span>
             </div>
           )}
           {contextUsage.total > 0 && messages.length > 0 && (() => {
