@@ -75,6 +75,12 @@ export default function ChatView() {
         <textarea
           value={draft()}
           onInput={(e) => setDraft(e.currentTarget.value)}
+          onFocus={() => {
+            // Klavye açılıp layout küçülünce son mesaja kaydır.
+            setTimeout(() => {
+              if (scroller) scroller.scrollTop = scroller.scrollHeight;
+            }, 300);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

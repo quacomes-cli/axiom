@@ -1,0 +1,233 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Geist:wght@300;400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..600&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+    --color-base: #1a1a1a;
+    --color-surface: #222222;
+    --color-surface-2: #2d2d2d;
+    --color-surface-3: #3b3b3b;
+    --color-surface-dark: #0a0a0a;
+
+    --color-border: rgba(255, 255, 255, 0.07);
+    --color-border-hover: rgba(255, 255, 255, 0.14);
+
+    --color-accent: rgba(255,255,255);
+    --color-accent-muted: rgba(255, 255, 255, 0.12);
+    --color-accent-hover: rgba(255, 255, 255, 0.20);
+    --color-accent-colorful: #d17249;
+
+    --color-text: #f0eee6;
+    --color-text-secondary: #b8b4a9;
+    --color-text-faint: #7d7a70;
+
+    --color-success: #7ec488;
+    --color-warn: #e2b449;
+    --color-danger: #e77568;
+
+    --color-hover: rgba(255, 255, 255, 0.045);
+    --color-hover-strong: rgba(255, 255, 255, 0.08);
+    --color-active: rgba(255, 255, 255, 0.10);
+    --color-kbd: rgba(255, 255, 255, 0.07);
+
+    --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", "Cascadia Code", ui-monospace, monospace;
+
+    --radius: 8px;
+    --radius-xs: 3px;
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+    --radius-2xl: 12px;
+    --radius-3xl: 16px;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    /* Klavye açılınca tüm sayfa yukarı kaymasın — yalnızca içteki
+       overflow-y-auto alanlar (mesaj listesi) kaysın. */
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    background-color: var(--color-base);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+    outline: none;
+}
+*::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+*::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+}
+*::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::selection {
+    background: rgba(var(--color-accent) / 50);
+}
+
+[data-theme="light"] {
+    /* Açık tema: bembeyaz yerine krem zemin (Claude'un kâğıt hissi) —
+       parlak ekranda göz yormaz, terracotta vurgu kontrast için koyulaştı. */
+    --color-base: #faf8f5;
+    --color-surface: #f1efe8;
+    --color-surface-2: #e9e6dd;
+    --color-surface-3: #dcd8cc;
+    --color-surface-dark: var(--color-surface-2);
+
+    --color-border: rgba(60, 50, 30, 0.10);
+    --color-border-hover: rgba(60, 50, 30, 0.20);
+
+    --color-accent: rgb(26, 26, 26);
+    --color-accent-muted: rgba(26, 26, 26, 0.10);
+    --color-accent-hover: rgba(26, 26, 26, 0.18);
+    --color-accent-colorful: #d17249;
+
+    --color-text: #3d3929;
+    --color-text-secondary: #6c6759;
+    --color-text-faint: #a19d90;
+
+    --color-success: #2f9e44;
+    --color-warn: #b07d1e;
+    --color-danger: #d64545;
+
+    --color-hover: rgba(60, 50, 30, 0.05);
+    --color-hover-strong: rgba(60, 50, 30, 0.08);
+    --color-active: rgba(60, 50, 30, 0.10);
+    --color-kbd: rgba(60, 50, 30, 0.07);
+}
+
+[data-theme="light"] ::selection {
+    background: rgba(201, 100, 66, 0.22);
+}
+
+[data-theme="light"] *::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+}
+[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.20);
+}
+[data-theme="light"] * {
+    scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+button {
+    cursor: pointer;
+}
+
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+
+::selection {
+    background: var(--color-accent-muted);
+}
+
+.prose {
+    --tw-prose-body: var(--color-text-secondary);
+    --tw-prose-headings: var(--color-text);
+    --tw-prose-links: var(--color-text);
+    --tw-prose-bold: var(--color-text);
+    --tw-prose-counters: var(--color-text-faint);
+    --tw-prose-bullets: var(--color-text-faint);
+    --tw-prose-hr: var(--color-border);
+    --tw-prose-quotes: var(--color-text-secondary);
+    --tw-prose-quote-borders: var(--color-border-hover);
+    --tw-prose-captions: var(--color-text-faint);
+    --tw-prose-code: var(--color-text);
+    --tw-prose-pre-code: var(--color-text-secondary);
+    --tw-prose-pre-bg: var(--color-surface-2);
+    --tw-prose-th-borders: var(--color-border-hover);
+    --tw-prose-td-borders: var(--color-border);
+    --tw-prose-invert-body: var(--color-text-secondary);
+    --tw-prose-invert-headings: var(--color-text);
+    --tw-prose-invert-links: var(--color-text);
+    --tw-prose-invert-bold: var(--color-text);
+    --tw-prose-invert-counters: var(--color-text-faint);
+    --tw-prose-invert-bullets: var(--color-text-faint);
+    --tw-prose-invert-hr: var(--color-border);
+    --tw-prose-invert-quotes: var(--color-text-secondary);
+    --tw-prose-invert-quote-borders: var(--color-border-hover);
+    --tw-prose-invert-captions: var(--color-text-faint);
+    --tw-prose-invert-code: var(--color-text);
+    --tw-prose-invert-pre-code: var(--color-text-secondary);
+    --tw-prose-invert-pre-bg: var(--color-surface-2);
+    --tw-prose-invert-th-borders: var(--color-border-hover);
+    --tw-prose-invert-td-borders: var(--color-border);
+}
+
+.prose a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--color-border-hover);
+    transition: text-decoration-color 0.15s;
+    cursor: alias;
+}
+.prose a:hover {
+    text-decoration-color: var(--color-text-faint);
+}
+
+.prose code:not(pre code) {
+    background: var(--color-surface-2);
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-family: var(--font-mono);
+}
+
+.prose pre {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+
+.prose blockquote {
+    font-style: normal;
+    border-left-width: 2px;
+}
+
+.prose strong {
+    font-weight: 600;
+}
+
+.prose em {
+    color: var(--color-text-secondary);
+}
+
+.prose li::marker {
+    color: var(--color-text-faint);
+}
