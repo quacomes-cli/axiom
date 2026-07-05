@@ -383,6 +383,27 @@ export interface Chat {
   messages: ChatMessage[];
   createdAt: number;
   compactedSummary?: string;
+  /** Eşleşmiş telefondan erişime izin verildi mi (yalnızca in-memory + localStorage;
+      SQLite'a yazılmaz). */
+  remoteAllowed?: boolean;
+}
+
+// Uzaktan erişime izin verilen sohbet id'leri — SQLite şemasına dokunmamak için
+// hafif localStorage kalıcılığı.
+const REMOTE_ALLOWED_KEY = "axiom-remote-allowed";
+
+function loadRemoteAllowedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(REMOTE_ALLOWED_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    /* yok say */
+  }
+  return new Set();
+}
+
+function saveRemoteAllowedIds(ids: Set<string>) {
+  localStorage.setItem(REMOTE_ALLOWED_KEY, JSON.stringify([...ids]));
 }
 
 interface StreamTokenPayload {
@@ -1088,6 +1109,8 @@ interface ChatState {
   switchChat: (id: string) => void;
   deleteChat: (id: string) => void;
   renameChat: (id: string, title: string) => void;
+  /** Sohbete uzaktan (telefon) erişim iznini aç/kapat. */
+  toggleRemoteAllowed: (id: string) => void;
   toggleToolCollapse: (chatId: string, msgId: string, actionIdx: number) => void;
   setToolUseEnabled: (v: boolean) => void;
   setChatMode: (mode: ChatMode) => void;
@@ -1206,6 +1229,11 @@ export const useChatStore = create<ChatState>()(
         const chats = await chatDb.loadAllChats();
         // Yeni yüklenenler zaten diskte — açılışta geri yazılmasınlar
         for (const c of chats) lastPersisted.set(c.id, c);
+        // Uzaktan-erişim bayraklarını localStorage'dan geri yükle.
+        const allowedIds = loadRemoteAllowedIds();
+        if (allowedIds.size > 0) {
+          for (const c of chats) if (allowedIds.has(c.id)) c.remoteAllowed = true;
+        }
         set({ chats, activeChatId: chats[0]?.id ?? null, hydrated: true });
         // Açılış her zaman boş bir sohbette başlar (eski onRehydrate davranışı):
         // ilk sohbet boşsa onu kullan, doluysa yeni oluştur.
@@ -1238,6 +1266,18 @@ export const useChatStore = create<ChatState>()(
           streamUnlisten();
           streamUnlisten = null;
         }
+      },
+
+      toggleRemoteAllowed: (id) => {
+        set((s) => ({
+          chats: s.chats.map((c) =>
+            c.id === id ? { ...c, remoteAllowed: !c.remoteAllowed } : c,
+          ),
+        }));
+        const ids = new Set(
+          get().chats.filter((c) => c.remoteAllowed).map((c) => c.id),
+        );
+        saveRemoteAllowedIds(ids);
       },
 
       injectAssistantMessage: (text, title) => {
@@ -1351,6 +1391,18 @@ export const useChatStore = create<ChatState>()(
         const summaryMatch = text.match(/^\/(summary|özet|compact)\s*$/i);
         if (summaryMatch) {
           await get().compactChat();
+          return;
+        }
+
+        // /remote — bu sohbetin uzaktan (telefon) erişimini aç/kapat.
+        if (/^\/remote\s*$/i.test(text)) {
+          get().toggleRemoteAllowed(activeChatId);
+          const on = get().chats.find((c) => c.id === activeChatId)?.remoteAllowed;
+          get().injectAssistantMessage(
+            on
+              ? "📱 Bu sohbet artık eşleşmiş telefonundan erişilebilir."
+              : "📱 Bu sohbetin telefon erişimi kapatıldı.",
+          );
           return;
         }
 

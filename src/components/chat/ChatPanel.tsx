@@ -25,6 +25,7 @@ import {
   VolumeX,
   AlertTriangle,
   Loader,
+  Smartphone,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -963,6 +964,12 @@ function useSlashCommands(): SlashCommand[] {
       label: translate("chat.compress"),
       description: translate("chat.compressContext"),
       icon: <MessageCircle size={14} strokeWidth={1.6} />,
+    },
+    {
+      command: "/remote",
+      label: translate("phoneConnect.cmdLabel"),
+      description: translate("phoneConnect.cmdDesc"),
+      icon: <Smartphone size={14} strokeWidth={1.6} />,
     },
   ];
   const appCommands: SlashCommand[] = apps

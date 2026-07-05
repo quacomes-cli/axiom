@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Send,
   TrendingDown,
+  Smartphone,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -82,6 +83,7 @@ function ChatContextMenu({
 }) {
   const deleteChat = useChatStore((s) => s.deleteChat);
   const renameChat = useChatStore((s) => s.renameChat);
+  const toggleRemoteAllowed = useChatStore((s) => s.toggleRemoteAllowed);
   const chat = useChatStore((s) => s.chats.find((c) => c.id === chatId));
   const menuRef = useRef<HTMLDivElement>(null);
   const [renaming, setRenaming] = useState(false);
@@ -138,6 +140,19 @@ function ChatContextMenu({
       >
         <Pencil size={15} strokeWidth={1.4} />
         {t("sidebar.rename")}
+      </button>
+      <button
+        onClick={() => {
+          toggleRemoteAllowed(chatId);
+          onClose();
+        }}
+        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-[0.9286rem] hover:bg-hover ${
+          chat?.remoteAllowed ? "text-success" : "text-text-secondary hover:text-text"
+        }`}
+      >
+        <Smartphone size={15} strokeWidth={1.4} />
+        {t("phoneConnect.cmdLabel")}
+        {chat?.remoteAllowed && <span className="ml-auto text-[0.7857rem]">✓</span>}
       </button>
       <button
         onClick={() => {

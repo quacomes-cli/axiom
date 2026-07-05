@@ -6,6 +6,7 @@ import { AnimatedView } from "./components/shared/AnimatedView";
 import { SearchModal } from "./components/shared/SearchModal";
 import { Launchpad } from "./components/shared/Launchpad";
 import { AboutDialog } from "./components/shared/AboutDialog";
+import { initRemoteHost } from "./lib/remoteHost";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
 import { MigrationModal } from "./components/auth/MigrationModal";
@@ -74,6 +75,11 @@ export default function App() {
   usePriceTracker();
   useBackgroundUpdater();
   usePaletteBridge();
+
+  // Uzak sohbet relay'ini bir kez bağla (telefon ↔ chatStore protokolü).
+  useEffect(() => {
+    initRemoteHost();
+  }, []);
 
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
