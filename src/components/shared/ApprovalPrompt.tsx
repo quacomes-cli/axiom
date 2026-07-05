@@ -1,12 +1,14 @@
-// Tool onay kartları — approvalStore'daki bekleyen istekleri sağ altta,
+﻿// Tool onay kartları — approvalStore'daki bekleyen istekleri sağ altta,
 // hangi sekmede olursa olsun gösterir. Üç karar: Reddet / Bu sefer izin ver /
 // Her zaman izin ver (kalıcı kural — İzinler sayfasına işlenir).
 
 import { ShieldAlert } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useApprovalStore } from "../../stores/approvalStore";
+import { useT } from "../../i18n";
 
 export function ApprovalPrompt() {
+  const t = useT();
   const requests = useApprovalStore((s) => s.requests);
   const decide = useApprovalStore((s) => s.decide);
 
@@ -51,7 +53,7 @@ export function ApprovalPrompt() {
                   </button>
                   <button
                     onClick={() => decide(r.id, "always")}
-                    title={r.alwaysHint ?? "Bu izin türü kalıcı olarak açılır (İzinler sayfasından değiştirilebilir)"}
+                    title={r.alwaysHint ?? t("misc.approvalPersist")}
                     className="rounded-md bg-accent/25 px-2.5 py-1 text-xs font-medium text-text transition-colors hover:bg-accent/35"
                   >
                     Her zaman

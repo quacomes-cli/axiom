@@ -1,4 +1,4 @@
-// İnteraktif HTML yanıtları — modelin ürettiği ```html blokları sandbox'lı
+﻿// İnteraktif HTML yanıtları — modelin ürettiği ```html blokları sandbox'lı
 // iframe'de canlı render edilir (Claude artifact benzeri).
 //
 // GÜVENLİK: iframe'e `allow-same-origin` VERİLMEZ. Snippet, uygulama
@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Code2, Copy, Play, RefreshCw, Maximize2, X, Loader } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { useT } from "../../i18n";
 
 /**
  * Uygulamanın CANLI tema değişkenlerini okuyup iframe'e taşınacak tasarım
@@ -101,6 +102,7 @@ const HEIGHT_REPORTER = `<script>(function(){
 })();</script>`;
 
 export function InteractiveHtml({ code }: { code: string }) {
+  const t = useT();
   const [view, setView] = useState<"preview" | "code">("preview");
   const [copied, setCopied] = useState(false);
   const [runId, setRunId] = useState(0);
@@ -141,16 +143,16 @@ export function InteractiveHtml({ code }: { code: string }) {
       <button
         onClick={() => setView(view === "preview" ? "code" : "preview")}
         className="flex items-center gap-1 rounded-md px-1.5 py-0 text-[0.7143rem] text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-        title={view === "preview" ? "Kodu göster" : "Önizlemeye dön"}
+        title={view === "preview" ? t("interactive.showCode") : t("interactive.backToPreview")}
       >
         {view === "preview" ? <Code2 size={12} /> : <Play size={12} />}
-        {view === "preview" ? "Kod" : "Önizle"}
+        {view === "preview" ? t("interactive.code") : t("interactive.preview")}
       </button>
       {view === "preview" && (
         <button
           onClick={() => setRunId((n) => n + 1)}
           className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-          title="Yeniden çalıştır"
+          title={t("interactive.rerun")}
         >
           <RefreshCw size={12} />
         </button>
@@ -158,14 +160,14 @@ export function InteractiveHtml({ code }: { code: string }) {
       <button
         onClick={() => setFullscreen((f) => !f)}
         className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-        title={fullscreen ? "Kapat" : "Büyüt"}
+        title={fullscreen ? t("interactive.close") : t("interactive.enlarge")}
       >
         {fullscreen ? <X size={12} /> : <Maximize2 size={12} />}
       </button>
       <button
         onClick={copy}
         className="rounded-md p-1 text-text-faint transition-colors hover:bg-hover hover:text-text-secondary"
-        title="Kodu kopyala"
+        title={t("interactive.copyCode")}
       >
         {copied ? <Check size={12} /> : <Copy size={12} />}
       </button>
@@ -179,7 +181,7 @@ export function InteractiveHtml({ code }: { code: string }) {
         ref={iframeRef}
         sandbox="allow-scripts allow-forms allow-modals"
         srcDoc={srcDoc}
-        title="İnteraktif yanıt"
+        title={t("interactive.interactiveResponse")}
         className="w-full border-0"
         style={{ height: fullscreen ? "100%" : height, display: "block" }}
       />
@@ -218,20 +220,21 @@ export function InteractiveHtml({ code }: { code: string }) {
  * Streaming sırasında ham HTML kodu yerine gösterilen "tasarlanıyor" bloğu —
  * kod yazım süreci kullanıcıya sızmaz, dönüşümlü durum mesajları akar.
  */
-const DESIGN_STAGES = [
-  "Arayüz tasarlanıyor",
-  "Bileşenler yerleştiriliyor",
-  "Etkileşimler bağlanıyor",
-  "Tema uygulanıyor",
-  "Son rötuşlar yapılıyor",
+const DESIGN_STAGE_KEYS = [
+  "interactive.stage1",
+  "interactive.stage2",
+  "interactive.stage3",
+  "interactive.stage4",
+  "interactive.stage5",
 ];
 
 export function DesigningIndicator() {
+  const t = useT();
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
     const id = setInterval(
-      () => setStage((s) => Math.min(s + 1, DESIGN_STAGES.length - 1)),
+      () => setStage((s) => Math.min(s + 1, DESIGN_STAGE_KEYS.length - 1)),
       1800,
     );
     return () => clearInterval(id);
@@ -253,7 +256,7 @@ export function DesigningIndicator() {
           transition={{ duration: 0.25 }}
           className="text-[0.8571rem] text-text-secondary"
         >
-          {DESIGN_STAGES[stage]}
+          {t(DESIGN_STAGE_KEYS[stage])}
         </motion.span>
       </AnimatePresence>
     </div>

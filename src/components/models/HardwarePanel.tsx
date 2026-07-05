@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Box, CircuitBoard, Monitor, RefreshCw } from "lucide-react";
 import { ipc } from "../../lib/ipc";
 import type { HardwareProfile } from "../../types";
+import { useT } from "../../i18n";
 
 function Stat({
   icon,
@@ -26,6 +27,7 @@ function Stat({
 }
 
 export function HardwarePanel() {
+  const t = useT();
   const [profile, setProfile] = useState<HardwareProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +110,7 @@ export function HardwarePanel() {
           />
           <Stat
             icon={<Monitor size={15} strokeWidth={1.3} />}
-            label="İşletim Sistemi"
+            label={t("misc.os")}
             value={profile.osName}
           />
         </div>
