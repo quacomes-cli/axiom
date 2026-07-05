@@ -13,6 +13,7 @@ import {
   Info,
   Power,
   ExternalLink,
+  Smartphone,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -31,6 +32,7 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
   const setView = useUiStore((s) => s.setView);
   const setLaunchpadOpen = useUiStore((s) => s.setLaunchpadOpen);
   const setAboutOpen = useUiStore((s) => s.setAboutOpen);
+  const setPhoneConnectOpen = useUiStore((s) => s.setPhoneConnectOpen);
   const openSettings = useUiStore((s) => s.openSettings);
   const [sysOpen, setSysOpen] = useState(false);
 
@@ -91,6 +93,14 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
             icon={Minus}
             label={t("menu.minimizeTray")}
             onClick={act(() => void appWindow.hide())}
+          />
+
+          <div className="my-1 h-px bg-border" />
+
+          <MenuItem
+            icon={Smartphone}
+            label={t("menu.connectPhone")}
+            onClick={act(() => setPhoneConnectOpen(true))}
           />
 
           <div className="my-1 h-px bg-border" />
