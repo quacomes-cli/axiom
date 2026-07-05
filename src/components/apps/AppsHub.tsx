@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+﻿import { useState, useEffect, useRef, useCallback } from "react";
 import { Settings2, X, Zap, ZapOff, Loader2, AlertCircle, CheckCircle2, Plug, ExternalLink, Copy, Check } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { PageHeader } from "../shared/PageHeader";
@@ -35,49 +35,49 @@ type ConfigField =
 const CONFIG_FIELDS: Record<string, ConfigField[]> = {
   telegram: [
     { label: "Bot Token", key: "bot_token", placeholder: "123456:ABC-DEF...", secret: true },
-    { label: "Chat ID", key: "chat_id", placeholder: "Hedef chat ID (gönderim için)" },
+    { label: "Chat ID", key: "chat_id", placeholder: "appsCfg.targetChatPh" },
     {
-      label: "Otomatik mod",
+      label: "appsCfg.autoMode",
       key: "auto_mode",
       type: "toggle",
-      hint: "Yeni Telegram mesajları geldiğinde AI'a yönlendir ve cevabı otomatik geri yolla",
+      hint: "appsCfg.autoModeDesc",
     },
   ],
   github: [
     { label: "Client ID (OAuth App)", key: "client_id", placeholder: "Ov23li...", secret: false },
-    { label: "Personal Access Token", key: "personal_access_token", placeholder: "ghp_... (OAuth ile otomatik dolar)", secret: true },
+    { label: "Personal Access Token", key: "personal_access_token", placeholder: "appsCfg.githubPatPh", secret: true },
   ],
   notion: [
     { label: "Integration Token", key: "integration_token", placeholder: "secret_...", secret: true },
   ],
   discord: [
     { label: "Bot Token", key: "bot_token", placeholder: "Bot token...", secret: true },
-    { label: "Guild ID", key: "guild_id", placeholder: "Sunucu ID" },
+    { label: "Guild ID", key: "guild_id", placeholder: "appsCfg.serverIdPh" },
   ],
   spotify: [
-    { label: "Client ID", key: "client_id", placeholder: "Spotify Developer Dashboard'dan" },
+    { label: "Client ID", key: "client_id", placeholder: "appsCfg.spotifyClientIdPh" },
     { label: "Client Secret", key: "client_secret", placeholder: "Spotify Client Secret", secret: true },
   ],
   // gmail ve gcalendar için kullanıcı credential girmez — uygulama kendi credential'larını kullanır
   vscode: [
     {
-      label: "code komutu",
+      label: "appsCfg.codeCommand",
       key: "command",
-      placeholder: "code (PATH'te yoksa tam yol)",
+      placeholder: "appsCfg.codeCommandPh",
     },
   ],
   obsidian: [
     {
-      label: "Vault klasörü",
+      label: "appsCfg.vaultFolder",
       key: "vault_path",
       placeholder: "C:/Users/.../Obsidian/Vault",
     },
   ],
   wikipedia: [
     {
-      label: "Varsayılan dil",
+      label: "appsCfg.defaultLang",
       key: "lang",
-      placeholder: "tr veya en (boşsa otomatik)",
+      placeholder: "appsCfg.defaultLangPh",
     },
   ],
 };
@@ -123,6 +123,7 @@ function DeviceCodePanel({ userCode, verificationUri, onCancel }: {
   verificationUri: string;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
 
   const copyCode = useCallback(() => {
@@ -138,7 +139,7 @@ function DeviceCodePanel({ userCode, verificationUri, onCancel }: {
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-surface-2 p-4 text-center">
-        <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">Bu kodu tarayıcıda gir</div>
+        <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("appsCfg.deviceEnterCode")}</div>
         <button
           onClick={copyCode}
           className="group inline-flex items-center gap-2 rounded-lg bg-surface-3 px-4 py-2 font-mono text-xl font-bold tracking-widest text-text transition-colors hover:bg-hover-strong"
@@ -146,15 +147,15 @@ function DeviceCodePanel({ userCode, verificationUri, onCancel }: {
           {userCode}
           {copied ? <Check size={16} className="text-success" /> : <Copy size={16} className="text-text-faint group-hover:text-text" />}
         </button>
-        <div className="mt-2 text-xs text-text-faint">Kod panoya kopyalandığında tarayıcıya yapıştır</div>
+        <div className="mt-2 text-xs text-text-faint">{t("appsCfg.devicePaste")}</div>
       </div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Loader2 size={14} className="animate-spin text-text-faint" />
-          <span className="text-xs text-text-faint">Yetkilendirme bekleniyor...</span>
+          <span className="text-xs text-text-faint">{t("appsCfg.deviceWaitingAuth")}</span>
         </div>
         <button onClick={onCancel} className="rounded-lg px-3 py-1.5 text-xs text-text-faint hover:bg-hover hover:text-text">
-          İptal
+          {t("common.cancel")}
         </button>
       </div>
     </div>
@@ -167,6 +168,7 @@ function DeviceCodePanel({ userCode, verificationUri, onCancel }: {
  * "Kaydet"e basılmadan anında etkili olsun (bot o anda poll ediyor olabilir).
  */
 function TelegramAccessSection() {
+  const t = useT();
   const liveApp = useAppStore((s) => s.apps.find((a) => a.id === "telegram"));
   const updateConfig = useAppStore((s) => s.updateConfig);
   const [manualId, setManualId] = useState("");
@@ -257,7 +259,7 @@ function TelegramAccessSection() {
               {id}
               <button
                 onClick={() => removeAllowed(id)}
-                title="Erişimi kaldır"
+                title={t("appsCfg.removeAccess")}
                 className="text-text-faint transition-colors hover:text-red-400"
               >
                 <X size={10} strokeWidth={2} />
@@ -277,7 +279,7 @@ function TelegramAccessSection() {
           value={manualId}
           onChange={(e) => setManualId(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addManual(); } }}
-          placeholder="Chat ID'yi elle ekle"
+          placeholder={t("appsCfg.manualChatId")}
           className="w-full rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-text outline-none placeholder:text-text-faint focus:bg-surface-3"
         />
         <button
@@ -299,6 +301,7 @@ function AppConfigDialog({
   app: AppIntegration;
   onClose: () => void;
 }) {
+  const t = useT();
   const updateConfig = useAppStore((s) => s.updateConfig);
   const testConnection = useAppStore((s) => s.testConnection);
   const oauthConnect = useAppStore((s) => s.oauthConnect);
@@ -377,10 +380,10 @@ function AppConfigDialog({
   const OAUTH_APPS = new Set(["github", "spotify", "gmail", "gcalendar"]);
   const supportsOAuth = OAUTH_APPS.has(app.id);
   const OAUTH_BUTTON_LABELS: Record<string, string> = {
-    github: "GitHub ile Bağlan",
-    spotify: "Spotify ile Bağlan",
-    gmail: "Gmail ile Bağlan",
-    gcalendar: "Google Calendar ile Bağlan",
+    github: t("appsCfg.connectWith", { service: "GitHub" }),
+    spotify: t("appsCfg.connectWith", { service: "Spotify" }),
+    gmail: t("appsCfg.connectWith", { service: "Gmail" }),
+    gcalendar: t("appsCfg.connectWith", { service: "Google Calendar" }),
   };
   const guideUrl = GUIDE_URLS[app.id];
 
@@ -424,9 +427,9 @@ function AppConfigDialog({
                         className="flex items-start justify-between rounded-lg bg-surface-2 px-3 py-2.5"
                       >
                         <div className="mr-3 min-w-0">
-                          <div className="text-[0.8571rem] text-text-secondary">{field.label}</div>
+                          <div className="text-[0.8571rem] text-text-secondary">{t(field.label)}</div>
                           {field.hint && (
-                            <div className="mt-0.5 text-[0.7857rem] text-text-faint">{field.hint}</div>
+                            <div className="mt-0.5 text-[0.7857rem] text-text-faint">{t(field.hint)}</div>
                           )}
                         </div>
                         <button
@@ -458,7 +461,7 @@ function AppConfigDialog({
                         onChange={(e) =>
                           setValues((v) => ({ ...v, [field.key]: e.target.value }))
                         }
-                        placeholder={field.placeholder}
+                        placeholder={t(field.placeholder ?? "")}
                         className="w-full rounded-lg bg-surface-2 px-3 py-2 text-sm text-text outline-none transition-colors placeholder:text-text-faint focus:bg-surface-3"
                       />
                     </div>
@@ -467,35 +470,35 @@ function AppConfigDialog({
               </div>
             ) : (
               <div className="rounded-xl bg-surface-2 py-6 text-center text-xs text-text-faint">
-                Bu entegrasyon için yapılandırma gerekmez.
+                {t("appsCfg.noConfigNeeded")}
               </div>
             )}
 
             {app.id === "github" && (
               <div className="mt-3 flex flex-col">
-                <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">Hızlı bağlantı</div>
+                <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("appsCfg.quickConnect")}</div>
                 <div className="space-y-2">
                   <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    <span className="font-medium text-text-secondary">1.</span> GitHub'da OAuth App oluştur
+                    <span className="font-medium text-text-secondary">1.</span> {t("appsCfg.githubStep1")}
                     <button
                       onClick={() => openUrl(GUIDE_URLS.github).catch(() => {})}
                       className="ml-1.5 inline-flex items-center gap-1 text-text-secondary hover:text-text"
                     >
-                      <ExternalLink size={10} /> Aç
+                      <ExternalLink size={10} /> {t("appsCfg.open")}
                     </button>
                   </div>
                   <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    <span className="font-medium text-text-secondary">2.</span> Client ID'yi yukarıya gir, <span className="font-medium text-text-secondary">Device Flow</span>'u etkinleştir
+                    <span className="font-medium text-text-secondary">2.</span> {t("appsCfg.githubStep2Before")}<span className="font-medium text-text-secondary">{t("appsCfg.githubStep2Mid")}</span>
                   </div>
                   <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    <span className="font-medium text-text-secondary">3.</span> "GitHub ile Bağlan"a tıkla
+                    {t("appsCfg.githubStep3")}
                   </div>
                 </div>
               </div>
             )}
             {(app.id === "gmail" || app.id === "gcalendar") && (
               <div className="mt-3 rounded-xl bg-surface-2 px-3 py-2.5 text-xs text-text-faint">
-                Google hesabınla giriş yapman yeterli — başka yapılandırma gerekmez.
+                {t("appsCfg.googleLoginEnough")}
               </div>
             )}
 
@@ -509,19 +512,19 @@ function AppConfigDialog({
 
             {liveApp.connectionStatus === "connected" && (
               <div className="mt-3 rounded-lg bg-success/10 px-3 py-2 text-xs text-success">
-                Bağlantı başarılı
+                {t("appsCfg.connectionSuccess")}
               </div>
             )}
 
             {app.tools.length > 0 && (
               <div className="mt-4">
-                <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">Araçlar</div>
+                <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("chat.tools")}</div>
                 <div className="space-y-1">
-                  {app.tools.map((t) => (
-                    <div key={t.name} className="flex items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
+                  {app.tools.map((tl) => (
+                    <div key={tl.name} className="flex items-center gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs">
                       <Plug size={10} className="text-text-faint" />
-                      <span className="text-text-secondary">{t.name}</span>
-                      <span className="text-text-faint">— {t.description}</span>
+                      <span className="text-text-secondary">{tl.name}</span>
+                      <span className="text-text-faint">— {tl.description}</span>
                     </div>
                   ))}
                 </div>
@@ -539,12 +542,12 @@ function AppConfigDialog({
                     {oauthBusy ? (
                       <>
                         <Loader2 size={12} className="animate-spin" />
-                        Tarayıcı bekleniyor...
+                        {t("appsCfg.waitingBrowser")}
                       </>
                     ) : (
                       <>
                         <ExternalLink size={12} />
-                        {OAUTH_BUTTON_LABELS[app.id] || "OAuth ile Bağlan"}
+                        {OAUTH_BUTTON_LABELS[app.id] || t("appsCfg.connectOAuth")}
                       </>
                     )}
                   </button>
@@ -555,7 +558,7 @@ function AppConfigDialog({
                     className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-3"
                   >
                     <ExternalLink size={12} />
-                    Kurulum Rehberi
+                    {t("appsCfg.setupGuide")}
                   </button>
                 )}
                 {fields.length > 0 && (
@@ -565,7 +568,7 @@ function AppConfigDialog({
                     className="flex items-center gap-1.5 rounded-lg bg-surface-2 px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-surface-3 disabled:opacity-50"
                   >
                     {testing ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
-                    Test Et
+                    {t("appsCfg.test")}
                   </button>
                 )}
               </div>
@@ -574,13 +577,13 @@ function AppConfigDialog({
                   onClick={onClose}
                   className="rounded-lg px-3 py-1.5 text-xs text-text-faint transition-colors hover:bg-hover hover:text-text"
                 >
-                  İptal
+                  {t("common.cancel")}
                 </button>
                 <button
                   onClick={save}
                   className="rounded-lg bg-active px-3 py-1.5 text-xs text-text transition-colors hover:bg-border-hover"
                 >
-                  Kaydet
+                  {t("common.save")}
                 </button>
               </div>
             </div>
@@ -641,7 +644,7 @@ function AppCard({ app }: { app: AppIntegration }) {
                 ? "bg-success/10 text-success hover:bg-success/20"
                 : "text-text-faint hover:bg-hover hover:text-text"
               }`}
-            title={app.enabled ? "Devre dışı bırak" : "Etkinleştir"}
+            title={app.enabled ? t("appsCfg.disable") : t("appsCfg.enable")}
           >
             {app.enabled ? <Zap size={13} strokeWidth={1.6} /> : <ZapOff size={13} strokeWidth={1.6} />}
           </button>
