@@ -447,6 +447,22 @@ export const en = {
     noConversations: "No conversations yet. Message the bot from Telegram to see it here.",
     selectChat: "Select a chat on the left.",
   },
+  misc: {
+    micTranscribing: "Transcribing...",
+    micVoiceInput: "Voice input (microphone)",
+    screenCapturing: "Capturing screen...",
+    screenSelectCapture: "Select screen and capture",
+    screenScreenshot: "Take screenshot",
+    updateRestart: "Update and restart",
+  },
+  palette: {
+    ask: "Ask",
+    noModel: "No active model — pick one from the main window.",
+    askModel: "Ask {{model}}...",
+    askAxiom: "Ask Axiom...",
+    continueInChat: "Ctrl+Enter: Continue in chat",
+    close: "Esc: Close",
+  },
   search: {
     page: "Page",
     placeholder: "Search chat history...",

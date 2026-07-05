@@ -446,6 +446,22 @@ export const ja: typeof en = {
     noConversations: "まだ会話がありません。Telegram からボットにメッセージを送ると、ここに表示されます。",
     selectChat: "左からチャットを選択してください。",
   },
+  misc: {
+    micTranscribing: "文字起こし中...",
+    micVoiceInput: "音声入力（マイク）",
+    screenCapturing: "画面をキャプチャ中...",
+    screenSelectCapture: "画面を選択してキャプチャ",
+    screenScreenshot: "スクリーンショットを撮る",
+    updateRestart: "更新して再起動",
+  },
+  palette: {
+    ask: "質問",
+    noModel: "アクティブなモデルがありません — メインウィンドウで選択してください。",
+    askModel: "{{model}} に質問...",
+    askAxiom: "Axiom に質問...",
+    continueInChat: "Ctrl+Enter: チャットで続ける",
+    close: "Esc: 閉じる",
+  },
   search: {
     page: "ページ",
     placeholder: "チャット履歴を検索...",

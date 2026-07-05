@@ -1,4 +1,4 @@
-// Sidebar'da kullanıcı kartının hemen üstüne yerleşen "yeniden başlat ve
+﻿// Sidebar'da kullanıcı kartının hemen üstüne yerleşen "yeniden başlat ve
 // güncelle" butonu. Yalnızca status === "ready" iken görünür (yani indirme
 // tamamlanmış, uygulama yeniden başlatılmayı bekliyor).
 //
@@ -9,8 +9,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpCircle } from "lucide-react";
 import { useUpdaterStore } from "../../stores/updaterStore";
 import { performRestart } from "../../hooks/useUpdater";
+import { useT } from "../../i18n";
 
 export function UpdateReadyButton({ open }: { open: boolean }) {
+  const t = useT();
   const status = useUpdaterStore((s) => s.status);
   const newVersion = useUpdaterStore((s) => s.newVersion);
   if (status !== "ready") return null;
@@ -22,7 +24,7 @@ export function UpdateReadyButton({ open }: { open: boolean }) {
       exit={{ opacity: 0, y: 6, scale: 0.96 }}
       transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
       onClick={() => void performRestart()}
-      title={open ? undefined : `Güncelle ve yeniden başlat${newVersion ? ` (v${newVersion})` : ""}`}
+      title={open ? undefined : `${t("misc.updateRestart")}${newVersion ? ` (v${newVersion})` : ""}`}
       className="group relative flex items-center rounded-[10px] bg-accent/15 text-accent transition-colors duration-200 hover:bg-accent/25"
       style={{ height: 36 }}
     >
@@ -47,7 +49,7 @@ export function UpdateReadyButton({ open }: { open: boolean }) {
             }}
             className="flex flex-1 items-center gap-1.5 whitespace-nowrap pr-2 text-[0.8571rem] font-medium"
           >
-            <span>Güncelle ve yeniden başlat</span>
+            <span>{t("misc.updateRestart")}</span>
             {newVersion && (
               <span className="ml-auto rounded bg-accent/20 px-1 py-0.5 font-mono text-[0.7143rem] text-accent">
                 v{newVersion}

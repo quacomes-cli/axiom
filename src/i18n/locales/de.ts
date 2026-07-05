@@ -446,6 +446,22 @@ export const de: typeof en = {
     noConversations: "Noch keine Unterhaltungen. Schreibe dem Bot von Telegram aus, um sie hier zu sehen.",
     selectChat: "Wähle links einen Chat.",
   },
+  misc: {
+    micTranscribing: "Transkription läuft...",
+    micVoiceInput: "Spracheingabe (Mikrofon)",
+    screenCapturing: "Bildschirm wird aufgenommen...",
+    screenSelectCapture: "Bildschirm wählen und aufnehmen",
+    screenScreenshot: "Screenshot aufnehmen",
+    updateRestart: "Aktualisieren und neu starten",
+  },
+  palette: {
+    ask: "Fragen",
+    noModel: "Kein aktives Modell — wähle eines im Hauptfenster.",
+    askModel: "{{model}} fragen...",
+    askAxiom: "Axiom fragen...",
+    continueInChat: "Ctrl+Enter: Im Chat fortfahren",
+    close: "Esc: Schließen",
+  },
   search: {
     page: "Seite",
     placeholder: "Chat-Verlauf durchsuchen...",

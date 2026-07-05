@@ -446,6 +446,22 @@ export const fr: typeof en = {
     noConversations: "Aucune conversation pour l'instant. Envoyez un message au bot depuis Telegram pour la voir ici.",
     selectChat: "Sélectionnez une discussion à gauche.",
   },
+  misc: {
+    micTranscribing: "Transcription...",
+    micVoiceInput: "Entrée vocale (microphone)",
+    screenCapturing: "Capture d'écran...",
+    screenSelectCapture: "Sélectionner l'écran et capturer",
+    screenScreenshot: "Prendre une capture d'écran",
+    updateRestart: "Mettre à jour et redémarrer",
+  },
+  palette: {
+    ask: "Demander",
+    noModel: "Aucun modèle actif — choisissez-en un dans la fenêtre principale.",
+    askModel: "Demander à {{model}}...",
+    askAxiom: "Demander à Axiom...",
+    continueInChat: "Ctrl+Entrée : Continuer dans le chat",
+    close: "Échap : Fermer",
+  },
   search: {
     page: "Page",
     placeholder: "Rechercher dans l'historique des discussions...",

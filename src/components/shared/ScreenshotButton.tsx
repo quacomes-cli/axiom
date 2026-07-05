@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { Monitor as MonitorIcon, Loader2, ChevronDown } from "lucide-react";
 import { ipc } from "../../lib/ipc";
+import { useT } from "../../i18n";
 
 export interface MonitorInfo {
   index: number;
@@ -24,6 +25,7 @@ async function dataUrlToFile(dataUrl: string, name: string): Promise<File> {
 }
 
 export function ScreenshotButton({ onCapture, disabled }: ScreenshotButtonProps) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -78,7 +80,7 @@ export function ScreenshotButton({ onCapture, disabled }: ScreenshotButtonProps)
         type="button"
         disabled
         className={`${baseCls} bg-zinc-700/50 text-text-faint cursor-wait`}
-        title="Ekran yakalanıyor..."
+        title={t("misc.screenCapturing")}
       >
         <Loader2 size={14} className="animate-spin" />
       </button>
@@ -98,7 +100,7 @@ export function ScreenshotButton({ onCapture, disabled }: ScreenshotButtonProps)
         }}
         disabled={disabled}
         className={`${baseCls} text-text-faint hover:text-text hover:bg-zinc-800/60`}
-        title={multi ? "Ekran seç ve yakala" : "Ekran görüntüsü al"}
+        title={multi ? t("misc.screenSelectCapture") : t("misc.screenScreenshot")}
       >
         <MonitorIcon size={14} />
         {multi && <ChevronDown size={11} className="opacity-60" />}

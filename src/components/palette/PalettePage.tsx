@@ -1,4 +1,4 @@
-// Hızlı palet — Spotlight benzeri, global kısayolla açılan mini asistan.
+﻿// Hızlı palet — Spotlight benzeri, global kısayolla açılan mini asistan.
 //
 // Ayrı bir Tauri penceresinde çalışır (main.tsx etiketle yönlendirir) ve
 // bilinçli olarak hafiftir: chatStore/App hook'ları YÜKLENMEZ; model çağrısı
@@ -11,11 +11,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import { ArrowUpRight, CornerDownLeft, Loader2, Sparkles } from "lucide-react";
 import { ipc } from "../../lib/ipc";
+import { useT, applyLocaleFromSetting } from "../../i18n";
 import type { ModelInfo } from "../../types";
 
 const win = getCurrentWindow();
 
 export function PalettePage() {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,6 +29,8 @@ export function PalettePage() {
   // Aktif modeli pencere her odaklandığında tazele (kullanıcı ana pencerede
   // model değiştirmiş olabilir) + input'a odaklan. Odak kaybında gizlen.
   useEffect(() => {
+    // Palet ayrı pencere: dil ayarını da uygula (yoksa hep İngilizce kalır).
+    void ipc.settingsGet().then((s) => applyLocaleFromSetting(s.language)).catch(() => {});
     const refresh = () => {
       void ipc.modelsList().then((models) => {
         setModel(models.find((m) => m.isActive) ?? null);
@@ -54,7 +58,7 @@ export function PalettePage() {
     const q = query.trim();
     if (!q || busy) return;
     if (!model) {
-      setError("Aktif model yok — ana pencereden bir model seç.");
+      setError(t("palette.noModel"));
       return;
     }
     setBusy(true);
@@ -116,7 +120,7 @@ export function PalettePage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={model ? `${model.displayName || model.id}'e sor...` : "Axiom'a sor..."}
+            placeholder={model ? t("palette.askModel", { model: model.displayName || model.id }) : t("palette.askAxiom")}
             className="w-full bg-transparent text-[0.9857rem] text-text outline-none placeholder:text-text-faint"
             spellCheck={false}
           />
@@ -139,15 +143,15 @@ export function PalettePage() {
         {/* Alt bilgi */}
         <div className="flex items-center gap-4 border-t border-white/8 px-4 py-2 text-[0.7143rem] text-text-faint">
           <span className="flex items-center gap-1">
-            <CornerDownLeft size={11} /> Sor
+            <CornerDownLeft size={11} /> {t("palette.ask")}
           </span>
           <button
             onClick={() => void handoff()}
             className="flex items-center gap-1 transition-colors hover:text-text-secondary"
           >
-            <ArrowUpRight size={11} /> Ctrl+Enter: Sohbette devam
+            <ArrowUpRight size={11} /> {t("palette.continueInChat")}
           </button>
-          <span className="ml-auto">Esc: Kapat</span>
+          <span className="ml-auto">{t("palette.close")}</span>
         </div>
       </div>
     </div>

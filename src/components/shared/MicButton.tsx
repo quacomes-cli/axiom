@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { Mic, MicOff, Loader2, Download } from "lucide-react";
 import { useVoiceInput } from "../../hooks/useVoiceInput";
+import { useT } from "../../i18n";
 
 interface MicButtonProps {
   onTranscript: (text: string) => void;
@@ -8,6 +9,7 @@ interface MicButtonProps {
 }
 
 export function MicButton({ onTranscript, disabled }: MicButtonProps) {
+  const t = useT();
   const { state, toggle, cancel } = useVoiceInput(onTranscript);
   const [elapsed, setElapsed] = useState(0);
 
@@ -45,7 +47,7 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
         type="button"
         disabled
         className={`${baseCls} bg-zinc-700/50 text-text-faint cursor-wait`}
-        title="Transkripsiyon yapılıyor..."
+        title={t("misc.micTranscribing")}
       >
         <Loader2 size={14} className="animate-spin" />
       </button>
@@ -99,7 +101,7 @@ export function MicButton({ onTranscript, disabled }: MicButtonProps) {
       }}
       disabled={disabled}
       className={`${baseCls} text-text-faint hover:text-text hover:bg-zinc-800/60`}
-      title="Sesli giriş (mikrofon)"
+      title={t("misc.micVoiceInput")}
     >
       <Mic size={14} />
     </button>

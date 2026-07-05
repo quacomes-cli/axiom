@@ -446,6 +446,22 @@ export const tr: typeof en = {
     noConversations: "Henüz konuşma yok. Bot'a Telegram'dan mesaj at, burada görünsün.",
     selectChat: "Soldan bir sohbet seç.",
   },
+  misc: {
+    micTranscribing: "Transkripsiyon yapılıyor...",
+    micVoiceInput: "Sesli giriş (mikrofon)",
+    screenCapturing: "Ekran yakalanıyor...",
+    screenSelectCapture: "Ekran seç ve yakala",
+    screenScreenshot: "Ekran görüntüsü al",
+    updateRestart: "Güncelle ve yeniden başlat",
+  },
+  palette: {
+    ask: "Sor",
+    noModel: "Aktif model yok — ana pencereden bir model seç.",
+    askModel: "{{model}}'e sor...",
+    askAxiom: "Axiom'a sor...",
+    continueInChat: "Ctrl+Enter: Sohbette devam",
+    close: "Esc: Kapat",
+  },
   search: {
     page: "Sayfa",
     placeholder: "Sohbet geçmişinde ara...",

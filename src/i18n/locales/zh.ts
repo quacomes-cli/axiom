@@ -446,6 +446,22 @@ export const zh: typeof en = {
     noConversations: "还没有对话。从 Telegram 给机器人发消息，就会显示在这里。",
     selectChat: "在左侧选择一个聊天。",
   },
+  misc: {
+    micTranscribing: "转写中...",
+    micVoiceInput: "语音输入（麦克风）",
+    screenCapturing: "正在截取屏幕...",
+    screenSelectCapture: "选择屏幕并截图",
+    screenScreenshot: "截图",
+    updateRestart: "更新并重启",
+  },
+  palette: {
+    ask: "询问",
+    noModel: "没有活动模型 — 请在主窗口中选择一个。",
+    askModel: "询问 {{model}}...",
+    askAxiom: "询问 Axiom...",
+    continueInChat: "Ctrl+Enter：在聊天中继续",
+    close: "Esc：关闭",
+  },
   search: {
     page: "页面",
     placeholder: "搜索聊天历史...",

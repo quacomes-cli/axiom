@@ -446,6 +446,22 @@ export const ru: typeof en = {
     noConversations: "Пока нет переписок. Напишите боту в Telegram, чтобы увидеть их здесь.",
     selectChat: "Выберите чат слева.",
   },
+  misc: {
+    micTranscribing: "Расшифровка...",
+    micVoiceInput: "Голосовой ввод (микрофон)",
+    screenCapturing: "Захват экрана...",
+    screenSelectCapture: "Выбрать экран и сделать снимок",
+    screenScreenshot: "Сделать снимок экрана",
+    updateRestart: "Обновить и перезапустить",
+  },
+  palette: {
+    ask: "Спросить",
+    noModel: "Нет активной модели — выберите её в главном окне.",
+    askModel: "Спросить {{model}}...",
+    askAxiom: "Спросить Axiom...",
+    continueInChat: "Ctrl+Enter: продолжить в чате",
+    close: "Esc: закрыть",
+  },
   search: {
     page: "Страница",
     placeholder: "Поиск по истории чатов...",
