@@ -1,4 +1,4 @@
-﻿import type { en } from "./en";
+import type { en } from "./en";
 
 export const tr: typeof en = {
   nav: {
@@ -62,6 +62,7 @@ export const tr: typeof en = {
     disconnect: "Bağlantıyı kes",
     regenerate: "Yeniden oluştur",
     retry: "Tekrar dene",
+    syncSession: "Oturumu Eşitle",
   },
   common: {
     save: "Kaydet",

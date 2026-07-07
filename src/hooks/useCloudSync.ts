@@ -12,10 +12,12 @@ export function useCloudSync() {
   const chats = useChatStore((s) => s.chats);
   const settings = useSettingsStore((s) => s.settings);
   const profile = useUserProfileStore((s) => s.profile);
+  const profileEnabled = useUserProfileStore((s) => s.enabled);
 
   const prevChatsRef = useRef(chats);
   const prevSettingsRef = useRef(settings);
   const prevProfileRef = useRef(profile);
+  const prevProfileEnabledRef = useRef(profileEnabled);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync chats
@@ -65,13 +67,14 @@ export function useCloudSync() {
   // Sync profile
   useEffect(() => {
     if (!user) return;
-    if (prevProfileRef.current === profile) return;
+    if (prevProfileRef.current === profile && prevProfileEnabledRef.current === profileEnabled) return;
     prevProfileRef.current = profile;
+    prevProfileEnabledRef.current = profileEnabled;
 
     const timer = setTimeout(() => {
-      uploadProfile(user.uid, profile)
+      uploadProfile(user.uid, profile, profileEnabled)
         .catch((e) => console.error("[Sync] Profile upload failed:", e));
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [user, profile]);
+  }, [user, profile, profileEnabled]);
 }

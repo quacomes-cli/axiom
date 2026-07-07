@@ -77,19 +77,19 @@ export interface HostSession {
 export async function startHostSession(cb: HostCallbacks): Promise<HostSession> {
   await ensureAuth();
 
-  const pc = new RTCPeerConnection({ iceServers: iceServers() });
-  const channel = pc.createDataChannel("axiom", { ordered: true });
-
   const callDoc = doc(collection(db, "signaling"));
   const sessionId = callDoc.id;
   const secret = randomSecret();
   const callerCandidates = collection(callDoc, "callerCandidates");
   const calleeCandidates = collection(callDoc, "calleeCandidates");
 
+  let pc: RTCPeerConnection | null = null;
+  let channel: RTCDataChannel | null = null;
   let verified = false;
-  const unsubs: Unsubscribe[] = [];
+  let unsubs: Unsubscribe[] = [];
   let closed = false;
   let verifyTimer: number | undefined;
+  let reconnecting = false;
 
   const setStatus = (s: RtcStatus, info?: { deviceName?: string; error?: string }) =>
     cb.onStatus?.(s, info);
@@ -113,12 +113,12 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
     if (verifyTimer) clearTimeout(verifyTimer);
     unsubs.forEach((u) => u());
     try {
-      channel.close();
+      channel?.close();
     } catch {
       /* noop */
     }
     try {
-      pc.close();
+      pc?.close();
     } catch {
       /* noop */
     }
@@ -127,88 +127,123 @@ export async function startHostSession(cb: HostCallbacks): Promise<HostSession> 
   };
 
   const send = (msg: unknown) => {
-    if (channel.readyState === "open") channel.send(JSON.stringify(msg));
+    if (channel && channel.readyState === "open") channel.send(JSON.stringify(msg));
   };
 
-  pc.onicecandidate = (e) => {
-    if (e.candidate) void addDoc(callerCandidates, e.candidate.toJSON());
-  };
-
-  pc.onconnectionstatechange = () => {
-    if (pc.connectionState === "connecting") setStatus("connecting");
-    if (["failed", "disconnected", "closed"].includes(pc.connectionState) && !verified) {
-      setStatus("error", { error: pc.connectionState });
-    }
-  };
-
-  channel.onopen = () => {
-    setStatus("verifying");
-    void cleanupSignaling();
-    // Güvenlik: doğrulama 30 sn içinde gelmezse bağlantıyı kapat.
-    verifyTimer = window.setTimeout(() => {
-      if (!verified) close();
-    }, 30000);
-  };
-
-  channel.onclose = () => {
+  const initiateConnection = async () => {
     if (closed) return;
-    // Doğrulanmış bağlantı koptu → hata; henüz doğrulanmadıysa boşa düş.
-    setStatus(verified ? "error" : "idle", verified ? { error: "disconnected" } : undefined);
-  };
+    if (reconnecting) return;
+    reconnecting = true;
 
-  channel.onmessage = (ev) => {
-    let msg: { type?: string; secret?: string; deviceName?: string };
+    // Reset previous connection
+    try { channel?.close(); } catch {}
+    try { pc?.close(); } catch {}
+    unsubs.forEach((u) => u());
+    unsubs = [];
+    verified = false;
+
     try {
-      msg = JSON.parse(ev.data);
-    } catch {
-      return;
+      pc = new RTCPeerConnection({ iceServers: iceServers() });
+      channel = pc.createDataChannel("axiom", { ordered: true });
+
+      channel.onopen = () => {
+        setStatus("verifying");
+        void cleanupSignaling();
+        // Güvenlik: doğrulama 30 sn içinde gelmezse bağlantıyı kapat.
+        verifyTimer = window.setTimeout(() => {
+          if (!verified) close();
+        }, 30000);
+      };
+
+      channel.onclose = () => {
+        if (closed) return;
+        if (verified) {
+          setStatus("connecting");
+          void initiateConnection();
+        } else {
+          setStatus("idle");
+        }
+      };
+
+      channel.onmessage = (ev) => {
+        let msg: { type?: string; secret?: string; deviceName?: string };
+        try {
+          msg = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+        // El sıkışma: telefon `hello{secret}` yollar; doğrulanana kadar veri yok.
+        if (!verified) {
+          if (msg.type === "hello" && msg.secret === secret) {
+            verified = true;
+            if (verifyTimer) clearTimeout(verifyTimer);
+            send({ type: "paired", ok: true });
+            setStatus("paired", { deviceName: msg.deviceName });
+          } else if (msg.type === "hello") {
+            // Yanlış secret — reddet ve kapat.
+            send({ type: "error", msg: "bad_secret" });
+            close();
+          }
+          return;
+        }
+        cb.onMessage?.(msg);
+      };
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) void addDoc(callerCandidates, e.candidate.toJSON());
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc?.connectionState === "connecting") setStatus("connecting");
+        if (pc && ["failed", "disconnected"].includes(pc.connectionState)) {
+          if (!closed && verified) {
+            setStatus("connecting");
+            void initiateConnection();
+          } else if (!verified) {
+            setStatus("error", { error: pc.connectionState });
+          }
+        }
+      };
+
+      // Offer üret + Firestore'a yaz.
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await setDoc(callDoc, {
+        offer: { sdp: offer.sdp, type: offer.type },
+        createdAt: serverTimestamp(),
+      });
+      setStatus("waiting");
+
+      // Answer'ı dinle.
+      unsubs.push(
+        onSnapshot(callDoc, (snap) => {
+          const data = snap.data();
+          if (pc && !pc.currentRemoteDescription && data?.answer) {
+            void pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          }
+        }),
+      );
+
+      // Callee ICE adaylarını dinle.
+      unsubs.push(
+        onSnapshot(calleeCandidates, (snap) => {
+          snap.docChanges().forEach((chg) => {
+            if (chg.type === "added" && pc) {
+              void pc.addIceCandidate(new RTCIceCandidate(chg.doc.data()));
+            }
+          });
+        }),
+      );
+    } catch (e) {
+      console.error("Failed to initiate WebRTC host connection:", e);
+      setStatus("error", { error: String(e) });
+    } finally {
+      reconnecting = false;
     }
-    // El sıkışma: telefon `hello{secret}` yollar; doğrulanana kadar veri yok.
-    if (!verified) {
-      if (msg.type === "hello" && msg.secret === secret) {
-        verified = true;
-        if (verifyTimer) clearTimeout(verifyTimer);
-        setStatus("paired", { deviceName: msg.deviceName });
-        send({ type: "paired", ok: true });
-      } else if (msg.type === "hello") {
-        // Yanlış secret — reddet ve kapat.
-        send({ type: "error", msg: "bad_secret" });
-        close();
-      }
-      return;
-    }
-    cb.onMessage?.(msg);
   };
 
-  // Offer üret + Firestore'a yaz.
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  await setDoc(callDoc, {
-    offer: { sdp: offer.sdp, type: offer.type },
-    createdAt: serverTimestamp(),
-  });
-  setStatus("waiting");
-
-  // Answer'ı dinle.
-  unsubs.push(
-    onSnapshot(callDoc, (snap) => {
-      const data = snap.data();
-      if (!pc.currentRemoteDescription && data?.answer) {
-        void pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      }
-    }),
-  );
-
-  // Callee ICE adaylarını dinle.
-  unsubs.push(
-    onSnapshot(calleeCandidates, (snap) => {
-      snap.docChanges().forEach((chg) => {
-        if (chg.type === "added") {
-          void pc.addIceCandidate(new RTCIceCandidate(chg.doc.data()));
-        }
-      });
-    }),
-  );
+  // İlk bağlantıyı tetikle
+  void initiateConnection();
 
   const qrPayload = JSON.stringify({ v: 1, s: sessionId, k: secret });
 

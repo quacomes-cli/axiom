@@ -1,4 +1,4 @@
-﻿import type { en } from "./en";
+import type { en } from "./en";
 
 export const ja: typeof en = {
   nav: {
@@ -62,6 +62,7 @@ export const ja: typeof en = {
     disconnect: "切断",
     regenerate: "再生成",
     retry: "再試行",
+    syncSession: "セッションを同期",
   },
   common: {
     save: "保存",

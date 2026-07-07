@@ -114,7 +114,6 @@ export function TitleMenu({ open, onClose }: { open: boolean; onClose: () => voi
             onClick={() => loggedIn && setPhoneOpen((v) => !v)}
           />
 
-          {/* Sağa açılan QR flyout — menü açık kalır (bu div menü ref'i içinde). */}
           <AnimatePresence>
             {phoneOpen && loggedIn && (
               <motion.div

@@ -23,6 +23,7 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
+  googleIdToken: string | null;
   loading: boolean;
   initialized: boolean;
   error: string | null;
@@ -49,6 +50,7 @@ const GOOGLE_CLIENT_SECRET = import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? "";
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
+  googleIdToken: localStorage.getItem("axiom_google_id_token"),
   loading: false,
   initialized: false,
   error: null,
@@ -130,6 +132,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       const credential = GoogleAuthProvider.credential(tokens.id_token);
       await signInWithCredential(auth, credential);
 
+      set({ googleIdToken: tokens.id_token });
+      localStorage.setItem("axiom_google_id_token", tokens.id_token);
+
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       set({ error: mapFirebaseError(msg), loading: false });
@@ -139,7 +144,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await firebaseSignOut(auth);
-    set({ user: null });
+    localStorage.removeItem("axiom_google_id_token");
+    set({ user: null, googleIdToken: null });
   },
 
   clearError: () => set({ error: null }),

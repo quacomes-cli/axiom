@@ -1,4 +1,4 @@
-﻿// English — source-of-truth shape. All other locales must match these keys
+// English — source-of-truth shape. All other locales must match these keys
 // (typed as `Dict`), so TypeScript flags any missing/extra key.
 
 export const en = {
@@ -63,6 +63,7 @@ export const en = {
     disconnect: "Disconnect",
     regenerate: "Regenerate",
     retry: "Retry",
+    syncSession: "Sync Session",
   },
   common: {
     save: "Save",

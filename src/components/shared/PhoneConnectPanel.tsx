@@ -16,6 +16,12 @@ export function PhoneConnectPanel({ onClose }: { onClose: () => void }) {
   const startPairing = useRemoteStore((s) => s.startPairing);
   const ensurePairing = useRemoteStore((s) => s.ensurePairing);
   const stopPairing = useRemoteStore((s) => s.stopPairing);
+  const syncSessionEnabled = useRemoteStore((s) => s.syncSessionEnabled);
+  const setSyncSessionEnabled = useRemoteStore((s) => s.setSyncSessionEnabled);
+  const cloudKeySyncEnabled = useRemoteStore((s) => s.cloudKeySyncEnabled);
+  const setCloudKeySyncEnabled = useRemoteStore((s) => s.setCloudKeySyncEnabled);
+  const masterPassphrase = useRemoteStore((s) => s.masterPassphrase);
+  const setMasterPassphrase = useRemoteStore((s) => s.setMasterPassphrase);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   // Panel açılınca: aktif oturum yoksa başlat. Panel kapanınca DURDURMA —
@@ -54,6 +60,51 @@ export function PhoneConnectPanel({ onClose }: { onClose: () => void }) {
         >
           <X size={13} strokeWidth={1.6} />
         </button>
+      </div>
+
+      {/* Oturumu Eşitle Switch */}
+      <div className="mb-2 flex items-center justify-between border-b border-border/40 pb-2 px-0.5">
+        <span className="text-[0.72rem] text-text-secondary">{t("phoneConnect.syncSession")}</span>
+        <button
+          onClick={() => setSyncSessionEnabled(!syncSessionEnabled)}
+          className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+            syncSessionEnabled ? "bg-accent-colorful" : "bg-zinc-700"
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+              syncSessionEnabled ? "translate-x-3" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Bulut Anahtar Eşitle Switch */}
+      <div className="mb-2 flex flex-col border-b border-border/40 pb-2 px-0.5 gap-1.5">
+        <div className="flex items-center justify-between">
+          <span className="text-[0.72rem] text-text-secondary">Anahtarları Eşitle</span>
+          <button
+            onClick={() => setCloudKeySyncEnabled(!cloudKeySyncEnabled)}
+            className={`relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              cloudKeySyncEnabled ? "bg-accent-colorful" : "bg-zinc-700"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                cloudKeySyncEnabled ? "translate-x-3" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+        {cloudKeySyncEnabled && (
+          <input
+            type="password"
+            value={masterPassphrase}
+            onChange={(e) => setMasterPassphrase(e.target.value)}
+            placeholder="Ana Parola (E2EE)"
+            className="w-full rounded bg-surface-3 px-2 py-1 text-[0.68rem] text-text outline-none border border-border/60 focus:border-accent-colorful/40"
+          />
+        )}
       </div>
 
       {/* QR / durum */}

@@ -61,15 +61,6 @@ export class ErrorBoundary extends Component<Props, State> {
             </p>
           </div>
 
-          {/* Error detail */}
-          {this.state.error && (
-            <div className="w-full rounded-lg border border-border bg-surface px-3 py-2">
-              <p className="break-all font-mono text-xs text-text-faint">
-                {this.state.error.message}
-              </p>
-            </div>
-          )}
-
           {/* Reload button */}
           <button
             onClick={this.handleReload}

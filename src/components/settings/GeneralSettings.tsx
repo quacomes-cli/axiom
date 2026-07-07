@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { ipc } from "../../lib/ipc";
 import { useT, SUPPORTED_LOCALES } from "../../i18n";
 import type { AlarmSoundSource, FontFamily, Theme } from "../../types";
+import { FiChevronDown } from "react-icons/fi";
 
 function SettingRow({
   label,
@@ -45,9 +46,8 @@ function SegmentedControl<T extends string>({
           <button
             key={o.value}
             onClick={() => onChange(o.value)}
-            className={`relative rounded-lg px-3 py-1 text-[0.8571rem] font-medium transition-colors duration-150 ${
-              active ? "text-text" : "text-text-faint hover:text-text-secondary"
-            }`}
+            className={`relative rounded-lg px-3 py-1 text-[0.8571rem] font-medium transition-colors duration-150 ${active ? "text-text" : "text-text-faint hover:text-text-secondary"
+              }`}
           >
             {active && (
               <motion.div
@@ -74,16 +74,14 @@ function Toggle({
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative h-5.25 w-9 rounded-full transition-colors duration-200 ${
-        checked ? "bg-blue-400" : "bg-surface-3"
-      }`}
+      className={`relative h-5.25 w-9 rounded-full transition-colors duration-200 ${checked ? "bg-blue-400" : "bg-surface-3"
+        }`}
     >
       <motion.span
         animate={{ x: checked ? 13.5 : 0.5 }}
         transition={{ type: "spring", stiffness: 400, damping: 28 }}
-        className={`absolute top-0.5 left-0.5 block h-4 w-4 rounded-full ${
-          checked ? "bg-white" : "bg-text-faint"
-        }`}
+        className={`absolute top-0.5 left-0.5 block h-4 w-4 rounded-full ${checked ? "bg-white" : "bg-text-faint"
+          }`}
       />
     </button>
   );
@@ -180,9 +178,8 @@ function VoiceSettings() {
             return (
               <div
                 key={m.id}
-                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs transition-colors ${
-                  isActive ? "border-blue-400/60 bg-blue-500/10" : "border-border bg-surface"
-                }`}
+                className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs transition-colors ${isActive ? "border-blue-400/60 bg-blue-500/10" : "border-border bg-surface"
+                  }`}
               >
                 <button
                   type="button"
@@ -660,6 +657,25 @@ export function GeneralSettings() {
 
   if (!settings) return null;
 
+  const [isOpen, setIsOpen] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const currentLabel = settings.language === 'system'
+    ? t("settings.language.system")
+    : SUPPORTED_LOCALES.find(l => l.code === settings.language)?.label;
+
   return (
     <div className="space-y-1.5">
       <div className="rounded-2xl bg-surface p-4">
@@ -667,16 +683,52 @@ export function GeneralSettings() {
           {t("settings.sections.language")}
         </div>
         <SettingRow label={t("settings.language.label")} hint={t("settings.language.hint")}>
-          <select
-            value={settings.language}
-            onChange={(e) => update({ language: e.target.value })}
-            className="rounded-lg bg-surface-2 px-2.5 py-1.5 text-[0.8571rem] text-text outline-none"
-          >
-            <option value="system">{t("settings.language.system")}</option>
-            {SUPPORTED_LOCALES.map((l) => (
-              <option key={l.code} value={l.code}>{l.label}</option>
-            ))}
-          </select>
+          <div className="relative inline-block">
+            <div ref={dropdownRef} className="relative inline-block text-left min-w-[120px]">
+
+              <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="flex w-full items-center justify-between rounded-lg bg-surface-3 pl-2.5 pr-3 py-1.5 text-[0.8571rem] text-text outline-none cursor-pointer border border-transparent focus:border-border"
+              >
+                <span>{currentLabel}</span>
+                <div className={`transition-transform duration-200 ease-in-out ${isOpen ? 'rotate-180' : 'rotate-0'}`}>
+                  <FiChevronDown size={14} strokeWidth={1.4} />
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="absolute right-0 z-50 mt-1 max-h-60 w-60 overflow-auto rounded-lg bg-surface-3 p-1 text-[0.8571rem] shadow-xl border border-white/5 focus:outline-none">
+
+                  <button
+                    onClick={() => {
+                      update({ language: 'system' });
+                      setIsOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md text-text transition-colors cursor-pointer ${settings.language === 'system' ? 'bg-white/10 font-medium' : 'hover:bg-white/5'
+                      }`}
+                  >
+                    {t("settings.language.system")}
+                  </button>
+
+                  {SUPPORTED_LOCALES.map((l) => (
+                    <button
+                      key={l.code}
+                      onClick={() => {
+                        update({ language: l.code });
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-md text-text transition-colors cursor-pointer ${settings.language === l.code ? 'bg-white/10 font-medium' : 'hover:bg-white/5'
+                        }`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+
+                </div>
+              )}
+            </div>
+          </div>
         </SettingRow>
       </div>
 

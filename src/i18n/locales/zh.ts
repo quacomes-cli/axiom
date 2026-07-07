@@ -1,4 +1,4 @@
-﻿import type { en } from "./en";
+import type { en } from "./en";
 
 export const zh: typeof en = {
   nav: {
@@ -62,6 +62,7 @@ export const zh: typeof en = {
     disconnect: "断开连接",
     regenerate: "重新生成",
     retry: "重试",
+    syncSession: "同步会话",
   },
   common: {
     save: "保存",

@@ -11,7 +11,7 @@ import { NotificationCenter } from "./NotificationCenter";
 import { TitleMenu } from "./TitleMenu";
 import { applySavedZoom } from "../../lib/zoom";
 import { useT } from "../../i18n";
-import { HiOutlineMenuAlt2 } from "react-icons/hi";
+import { motion } from "framer-motion";
 
 const appWindow = getCurrentWindow();
 
@@ -147,7 +147,54 @@ export function TitleBar() {
           style={{ fontSize: 12, height: 30, width: 30 }}
           title="Axiom"
         >
-          <HiOutlineMenuAlt2 size={17} strokeWidth={1.4} />
+          <motion.svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.4}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            whileHover="hover"
+            style={{ cursor: "pointer" }}
+          >
+            <motion.line
+              x1="4"
+              y1="6"
+              x2={20}
+              y2="6"
+              variants={{
+                hover: { x2: 16 }
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }} // Şöyle tatlı, hafif yaylanan bir geçiş
+            />
+
+            <motion.line
+              x1="4"
+              y1="12"
+              x2={20}
+              y2="12"
+              variants={{
+                hover: { x2: 12 }
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }} // Şöyle tatlı, hafif yaylanan bir geçiş
+            />
+
+            <motion.line
+              x1="4"
+              y1="18"
+              x2={12}
+              y2="18"
+              variants={{
+                hover: { x2: 20 }
+              }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }} // Şöyle tatlı, hafif yaylanan bir geçiş
+            />
+
+          </motion.svg>
+
         </button>
         <TitleMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
         <button

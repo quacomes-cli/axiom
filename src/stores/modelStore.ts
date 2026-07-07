@@ -61,6 +61,7 @@ interface ModelState {
   ollamaInstalling: boolean;
   ollamaStarting: boolean;
   cloudProviders: CloudProviderConfig[];
+  cloudProvidersLoaded: boolean;
   loading: boolean;
   pulling: string | null;
   pullProgress: Record<string, PullProgress>;
@@ -88,6 +89,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   ollamaInstalling: false,
   ollamaStarting: false,
   cloudProviders: [],
+  cloudProvidersLoaded: false,
   loading: false,
   pulling: null,
   pullProgress: {},
@@ -99,6 +101,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const models = await ipc.modelsList();
+      await get().loadCloudProviders();
       set({ models, loading: false });
     } catch (e) {
       set({ error: String(e), loading: false });
@@ -287,7 +290,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   loadCloudProviders: async () => {
     try {
       const configs = await ipc.cloudProvidersGet();
-      set({ cloudProviders: configs });
+      set({ cloudProviders: configs, cloudProvidersLoaded: true });
     } catch (e) {
       set({ error: String(e) });
     }
@@ -296,7 +299,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   saveCloudProviders: async (configs) => {
     try {
       await ipc.cloudProvidersSet(configs);
-      set({ cloudProviders: configs });
+      set({ cloudProviders: configs, cloudProvidersLoaded: true });
       await get().loadModels();
     } catch (e) {
       set({ error: String(e) });

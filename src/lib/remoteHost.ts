@@ -9,6 +9,7 @@
 // (masaüstü → telefon): chats, history, token{delta,done}, error
 
 import { useChatStore, type Chat } from "../stores/chatStore";
+import { useModelStore, modelSupportsTools } from "../stores/modelStore";
 import { useRemoteStore } from "../stores/remoteStore";
 
 type Send = (msg: unknown) => void;
@@ -36,6 +37,25 @@ function summarize(c: Chat): ChatSummary {
 
 function chatList(): ChatSummary[] {
   return allowed().map(summarize);
+}
+
+function settingsPayload() {
+  const cs = useChatStore.getState();
+  const ms = useModelStore.getState();
+  const active = ms.models.find((m) => m.isActive);
+  return {
+    type: "settings",
+    toolUse: cs.toolUseEnabled,
+    mode: cs.chatMode,
+    activeModel: active?.id ?? null,
+    models: ms.models.map((m) => ({
+      id: m.id,
+      provider: m.provider,
+      name: m.displayName,
+      tools: modelSupportsTools(m),
+      thinking: !!m.capabilities?.includes("thinking"),
+    })),
+  };
 }
 
 function historyOf(chatId: string) {
@@ -85,10 +105,22 @@ async function handleRemoteSend(chatId: string, text: string, send: Send) {
 }
 
 function handleMessage(raw: unknown, send: Send) {
-  const msg = raw as { type?: string; chatId?: string; text?: string };
+  const msg = raw as {
+    type?: string;
+    chatId?: string;
+    text?: string;
+    on?: boolean;
+    mode?: "fast" | "balanced" | "thinking";
+    id?: string;
+    provider?: string;
+  };
   switch (msg?.type) {
     case "list_chats":
       send({ type: "chats", chats: chatList() });
+      send(settingsPayload()); // ilk açılışta ayarları da yolla
+      break;
+    case "get_settings":
+      send(settingsPayload());
       break;
     case "open_chat": {
       const h = msg.chatId ? historyOf(msg.chatId) : null;
@@ -98,6 +130,22 @@ function handleMessage(raw: unknown, send: Send) {
     }
     case "send_message":
       if (msg.chatId) void handleRemoteSend(msg.chatId, String(msg.text ?? ""), send);
+      break;
+    case "set_tool":
+      useChatStore.getState().setToolUseEnabled(!!msg.on);
+      send(settingsPayload());
+      break;
+    case "set_mode":
+      if (msg.mode) useChatStore.getState().setChatMode(msg.mode);
+      send(settingsPayload());
+      break;
+    case "set_model":
+      if (msg.id && msg.provider) {
+        void useModelStore
+          .getState()
+          .setActive(msg.provider as "ollama" | "cloud" | "llamacpp", msg.id)
+          .then(() => send(settingsPayload()));
+      }
       break;
     case "stop":
       useChatStore.getState().stopGeneration();
@@ -128,4 +176,19 @@ export function initRemoteHost() {
       useRemoteStore.getState().send({ type: "chats", chats: chatList() });
     }
   });
+
+  // Araç/mod/aktif-model değişince ayarları telefona it.
+  let lastSettingsSig = "";
+  const pushSettings = () => {
+    if (useRemoteStore.getState().status !== "paired") return;
+    const cs = useChatStore.getState();
+    const active = useModelStore.getState().models.find((m) => m.isActive);
+    const sig = `${cs.toolUseEnabled}:${cs.chatMode}:${active?.id ?? ""}`;
+    if (sig !== lastSettingsSig) {
+      lastSettingsSig = sig;
+      useRemoteStore.getState().send(settingsPayload());
+    }
+  };
+  useChatStore.subscribe(pushSettings);
+  useModelStore.subscribe(pushSettings);
 }

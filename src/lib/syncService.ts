@@ -182,13 +182,32 @@ export async function downloadSettings(uid: string): Promise<Record<string, unkn
 
 // ── Profile sync ──
 
-export async function uploadProfile(uid: string, profile: UserProfile): Promise<void> {
-  await setDoc(userDoc(uid, PROFILE_DOC), { ...profile, updatedAt: serverTimestamp() });
+export async function uploadProfile(uid: string, profile: UserProfile, enabled: boolean): Promise<void> {
+  await setDoc(userDoc(uid, PROFILE_DOC), {
+    profile,
+    enabled,
+    updatedAt: serverTimestamp(),
+  });
 }
 
-export async function downloadProfile(uid: string): Promise<UserProfile | null> {
+export async function downloadProfile(uid: string): Promise<{ profile: UserProfile; enabled: boolean } | null> {
   const snap = await getDoc(userDoc(uid, PROFILE_DOC));
-  return snap.exists() ? (snap.data() as UserProfile) : null;
+  if (snap.exists()) {
+    const data = snap.data();
+    if ("profile" in data) {
+      return {
+        profile: data.profile as UserProfile,
+        enabled: data.enabled !== false,
+      };
+    } else {
+      const { updatedAt, ...profile } = data;
+      return {
+        profile: profile as UserProfile,
+        enabled: true,
+      };
+    }
+  }
+  return null;
 }
 
 // ── Full migration (all data) ──
@@ -207,15 +226,19 @@ export async function migrateAllData(uid: string, data: MigrationData): Promise<
     await uploadSettings(uid, data.settings);
   }
   if (data.profile) {
-    await uploadProfile(uid, data.profile);
+    await uploadProfile(uid, data.profile, true);
   }
 }
 
 export async function downloadAllData(uid: string): Promise<MigrationData> {
-  const [chats, settings, profile] = await Promise.all([
+  const [chats, settings, profileData] = await Promise.all([
     downloadChats(uid),
     downloadSettings(uid),
     downloadProfile(uid),
   ]);
-  return { chats, settings, profile };
+  return {
+    chats,
+    settings,
+    profile: profileData ? profileData.profile : null,
+  };
 }

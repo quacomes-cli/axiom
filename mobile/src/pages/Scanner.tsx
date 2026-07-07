@@ -4,8 +4,10 @@
 import { onCleanup, onMount, createSignal } from "solid-js";
 import jsQR from "jsqr";
 import { pairFromQr } from "../lib/session";
+import { useT } from "../i18n";
 
 export default function Scanner(props: { onBack: () => void }) {
+  const t = useT();
   let video: HTMLVideoElement | undefined;
   let canvas: HTMLCanvasElement | undefined;
   let raf = 0;
@@ -65,7 +67,7 @@ export default function Scanner(props: { onBack: () => void }) {
   onCleanup(stop);
 
   return (
-    <div class="relative flex h-full w-full flex-col items-center justify-center bg-surface-dark">
+    <div class="relative flex h-full w-full flex-col items-center justify-center bg-surface-dark overflow-hidden">
       <video
         ref={video}
         playsinline
@@ -74,11 +76,19 @@ export default function Scanner(props: { onBack: () => void }) {
       />
       <canvas ref={canvas} class="hidden" />
 
-      {/* Hedefleme çerçevesi */}
-      <div class="pointer-events-none relative z-10 flex flex-col items-center gap-6">
-        <div class="h-56 w-56 rounded-3xl border-2 border-text/70 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
-        <p class="text-[0.95rem] text-text drop-shadow">
-          {error() ? "Kameraya erişilemedi" : "QR kodu çerçeveye hizala"}
+      {/* Target framing box */}
+      <div class="pointer-events-none relative z-10 flex flex-col items-center gap-8">
+        <div class="relative h-60 w-60">
+          {/* Pulsing glow target outline */}
+          <div class="h-full w-full rounded-[2.5rem] border-2 border-accent-colorful shadow-[0_0_0_9999px_rgba(10,10,10,0.65)] animate-pulse" />
+          {/* Corner design accents */}
+          <div class="absolute -top-1 -left-1 h-6 w-6 border-t-4 border-l-4 border-accent-colorful rounded-tl-xl" />
+          <div class="absolute -top-1 -right-1 h-6 w-6 border-t-4 border-r-4 border-accent-colorful rounded-tr-xl" />
+          <div class="absolute -bottom-1 -left-1 h-6 w-6 border-b-4 border-l-4 border-accent-colorful rounded-bl-xl" />
+          <div class="absolute -bottom-1 -right-1 h-6 w-6 border-b-4 border-r-4 border-accent-colorful rounded-br-xl" />
+        </div>
+        <p class="text-[1rem] font-medium text-text bg-surface-dark/40 backdrop-blur-md px-4 py-2 rounded-full border border-border shadow-lg drop-shadow-md">
+          {error() ? t("scanner.cameraError") : t("scanner.alignQr")}
         </p>
       </div>
 
@@ -87,15 +97,15 @@ export default function Scanner(props: { onBack: () => void }) {
           stop();
           props.onBack();
         }}
-        class="absolute left-4 top-4 z-10 rounded-full bg-black/40 px-4 py-2 text-[0.9rem] text-white backdrop-blur"
+        class="absolute left-6 top-12 z-20 rounded-full border border-border/40 bg-surface-dark/50 px-5 py-2.5 text-[0.9rem] font-medium text-text shadow-lg backdrop-blur-md transition-all duration-200 active:scale-95 hover:bg-surface-dark/70"
       >
-        Geri
+        {t("scanner.back")}
       </button>
 
       {error() && (
-        <p class="absolute bottom-8 z-10 px-6 text-center text-[0.8rem] text-danger">
+        <div class="absolute bottom-12 z-10 mx-6 rounded-xl border border-danger/20 bg-danger/10 px-5 py-3 text-center text-[0.85rem] text-danger backdrop-blur-md shadow-lg max-w-[280px]">
           {error()}
-        </p>
+        </div>
       )}
     </div>
   );

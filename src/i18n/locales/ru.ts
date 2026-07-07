@@ -1,4 +1,4 @@
-﻿import type { en } from "./en";
+import type { en } from "./en";
 
 export const ru: typeof en = {
   nav: {
@@ -62,6 +62,7 @@ export const ru: typeof en = {
     disconnect: "Отключить",
     regenerate: "Обновить код",
     retry: "Повторить",
+    syncSession: "Синхронизировать сессию",
   },
   common: {
     save: "Сохранить",
