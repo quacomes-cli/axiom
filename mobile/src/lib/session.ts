@@ -70,7 +70,12 @@ export interface UserProfile {
 const [cloudProfile, setCloudProfile] = createSignal<UserProfile | null>(null);
 const [cloudProfileEnabled, setCloudProfileEnabled] = createSignal<boolean>(true);
 const [decryptedKeys, setDecryptedKeys] = createSignal<Record<string, string> | null>(null);
-const [masterPassphrase, setPassphraseSig] = createSignal<string>(localStorage.getItem("axiom_mobile_master_passphrase") || "");
+// Güvenlik: master parola DÜZ METİN kalıcı depoya yazılmaz. Yalnızca
+// sessionStorage (uygulama oturumu) — kapatınca uçar. Eski localStorage
+// kaydı varsa tek seferlik temizlenir.
+localStorage.removeItem("axiom_mobile_master_passphrase");
+const PASS_KEY = "axiom_mobile_master_passphrase";
+const [masterPassphrase, setPassphraseSig] = createSignal<string>(sessionStorage.getItem(PASS_KEY) || "");
 const [cloudKeysLoading, setCloudKeysLoading] = createSignal(false);
 const [cloudKeysError, setCloudKeysError] = createSignal<string | null>(null);
 
@@ -125,7 +130,7 @@ async function tryDecryptCloudKeys(passphrase: string): Promise<boolean> {
     const keys = JSON.parse(decryptedJson);
     setDecryptedKeys(keys);
     setPassphraseSig(passphrase);
-    localStorage.setItem("axiom_mobile_master_passphrase", passphrase);
+    sessionStorage.setItem(PASS_KEY, passphrase);
     setCloudKeysLoading(false);
     updateDirectModels();
     return true;
@@ -155,7 +160,9 @@ export function updateDirectModels() {
     list.push({ id: "gpt-4o", provider: "openai", name: "GPT-4o", tools: false, thinking: false });
   }
   if (providers.includes("anthropic")) {
-    list.push({ id: "claude-3-5-sonnet-latest", provider: "anthropic", name: "Claude 3.5 Sonnet", tools: false, thinking: false });
+    list.push({ id: "claude-haiku-4-5-20251001", provider: "anthropic", name: "Claude Haiku 4.5", tools: false, thinking: false });
+    list.push({ id: "claude-sonnet-5", provider: "anthropic", name: "Claude Sonnet 5", tools: false, thinking: false });
+    list.push({ id: "claude-opus-4-8", provider: "anthropic", name: "Claude Opus 4.8", tools: false, thinking: false });
   }
 
   setModels(list);
@@ -190,6 +197,34 @@ export function getPromptInjection(profile: UserProfile | null): string | null {
   return lines.join("\n");
 }
 
+// Aktif cloud isteği — stopGeneration iptal edebilsin diye.
+let directAbortCtrl: AbortController | null = null;
+
+/** SSE gövdesini satır satır okuyup her `data:` JSON'ı için onData çağırır. */
+async function readSse(resp: Response, onData: (json: any) => void): Promise<void> {
+  const reader = resp.body!.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop() ?? "";
+    for (const line of lines) {
+      const s = line.trim();
+      if (!s.startsWith("data:")) continue;
+      const payload = s.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+      try {
+        onData(JSON.parse(payload));
+      } catch {
+        /* kısmi/bozuk satır — atla */
+      }
+    }
+  }
+}
+
 export async function sendDirectChat(chatId: string, text: string) {
   const user = currentUser();
   const keys = decryptedKeys();
@@ -199,9 +234,14 @@ export async function sendDirectChat(chatId: string, text: string) {
     return;
   }
 
-  let provider = "gemini";
-  if (modelId.startsWith("gpt-") || modelId.startsWith("o1-")) provider = "openai";
-  else if (modelId.startsWith("claude-")) provider = "anthropic";
+  // Provider'ı model listesinden çöz — id önekinden tahmin kırılgan (fallback).
+  const provider =
+    models().find((m) => m.id === modelId)?.provider ??
+    (modelId.startsWith("gpt-") || modelId.startsWith("o1")
+      ? "openai"
+      : modelId.startsWith("claude-")
+        ? "anthropic"
+        : "gemini");
 
   const apiKey = keys[provider];
   if (!apiKey) {
@@ -210,70 +250,76 @@ export async function sendDirectChat(chatId: string, text: string) {
     return;
   }
 
+  // ÖNEMLİ: sendChat kullanıcı mesajını messages()'a zaten iyimser ekledi —
+  // history'ye tekrar EKLENMEZ (eski çift-mesaj bug'ı buradan geliyordu).
+  const history = messages();
+  const systemText = cloudProfileEnabled() ? getPromptInjection(cloudProfile()) : null;
+
+  // Streaming cevap için boş agent mesajı aç; her delta'da metni büyüt.
+  const agentId = `agent-${Date.now()}`;
+  setMessages((cur) => [...cur, { id: agentId, role: "agent", text: "" }]);
+  const appendDelta = (delta: string) => {
+    if (!delta) return;
+    setMessages((cur) =>
+      cur.map((m) => (m.id === agentId ? { ...m, text: m.text + delta } : m)),
+    );
+  };
+
+  directAbortCtrl?.abort();
+  const ctrl = new AbortController();
+  directAbortCtrl = ctrl;
+
   try {
-    let reply = "";
-    const systemText = cloudProfileEnabled() ? getPromptInjection(cloudProfile()) : null;
-
     if (provider === "gemini") {
-      const history = messages().map(m => ({
+      const contents = history.map((m) => ({
         role: m.role === "user" ? "user" : "model",
-        parts: [{ text: m.text }]
+        parts: [{ text: m.text }],
       }));
-      history.push({ role: "user", parts: [{ text }] });
+      const body: any = { contents };
+      if (systemText) body.systemInstruction = { parts: [{ text: systemText }] };
 
-      const body: any = { contents: history };
-      if (systemText) {
-        body.systemInstruction = { parts: [{ text: systemText }] };
-      }
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+      // Anahtar URL query yerine header'da (loglara sızmasın); SSE stream.
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:streamGenerateContent?alt=sse`;
       const resp = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
       if (!resp.ok) throw new Error(await resp.text());
-      const json = await resp.json();
-      reply = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      await readSse(resp, (j) =>
+        appendDelta(j.candidates?.[0]?.content?.parts?.[0]?.text ?? ""),
+      );
     } else if (provider === "openai") {
       const openAiMsgs: any[] = [];
-      if (systemText) {
-        openAiMsgs.push({ role: "system", content: systemText });
-      }
-      messages().forEach(m => {
-        openAiMsgs.push({ role: m.role === "user" ? "user" : "assistant", content: m.text });
-      });
-      openAiMsgs.push({ role: "user", content: text });
+      if (systemText) openAiMsgs.push({ role: "system", content: systemText });
+      history.forEach((m) =>
+        openAiMsgs.push({ role: m.role === "user" ? "user" : "assistant", content: m.text }),
+      );
 
       const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${apiKey}`
+          Authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: modelId,
-          messages: openAiMsgs
-        })
+        body: JSON.stringify({ model: modelId, messages: openAiMsgs, stream: true }),
+        signal: ctrl.signal,
       });
       if (!resp.ok) throw new Error(await resp.text());
-      const json = await resp.json();
-      reply = json.choices?.[0]?.message?.content || "";
+      await readSse(resp, (j) => appendDelta(j.choices?.[0]?.delta?.content ?? ""));
     } else if (provider === "anthropic") {
-      const anthropicMsgs = messages().map(m => ({
+      const anthropicMsgs = history.map((m) => ({
         role: m.role === "user" ? "user" : "assistant",
-        content: m.text
+        content: m.text,
       }));
-      anthropicMsgs.push({ role: "user", content: text });
-
       const body: any = {
         model: modelId,
         messages: anthropicMsgs,
-        max_tokens: 1024
+        max_tokens: 8192,
+        stream: true,
       };
-      if (systemText) {
-        body.system = systemText;
-      }
+      if (systemText) body.system = systemText;
 
       const resp = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -281,32 +327,43 @@ export async function sendDirectChat(chatId: string, text: string) {
           "Content-Type": "application/json",
           "x-api-key": apiKey,
           "anthropic-version": "2023-06-01",
-          "dangerously-allow-html-user-delegation": "true"
+          // Tarayıcıdan doğrudan çağrı için resmi CORS opt-in header'ı.
+          "anthropic-dangerous-direct-browser-access": "true",
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
       if (!resp.ok) throw new Error(await resp.text());
-      const json = await resp.json();
-      reply = json.content?.[0]?.text || "";
+      await readSse(resp, (j) => {
+        if (j.type === "content_block_delta") appendDelta(j.delta?.text ?? "");
+      });
     }
-
-    const docRef = doc(db, "users", user.uid, "chats", chatId);
-    const updatedMsgs = [
-      ...messages().map(m => ({ id: m.id, role: m.role === "user" ? "user" : "model", text: m.text })),
-      { id: `m-${Date.now()}-u`, role: "user", text },
-      { id: `m-${Date.now()}-a`, role: "model", text: reply }
-    ];
-
-    await updateDoc(docRef, {
-      messages: updatedMsgs,
-      updatedAt: Date.now()
-    });
-
   } catch (err) {
-    console.error("Direct execution failed:", err);
-    setErrorMsg(`Direct model hatası: ${String(err)}`);
+    // Kullanıcı durdurduysa hata değil — kısmi cevap korunur.
+    const aborted = err instanceof DOMException && err.name === "AbortError";
+    if (!aborted) {
+      console.error("Direct execution failed:", err);
+      setErrorMsg(`Model hatası: ${String(err)}`);
+    }
   } finally {
+    if (directAbortCtrl === ctrl) directAbortCtrl = null;
     setBusy(false);
+  }
+
+  // Sohbeti Firestore'a TEK seferde yaz — messages() zaten user + agent'ı içeriyor.
+  try {
+    const finalMsgs = messages()
+      .filter((m) => m.text.trim())
+      .map((m) => ({ id: m.id, role: m.role === "user" ? "user" : "model", text: m.text }));
+    const patch: Record<string, any> = { messages: finalMsgs, updatedAt: Date.now() };
+    // İlk mesajsa başlık üret — sohbet sonsuza dek "Yeni Sohbet" kalmasın.
+    const meta = chats().find((c) => c.id === chatId);
+    if (meta && (!meta.title || meta.title === "Yeni Sohbet")) {
+      patch.title = text.length > 40 ? `${text.slice(0, 40)}…` : text;
+    }
+    await updateDoc(doc(db, "users", user.uid, "chats", chatId), patch);
+  } catch (err) {
+    console.error("Cloud chat persist failed:", err);
   }
 }
 
@@ -370,7 +427,7 @@ onAuthStateChanged(auth, (user) => {
     listenCloudProfile(user.uid);
     if (status() !== "paired") {
       listenCloudChats(user.uid);
-      const savedPass = localStorage.getItem("axiom_mobile_master_passphrase");
+      const savedPass = sessionStorage.getItem(PASS_KEY);
       if (savedPass) {
         void tryDecryptCloudKeys(savedPass);
       }
@@ -644,6 +701,9 @@ export function sendChat(text: string) {
 export function stopGeneration() {
   if (status() === "paired") {
     send({ type: "stop" });
+  } else {
+    // Cloud modda aktif fetch'i gerçekten iptal et (kısmi cevap korunur).
+    directAbortCtrl?.abort();
   }
   setBusy(false);
 }
@@ -744,4 +804,27 @@ export function reset() {
   activeChatUnsub = null;
   cloudChatsUnsub?.();
   cloudChatsUnsub = null;
+}
+
+/** Yalnızca PC (P2P) bağlantısını keser — Google oturumu KORUNUR.
+    Cloud kullanıcıysa bulut sohbet listesine geri döner. */
+export function disconnectFromPc() {
+  localStorage.removeItem("axiom_paired_session");
+  reconnectAttempts = 0;
+  conn?.close();
+  conn = null;
+  setStatus("idle");
+  setErrorMsg(null);
+  setOpenChatId(null);
+  setMessages([]);
+  setBusy(false);
+  activeChatUnsub?.();
+  activeChatUnsub = null;
+  const user = currentUser();
+  if (user && !user.isAnonymous) {
+    listenCloudChats(user.uid);
+    updateDirectModels();
+  } else {
+    setChats([]);
+  }
 }

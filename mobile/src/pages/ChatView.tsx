@@ -13,6 +13,7 @@ import {
   decryptedKeys,
 } from "../lib/session";
 import ChatMenu from "./ChatMenu";
+import { SolidMarkdown } from "solid-markdown";
 import { useT } from "../i18n";
 
 export default function ChatView() {
@@ -84,15 +85,19 @@ export default function ChatView() {
       <div ref={scroller} class="flex flex-1 flex-col gap-3.5 overflow-y-auto p-4 scroll-smooth">
         <For each={messages()}>
           {(m) => (
-            <div
-              class={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[0.92rem] leading-relaxed shadow-sm ${
-                m.role === "user"
-                  ? "self-end bg-accent-colorful/15 border border-accent-colorful/20 text-text rounded-tr-sm"
-                  : "self-start p-0! text-text rounded-tl-sm !shadow-none"
-              }`}
+            <Show
+              when={m.role !== "user"}
+              fallback={
+                <div class="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-tr-sm px-4 py-2.5 text-[0.92rem] leading-relaxed shadow-sm self-end bg-accent-colorful/15 border border-accent-colorful/20 text-text">
+                  {m.text}
+                </div>
+              }
             >
-              {m.text}
-            </div>
+              {/* Agent cevabı markdown olarak render edilir (kod blokları, listeler…) */}
+              <div class="max-w-full self-start text-[0.92rem] leading-relaxed text-text prose-mobile">
+                <SolidMarkdown children={m.text} />
+              </div>
+            </Show>
           )}
         </For>
         <Show when={busy()}>
