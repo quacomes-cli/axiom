@@ -49,6 +49,12 @@ export const tr: typeof en = {
     aboutWebsite: "Web sitesi",
   },
   agent: {
+    tasksRunning: "{{n}} görev çalışıyor",
+    panelTitle: "Agent görevleri",
+    noRuns: "Henüz agent görevi yok. /agent ile başlat.",
+    history: "Geçmiş",
+    background: "Arka plan",
+    clearFinished: "Bitenleri temizle",
     planning: "Plan yapılıyor…",
     running: "Adımlar yürütülüyor…",
     synthesizing: "Rapor yazılıyor…",

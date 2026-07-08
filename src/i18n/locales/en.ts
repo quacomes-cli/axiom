@@ -50,6 +50,12 @@ export const en = {
     aboutWebsite: "Website",
   },
   agent: {
+    tasksRunning: "{{n}} task running",
+    panelTitle: "Agent tasks",
+    noRuns: "No agent tasks yet. Start one with /agent.",
+    history: "History",
+    background: "Background",
+    clearFinished: "Clear finished",
     planning: "Planning…",
     running: "Working through steps…",
     synthesizing: "Writing the report…",

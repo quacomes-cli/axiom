@@ -49,6 +49,12 @@ export const zh: typeof en = {
     aboutWebsite: "网站",
   },
   agent: {
+    tasksRunning: "{{n}} 个任务运行中",
+    panelTitle: "智能体任务",
+    noRuns: "暂无任务。用 /agent 开始。",
+    history: "历史",
+    background: "后台",
+    clearFinished: "清除已完成",
     planning: "规划中…",
     running: "执行步骤中…",
     synthesizing: "撰写报告中…",

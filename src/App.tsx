@@ -6,6 +6,7 @@ import { AnimatedView } from "./components/shared/AnimatedView";
 import { SearchModal } from "./components/shared/SearchModal";
 import { Launchpad } from "./components/shared/Launchpad";
 import { AboutDialog } from "./components/shared/AboutDialog";
+import { AgentPanel } from "./components/chat/AgentPanel";
 import { initRemoteHost } from "./lib/remoteHost";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
@@ -193,6 +194,7 @@ export default function App() {
       <SearchModal />
       <Launchpad />
       <AboutDialog />
+      <AgentPanel />
       <ApprovalPrompt />
 
       <AnimatePresence>

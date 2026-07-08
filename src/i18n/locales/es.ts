@@ -49,6 +49,12 @@ export const es: typeof en = {
     aboutWebsite: "Sitio web",
   },
   agent: {
+    tasksRunning: "{{n}} tarea en curso",
+    panelTitle: "Tareas del agente",
+    noRuns: "Aún no hay tareas. Inicia una con /agent.",
+    history: "Historial",
+    background: "Segundo plano",
+    clearFinished: "Limpiar terminadas",
     planning: "Planificando…",
     running: "Ejecutando pasos…",
     synthesizing: "Escribiendo el informe…",

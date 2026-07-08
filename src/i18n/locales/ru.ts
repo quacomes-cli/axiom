@@ -49,6 +49,12 @@ export const ru: typeof en = {
     aboutWebsite: "Сайт",
   },
   agent: {
+    tasksRunning: "Задач выполняется: {{n}}",
+    panelTitle: "Задачи агента",
+    noRuns: "Задач пока нет. Запустите через /agent.",
+    history: "История",
+    background: "Фон",
+    clearFinished: "Очистить завершённые",
     planning: "Планирование…",
     running: "Выполнение шагов…",
     synthesizing: "Пишу отчёт…",

@@ -49,6 +49,12 @@ export const ja: typeof en = {
     aboutWebsite: "ウェブサイト",
   },
   agent: {
+    tasksRunning: "{{n}} 件のタスク実行中",
+    panelTitle: "エージェントタスク",
+    noRuns: "タスクはまだありません。/agent で開始。",
+    history: "履歴",
+    background: "バックグラウンド",
+    clearFinished: "完了分をクリア",
     planning: "計画中…",
     running: "ステップ実行中…",
     synthesizing: "レポート作成中…",

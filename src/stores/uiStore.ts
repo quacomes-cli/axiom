@@ -13,6 +13,8 @@ interface UiState {
   launchpadOpen: boolean;
   /** Hakkında kutusu */
   aboutOpen: boolean;
+  /** Sağdan kayan agent görevleri paneli */
+  agentPanelOpen: boolean;
   /** SettingsPage açılışta hangi sekmeye gitsin (menüden derin bağlantı) */
   settingsTab: string;
   direction: 1 | -1;
@@ -25,6 +27,7 @@ interface UiState {
   setSearchOpen: (open: boolean) => void;
   setLaunchpadOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
+  setAgentPanelOpen: (open: boolean) => void;
   /** Ayarları belirli bir sekmede açar */
   openSettings: (tab?: string) => void;
   setAppReady: () => void;
@@ -41,6 +44,7 @@ export const useUiStore = create<UiState>()(
       searchOpen: false,
       launchpadOpen: false,
       aboutOpen: false,
+      agentPanelOpen: false,
       settingsTab: "general",
       direction: 1,
       appReady: false,
@@ -60,6 +64,7 @@ export const useUiStore = create<UiState>()(
       setSearchOpen: (open) => set({ searchOpen: open }),
       setLaunchpadOpen: (open) => set({ launchpadOpen: open }),
       setAboutOpen: (open) => set({ aboutOpen: open }),
+      setAgentPanelOpen: (open) => set({ agentPanelOpen: open }),
       openSettings: (tab) =>
         set((s) => {
           const fromIdx = VIEW_ORDER.indexOf(s.view);

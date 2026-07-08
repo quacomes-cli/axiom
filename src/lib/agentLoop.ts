@@ -24,6 +24,7 @@ import {
 import { buildMcpToolsPrompt } from "../stores/mcpStore";
 import { envPromptBlock } from "./envInfo";
 import { useModelStore } from "../stores/modelStore";
+import { useAgentRunStore } from "../stores/agentRunStore";
 import type { ChatMessage as LlmMessage, ToolAction } from "../types";
 
 // ---- Sınırlar ---------------------------------------------------------------
@@ -322,23 +323,54 @@ export async function runAgentInChat(goal: string): Promise<void> {
     ),
   }));
 
+  // Sağ paneldeki canlı koşu kaydı (msgId = koşu id'si).
+  useAgentRunStore.getState().register({
+    id: msgId,
+    source: "chat",
+    chatId,
+    goal,
+    status: "planning",
+    steps: [],
+    startedAt: Date.now(),
+  });
+  const liveRun = (patch: (r: AgentRun) => AgentRun) =>
+    useAgentRunStore.getState().patch(msgId, (r) => ({ ...r, ...patch(r) }));
+  const liveStep = (idx: number, p: Partial<AgentStep>) =>
+    useAgentRunStore.getState().patch(msgId, (r) => ({
+      ...r,
+      steps: r.steps.map((st, i) => (i === idx ? { ...st, ...p } : st)),
+    }));
+
   const env: AgentEnv = {
     chatId,
     interactive: true,
     stopped: () => stopRequested,
-    onRun: (patch) => patchRun(chatId, msgId, patch),
-    onStep: (idx, patch) => patchStep(chatId, msgId, idx, patch),
+    onRun: (patch) => {
+      patchRun(chatId, msgId, patch);
+      liveRun(patch);
+    },
+    onStep: (idx, patch) => {
+      patchStep(chatId, msgId, idx, patch);
+      liveStep(idx, patch);
+    },
+  };
+
+  const finish = (status: AgentRun["status"], error?: string) => {
+    patchRun(chatId, msgId, (r) => ({ ...r, status, error }));
+    useAgentRunStore
+      .getState()
+      .patch(msgId, (r) => ({ ...r, status, error, endedAt: Date.now() }));
   };
 
   try {
     const report = await runAgentCore(goal, env);
     setMsgText(chatId, msgId, report);
-    patchRun(chatId, msgId, (r) => ({ ...r, status: "done" }));
+    finish("done");
   } catch (e) {
     if (e instanceof AgentStopped) {
-      patchRun(chatId, msgId, (r) => ({ ...r, status: "stopped" }));
+      finish("stopped");
     } else {
-      patchRun(chatId, msgId, (r) => ({ ...r, status: "failed", error: String(e).slice(0, 300) }));
+      finish("failed", String(e).slice(0, 300));
     }
   } finally {
     stopRequested = false;
@@ -359,10 +391,40 @@ export async function runAgentDetached(
   goal: string,
   opts: { persona?: string } = {},
 ): Promise<string> {
-  return runAgentCore(goal, {
-    chatId: "",
-    interactive: false,
-    stopped: () => false,
-    persona: opts.persona,
+  // Arka plan koşuları da sağ panelde görünür.
+  const runId = crypto.randomUUID();
+  useAgentRunStore.getState().register({
+    id: runId,
+    source: "task",
+    goal,
+    status: "planning",
+    steps: [],
+    startedAt: Date.now(),
   });
+  const store = () => useAgentRunStore.getState();
+
+  try {
+    const report = await runAgentCore(goal, {
+      chatId: "",
+      interactive: false,
+      stopped: () => false,
+      persona: opts.persona,
+      onRun: (patch) => store().patch(runId, (r) => ({ ...r, ...patch(r) })),
+      onStep: (idx, p) =>
+        store().patch(runId, (r) => ({
+          ...r,
+          steps: r.steps.map((st, i) => (i === idx ? { ...st, ...p } : st)),
+        })),
+    });
+    store().patch(runId, (r) => ({ ...r, status: "done", endedAt: Date.now() }));
+    return report;
+  } catch (e) {
+    store().patch(runId, (r) => ({
+      ...r,
+      status: "failed",
+      error: String(e).slice(0, 300),
+      endedAt: Date.now(),
+    }));
+    throw e;
+  }
 }
