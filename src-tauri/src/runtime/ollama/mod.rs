@@ -1,5 +1,9 @@
 mod client;
 pub mod lifecycle;
+
+// Native tool cagrisini blok metnine ceviren donusturucu cloud saglayicilarca
+// da kullanilir (Gemini functionCall -> ayni blok enjeksiyonu).
+pub(crate) use client::tool_call_to_block;
 pub mod types;
 
 use client::OllamaClient;

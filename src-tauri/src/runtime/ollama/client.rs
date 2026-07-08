@@ -8,7 +8,7 @@ use crate::runtime::error::RuntimeError;
 /// Gövde biçimi, chatStore.parseToolBlocks'un kind başına beklediği formatla
 /// eşleşmek zorunda: web_search/run_command ham satır, write_file `path` + `---`
 /// ayracı, geri kalanı `anahtar: değer` satırları.
-pub(super) fn tool_call_to_block(name: &str, args: &serde_json::Value) -> String {
+pub(crate) fn tool_call_to_block(name: &str, args: &serde_json::Value) -> String {
     fn arg_str(args: &serde_json::Value, key: &str) -> String {
         match args.get(key) {
             Some(serde_json::Value::String(s)) => s.clone(),

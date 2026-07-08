@@ -98,6 +98,9 @@ impl ModelProvider for CloudProvider {
                 .await
             }
             "gemini" => {
+                // Native function calling: tools şemaları functionDeclarations'a
+                // çevrilir; yanıt functionCall'ları blok metnine döner (2b).
+                let tools = req.tools;
                 gemini::chat(
                     &self.client,
                     &self.config.api_key,
@@ -106,6 +109,7 @@ impl ModelProvider for CloudProvider {
                     req.messages,
                     req.temperature,
                     req.max_tokens,
+                    tools.as_ref(),
                 )
                 .await
             }
@@ -166,6 +170,7 @@ impl CloudProvider {
                 .await
             }
             "gemini" => {
+                let tools = req.tools;
                 gemini::chat_stream(
                     &self.client,
                     &self.config.api_key,
@@ -174,6 +179,7 @@ impl CloudProvider {
                     req.messages,
                     req.temperature,
                     req.max_tokens,
+                    tools.as_ref(),
                     on_token,
                 )
                 .await

@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::runtime::error::RuntimeError;
+use crate::runtime::ollama::tool_call_to_block;
 use crate::runtime::provider::{ChatMessage, InferenceResponse};
 
 const BASE_URL: &str = "https://generativelanguage.googleapis.com/v1beta";
@@ -15,6 +16,14 @@ struct GeminiRequest {
     system_instruction: Option<GeminiContent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     generation_config: Option<GeminiGenerationConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<GeminiTool>>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GeminiTool {
+    function_declarations: Vec<serde_json::Value>,
 }
 
 #[derive(Serialize)]
@@ -53,8 +62,106 @@ struct GeminiRespContent {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct GeminiRespPart {
     text: Option<String>,
+    /// Native function calling yanıtı: {name, args}.
+    function_call: Option<GeminiFunctionCall>,
+}
+
+#[derive(Deserialize)]
+struct GeminiFunctionCall {
+    name: String,
+    #[serde(default)]
+    args: serde_json::Value,
+}
+
+/// Ollama-format tools listesini ([{type:"function", function:{name,description,
+/// parameters}}]) Gemini `functionDeclarations`'a çevirir. Şemalar Gemini'nin
+/// OpenAPI alt kümesine daraltılır (bilinmeyen anahtarlar 400 döndürebiliyor —
+/// özellikle MCP şemalarındaki additionalProperties/$schema).
+fn to_function_declarations(tools: &serde_json::Value) -> Option<Vec<GeminiTool>> {
+    let arr = tools.as_array()?;
+    let decls: Vec<serde_json::Value> = arr
+        .iter()
+        .filter_map(|t| {
+            let f = t.get("function")?;
+            let name = f.get("name")?.as_str()?.to_string();
+            let mut decl = serde_json::json!({ "name": name });
+            if let Some(desc) = f.get("description").and_then(|d| d.as_str()) {
+                decl["description"] = serde_json::Value::String(desc.to_string());
+            }
+            if let Some(params) = f.get("parameters") {
+                let cleaned = sanitize_schema(params);
+                // Boş properties'li şema Gemini'de sorun çıkarabilir — parametresiz
+                // araçlarda parameters alanını tamamen atla.
+                let has_props = cleaned
+                    .get("properties")
+                    .and_then(|p| p.as_object())
+                    .map(|o| !o.is_empty())
+                    .unwrap_or(false);
+                if has_props {
+                    decl["parameters"] = cleaned;
+                }
+            }
+            Some(decl)
+        })
+        .collect();
+    if decls.is_empty() {
+        None
+    } else {
+        Some(vec![GeminiTool {
+            function_declarations: decls,
+        }])
+    }
+}
+
+/// JSON Schema'yı Gemini'nin kabul ettiği alt kümeye daraltır: yalnızca
+/// type/description/properties/required/items/enum anahtarları (özyinelemeli).
+fn sanitize_schema(schema: &serde_json::Value) -> serde_json::Value {
+    match schema {
+        serde_json::Value::Object(map) => {
+            let mut out = serde_json::Map::new();
+            for (k, v) in map {
+                match k.as_str() {
+                    "type" | "description" | "enum" | "required" => {
+                        out.insert(k.clone(), v.clone());
+                    }
+                    "properties" => {
+                        if let Some(props) = v.as_object() {
+                            let cleaned: serde_json::Map<String, serde_json::Value> = props
+                                .iter()
+                                .map(|(pk, pv)| (pk.clone(), sanitize_schema(pv)))
+                                .collect();
+                            out.insert(k.clone(), serde_json::Value::Object(cleaned));
+                        }
+                    }
+                    "items" => {
+                        out.insert(k.clone(), sanitize_schema(v));
+                    }
+                    _ => {} // $schema, additionalProperties, default, format... atla
+                }
+            }
+            serde_json::Value::Object(out)
+        }
+        other => other.clone(),
+    }
+}
+
+/// Yanıt partlarını tek metne indirger: text partları birleşir, functionCall
+/// partları frontend'in yürüttüğü ```tool:...``` blok metnine çevrilir
+/// (Ollama native yolundaki dönüşümün aynısı — parser/yürütme sıfır değişiklik).
+fn parts_to_text(parts: Vec<GeminiRespPart>) -> String {
+    let mut out = String::new();
+    for p in parts {
+        if let Some(t) = p.text {
+            out.push_str(&t);
+        }
+        if let Some(fc) = p.function_call {
+            out.push_str(&tool_call_to_block(&fc.name, &fc.args));
+        }
+    }
+    out
 }
 
 fn build_gemini_parts(
@@ -98,6 +205,7 @@ pub async fn chat(
     messages: Vec<ChatMessage>,
     temperature: Option<f32>,
     max_tokens: Option<u32>,
+    tools: Option<&serde_json::Value>,
 ) -> Result<InferenceResponse, RuntimeError> {
     let url = format!(
         "{}/models/{}:generateContent?key={}",
@@ -119,6 +227,7 @@ pub async fn chat(
         contents,
         system_instruction,
         generation_config: gen_config,
+        tools: tools.and_then(to_function_declarations),
     };
 
     let resp = client
@@ -139,8 +248,7 @@ pub async fn chat(
         .and_then(|c| c.into_iter().next())
         .and_then(|c| c.content)
         .and_then(|c| c.parts)
-        .and_then(|p| p.into_iter().next())
-        .and_then(|p| p.text)
+        .map(parts_to_text)
         .unwrap_or_default();
 
     Ok(InferenceResponse {
@@ -158,6 +266,7 @@ pub async fn chat_stream<F>(
     messages: Vec<ChatMessage>,
     temperature: Option<f32>,
     max_tokens: Option<u32>,
+    tools: Option<&serde_json::Value>,
     mut on_token: F,
 ) -> Result<(), RuntimeError>
 where
@@ -183,6 +292,7 @@ where
         contents,
         system_instruction,
         generation_config: gen_config,
+        tools: tools.and_then(to_function_declarations),
     };
 
     let resp = client
@@ -214,8 +324,7 @@ where
                     .and_then(|c| c.into_iter().next())
                     .and_then(|c| c.content)
                     .and_then(|c| c.parts)
-                    .and_then(|p| p.into_iter().next())
-                    .and_then(|p| p.text)
+                    .map(parts_to_text)
                     .unwrap_or_default();
                 if !text.is_empty() {
                     on_token(text, false, None, None);
