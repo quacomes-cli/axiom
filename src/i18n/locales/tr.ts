@@ -48,6 +48,17 @@ export const tr: typeof en = {
     aboutVersion: "Sürüm",
     aboutWebsite: "Web sitesi",
   },
+  voiceMode: {
+    listening: "Dinliyor…",
+    hearing: "Seni duyuyorum…",
+    transcribing: "Yazıya döküyor…",
+    responding: "Düşünüyor…",
+    speaking: "Konuşuyor",
+    error: "Ses hatası",
+    hint: "Konuş — sustuğunda otomatik gönderilir",
+    close: "Kapat",
+    enter: "Sesli mod",
+  },
   agent: {
     tasksRunning: "{{n}} görev çalışıyor",
     panelTitle: "Agent görevleri",

@@ -48,6 +48,17 @@ export const es: typeof en = {
     aboutVersion: "Versión",
     aboutWebsite: "Sitio web",
   },
+  voiceMode: {
+    listening: "Escuchando…",
+    hearing: "Te oigo…",
+    transcribing: "Transcribiendo…",
+    responding: "Pensando…",
+    speaking: "Hablando",
+    error: "Error de voz",
+    hint: "Habla — se envía al hacer una pausa",
+    close: "Cerrar",
+    enter: "Modo de voz",
+  },
   agent: {
     tasksRunning: "{{n}} tarea en curso",
     panelTitle: "Tareas del agente",

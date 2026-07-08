@@ -229,6 +229,20 @@ export const ipc = {
     return invoke<void>("audio_start_recording", { sessionId });
   },
 
+  /** VAD'li kayıt (sesli asistan): konuşma başlangıcı/bitişi "voice-vad"
+      event'iyle gelir; segment-end sonrası stop_and_transcribe çağrılır. */
+  audioStartRecordingVad(
+    sessionId: string,
+    silenceMs?: number,
+    threshold?: number,
+  ): Promise<void> {
+    return invoke<void>("audio_start_recording_vad", {
+      sessionId,
+      silenceMs: silenceMs ?? null,
+      threshold: threshold ?? null,
+    });
+  },
+
   audioCancelRecording(sessionId: string): Promise<void> {
     return invoke<void>("audio_cancel_recording", { sessionId });
   },

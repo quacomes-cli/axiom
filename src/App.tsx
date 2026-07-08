@@ -7,6 +7,7 @@ import { SearchModal } from "./components/shared/SearchModal";
 import { Launchpad } from "./components/shared/Launchpad";
 import { AboutDialog } from "./components/shared/AboutDialog";
 import { AgentPanel } from "./components/chat/AgentPanel";
+import { VoiceMode } from "./components/chat/VoiceMode";
 import { initRemoteHost } from "./lib/remoteHost";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
@@ -195,6 +196,7 @@ export default function App() {
       <Launchpad />
       <AboutDialog />
       <AgentPanel />
+      <VoiceMode />
       <ApprovalPrompt />
 
       <AnimatePresence>

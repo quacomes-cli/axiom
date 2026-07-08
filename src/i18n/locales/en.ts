@@ -49,6 +49,17 @@ export const en = {
     aboutVersion: "Version",
     aboutWebsite: "Website",
   },
+  voiceMode: {
+    listening: "Listening…",
+    hearing: "Hearing you…",
+    transcribing: "Transcribing…",
+    responding: "Thinking…",
+    speaking: "Speaking",
+    error: "Voice error",
+    hint: "Speak — sends automatically when you pause",
+    close: "Close",
+    enter: "Voice mode",
+  },
   agent: {
     tasksRunning: "{{n}} task running",
     panelTitle: "Agent tasks",

@@ -15,6 +15,8 @@ interface UiState {
   aboutOpen: boolean;
   /** Sağdan kayan agent görevleri paneli */
   agentPanelOpen: boolean;
+  /** Canlı sesli asistan overlay'i */
+  voiceModeOpen: boolean;
   /** SettingsPage açılışta hangi sekmeye gitsin (menüden derin bağlantı) */
   settingsTab: string;
   direction: 1 | -1;
@@ -28,6 +30,7 @@ interface UiState {
   setLaunchpadOpen: (open: boolean) => void;
   setAboutOpen: (open: boolean) => void;
   setAgentPanelOpen: (open: boolean) => void;
+  setVoiceModeOpen: (open: boolean) => void;
   /** Ayarları belirli bir sekmede açar */
   openSettings: (tab?: string) => void;
   setAppReady: () => void;
@@ -45,6 +48,7 @@ export const useUiStore = create<UiState>()(
       launchpadOpen: false,
       aboutOpen: false,
       agentPanelOpen: false,
+      voiceModeOpen: false,
       settingsTab: "general",
       direction: 1,
       appReady: false,
@@ -65,6 +69,7 @@ export const useUiStore = create<UiState>()(
       setLaunchpadOpen: (open) => set({ launchpadOpen: open }),
       setAboutOpen: (open) => set({ aboutOpen: open }),
       setAgentPanelOpen: (open) => set({ agentPanelOpen: open }),
+      setVoiceModeOpen: (open) => set({ voiceModeOpen: open }),
       openSettings: (tab) =>
         set((s) => {
           const fromIdx = VIEW_ORDER.indexOf(s.view);

@@ -70,6 +70,32 @@ enum WorkerCmd {
     Stop,
 }
 
+/// Konuşma sonu algılama (VAD) ayarları — sesli asistan modu (Faz 6).
+#[derive(Debug, Clone)]
+pub struct VadConfig {
+    /// Konuşma başladıktan sonra bu kadar ms kesintisiz sessizlik → segment sonu.
+    pub silence_ms: u64,
+    /// RMS eşiği (mono f32, 16 kHz). Üstü "konuşma", altı "sessizlik" sayılır.
+    pub threshold: f32,
+    /// Güvenlik tavanı: segment bu süreyi aşarsa sessizlik beklenmeden kapatılır.
+    pub max_segment_ms: u64,
+}
+
+impl Default for VadConfig {
+    fn default() -> Self {
+        Self {
+            silence_ms: 1200,
+            threshold: 0.012,
+            max_segment_ms: 60_000,
+        }
+    }
+}
+
+/// VAD olayları — worker thread'den callback'e verilir.
+///   "speech-start": kullanıcı konuşmaya başladı (barge-in için TTS sustur)
+///   "segment-end":  konuşma bitti; frontend stop_and_transcribe çağırmalı
+pub type VadEvent = &'static str;
+
 struct Session {
     /// Channel to ask the worker to stop and flush.
     tx: mpsc::Sender<WorkerCmd>,
@@ -87,6 +113,24 @@ static SESSIONS: std::sync::LazyLock<Mutex<HashMap<String, Session>>> =
 
 /// Public: starts a new recording session bound to `session_id`.
 pub fn start_recording(session_id: String) -> Result<(), AudioError> {
+    start_recording_inner(session_id, None)
+}
+
+/// Public: VAD'li kayıt — worker her ~100ms RMS ölçer; konuşma başlangıcında
+/// ve `silence_ms` kesintisiz sessizlikte `on_event` çağrılır. Kayıt otomatik
+/// DURMAZ — "segment-end" sonrası frontend stop_and_transcribe/cancel çağırır.
+pub fn start_recording_with_vad(
+    session_id: String,
+    vad: VadConfig,
+    on_event: impl Fn(VadEvent) + Send + 'static,
+) -> Result<(), AudioError> {
+    start_recording_inner(session_id, Some((vad, Box::new(on_event))))
+}
+
+fn start_recording_inner(
+    session_id: String,
+    vad: Option<(VadConfig, Box<dyn Fn(VadEvent) + Send>)>,
+) -> Result<(), AudioError> {
     {
         let map = SESSIONS.lock();
         if map.contains_key(&session_id) {
@@ -164,8 +208,65 @@ pub fn start_recording(session_id: String) -> Result<(), AudioError> {
             return;
         }
 
-        // Park until stop signal.
-        let _ = cmd_rx.recv();
+        match vad {
+            None => {
+                // Park until stop signal (klasik bas-konuş yolu).
+                let _ = cmd_rx.recv();
+            }
+            Some((cfg, on_event)) => {
+                // VAD döngüsü: ~100ms tick'lerle son pencerenin RMS'ine bak.
+                use std::sync::mpsc::RecvTimeoutError;
+                use std::time::{Duration, Instant};
+                const TICK_MS: u64 = 100;
+                const WINDOW: usize = (TARGET_SR as usize / 1000) * TICK_MS as usize; // 100ms örnek
+
+                let started = Instant::now();
+                let mut speech_started = false;
+                let mut voiced_ticks: u32 = 0;
+                let mut silence_ticks: u32 = 0;
+                let mut segment_ended = false;
+
+                loop {
+                    match cmd_rx.recv_timeout(Duration::from_millis(TICK_MS)) {
+                        Ok(WorkerCmd::Stop) | Err(RecvTimeoutError::Disconnected) => break,
+                        Err(RecvTimeoutError::Timeout) => {
+                            if segment_ended {
+                                continue; // frontend'in stop çağrısı bekleniyor
+                            }
+                            let rms = {
+                                let buf = buffer.lock();
+                                let n = buf.len().min(WINDOW);
+                                if n == 0 {
+                                    0.0
+                                } else {
+                                    let tail = &buf[buf.len() - n..];
+                                    (tail.iter().map(|s| s * s).sum::<f32>() / n as f32).sqrt()
+                                }
+                            };
+                            let voiced = rms > cfg.threshold;
+
+                            if !speech_started {
+                                voiced_ticks = if voiced { voiced_ticks + 1 } else { 0 };
+                                // ~200ms kesintisiz ses = gerçek konuşma (tık/öksürük eleği)
+                                if voiced_ticks >= 2 {
+                                    speech_started = true;
+                                    on_event("speech-start");
+                                }
+                            } else {
+                                silence_ticks = if voiced { 0 } else { silence_ticks + 1 };
+                                let silent_ms = silence_ticks as u64 * TICK_MS;
+                                let too_long =
+                                    started.elapsed().as_millis() as u64 >= cfg.max_segment_ms;
+                                if silent_ms >= cfg.silence_ms || too_long {
+                                    segment_ended = true;
+                                    on_event("segment-end");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         drop(stream);
 
         let pcm = std::mem::take(&mut *buffer.lock());

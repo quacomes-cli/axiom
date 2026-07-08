@@ -48,6 +48,17 @@ export const ja: typeof en = {
     aboutVersion: "バージョン",
     aboutWebsite: "ウェブサイト",
   },
+  voiceMode: {
+    listening: "聞いています…",
+    hearing: "聞こえています…",
+    transcribing: "文字起こし中…",
+    responding: "考え中…",
+    speaking: "話しています",
+    error: "音声エラー",
+    hint: "話してください — 止まると自動送信",
+    close: "閉じる",
+    enter: "ボイスモード",
+  },
   agent: {
     tasksRunning: "{{n}} 件のタスク実行中",
     panelTitle: "エージェントタスク",

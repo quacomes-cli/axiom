@@ -1254,6 +1254,31 @@ pub fn audio_start_recording(session_id: String) -> Result<(), String> {
     audio::start_recording(session_id).map_err(|e| e.to_string())
 }
 
+/// Sesli asistan modu: VAD'li kayıt. Konuşma başlangıcı/bitişi "voice-vad"
+/// event'iyle frontend'e düşer ({sessionId, kind: "speech-start"|"segment-end"}).
+#[tauri::command]
+pub fn audio_start_recording_vad(
+    app: tauri::AppHandle,
+    session_id: String,
+    silence_ms: Option<u64>,
+    threshold: Option<f32>,
+) -> Result<(), String> {
+    let defaults = audio::VadConfig::default();
+    let cfg = audio::VadConfig {
+        silence_ms: silence_ms.unwrap_or(defaults.silence_ms),
+        threshold: threshold.unwrap_or(defaults.threshold),
+        max_segment_ms: defaults.max_segment_ms,
+    };
+    let sid = session_id.clone();
+    audio::start_recording_with_vad(session_id, cfg, move |kind| {
+        let _ = app.emit(
+            "voice-vad",
+            serde_json::json!({ "sessionId": sid.clone(), "kind": kind }),
+        );
+    })
+    .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn audio_cancel_recording(session_id: String) -> Result<(), String> {
     audio::cancel_recording(&session_id).map_err(|e| e.to_string())

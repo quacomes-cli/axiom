@@ -48,6 +48,17 @@ export const ru: typeof en = {
     aboutVersion: "Версия",
     aboutWebsite: "Сайт",
   },
+  voiceMode: {
+    listening: "Слушаю…",
+    hearing: "Слышу вас…",
+    transcribing: "Расшифровка…",
+    responding: "Думаю…",
+    speaking: "Говорит",
+    error: "Ошибка голоса",
+    hint: "Говорите — отправится при паузе",
+    close: "Закрыть",
+    enter: "Голосовой режим",
+  },
   agent: {
     tasksRunning: "Задач выполняется: {{n}}",
     panelTitle: "Задачи агента",

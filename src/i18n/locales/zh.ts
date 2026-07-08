@@ -48,6 +48,17 @@ export const zh: typeof en = {
     aboutVersion: "版本",
     aboutWebsite: "网站",
   },
+  voiceMode: {
+    listening: "聆听中…",
+    hearing: "听到你了…",
+    transcribing: "转写中…",
+    responding: "思考中…",
+    speaking: "朗读中",
+    error: "语音错误",
+    hint: "说话即可 — 停顿后自动发送",
+    close: "关闭",
+    enter: "语音模式",
+  },
   agent: {
     tasksRunning: "{{n}} 个任务运行中",
     panelTitle: "智能体任务",

@@ -245,6 +245,7 @@ pub fn run() {
             ipc::commands::ollama_registry_tags,
             ipc::commands::cache_alarm_audio,
             ipc::commands::audio_start_recording,
+            ipc::commands::audio_start_recording_vad,
             ipc::commands::audio_cancel_recording,
             ipc::commands::audio_stop_and_transcribe,
             ipc::commands::audio_model_status,

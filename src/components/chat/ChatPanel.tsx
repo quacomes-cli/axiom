@@ -27,6 +27,7 @@ import {
   Loader,
   Smartphone,
   Bot,
+  AudioLines,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -73,6 +74,8 @@ import { ToolBlock } from "../code/ToolMessage";
 import type { DocumentAttachment, WeatherData, CurrencyData, ModelInfo, ProviderKind } from "../../types";
 import 'highlight.js/styles/base16/classic-dark.css';
 import { useUserProfileStore } from "../../stores/userProfileStore";
+import { useAgentRunStore } from "../../stores/agentRunStore";
+import { FaTasks } from "react-icons/fa";
 
 const EMPTY_DOCS: DocumentAttachment[] = [];
 
@@ -1378,6 +1381,8 @@ export function ChatPanel() {
   const view = useUiStore((s) => s.view);
   const pendingScrollMessageId = useUiStore((s) => s.pendingScrollMessageId);
   const requestScrollToMessage = useUiStore((s) => s.requestScrollToMessage);
+  const voiceModeOpen = useUiStore((s) => s.voiceModeOpen);
+  const setVoiceModeOpen = useUiStore((s) => s.setVoiceModeOpen);
 
   // SearchModal'dan gelen mesaj scroll talebini yerine getir.
   useEffect(() => {
@@ -1780,6 +1785,18 @@ export function ChatPanel() {
             }
             disabled={thinking || !activeModel}
           />
+          {/* Canlı sesli asistan modu (Faz 6) */}
+          <Tooltip label={t("voiceMode.enter")}>
+            <button
+              onClick={() => setVoiceModeOpen(true)}
+              disabled={!activeModel}
+              className={`flex items-center justify-center rounded-lg px-1.5 py-1 transition-colors disabled:opacity-40 ${
+                voiceModeOpen ? "text-success" : "text-text-faint hover:text-text-secondary"
+              }`}
+            >
+              <AudioLines size={16} strokeWidth={1.6} />
+            </button>
+          </Tooltip>
           {modelSupportsVision(activeModel) && chatId && (
             <ScreenshotButton
               onCapture={(file) => {
@@ -1808,6 +1825,9 @@ export function ChatPanel() {
   const userName = profile?.name?.split(" ")[0] || t("chat.defaultUser");
   const renderedAuthText = t(authenticatedTemplateKeys[authIndex], { name: userName });
   const renderedUnauthText = t(unauthenticatedTemplateKeys[unauthIndex]);
+
+  const setAgentPanelOpen = useUiStore((s) => s.setAgentPanelOpen);
+  const runs = useAgentRunStore((s) => s.runs);
 
   return (
     <div className="flex h-full flex-col">
@@ -1864,6 +1884,16 @@ export function ChatPanel() {
             transition={{ duration: 0.3 }}
             className="flex min-h-0 flex-1 flex-col"
           >
+            {
+              runs && (
+                <button className="absolute top-[10px] right-[10px] flex h-6 w-6 items-center justify-center rounded-md text-text-faint hover:bg-surface-3 hover:text-text-secondary" onClick={(e) => {
+                  e.preventDefault();
+                  setAgentPanelOpen(true);
+                }}>
+                  <FaTasks size={14} strokeWidth={1.4}/>
+                </button>
+              )
+            }
             <div className="flex-1 overflow-y-auto px-6 py-6">
               <div className="mx-auto max-w-2xl space-y-5">
                 {messages.map((m, i) => {
