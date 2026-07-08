@@ -146,10 +146,15 @@ yolu SIFIR değişiklikle native calling kazandı.
 - UI uçtan uca test: kullanıcı gemma4:12b ile hava durumu sorup tool kartının
   çıktığını görmeli.
 
-### 2b — Gemini functionDeclarations — YAPILMADI
-Gemini regex-prompt yoluyla zaten güvenilir çalışıyor (talimat takibi güçlü);
-native'e geçiş düşük öncelik. Yapılacaksa: `cloud/gemini.rs`'de `tools` →
-`functionDeclarations` çevirisi + yanıt `functionCall` → aynı blok-metin enjeksiyonu.
+### 2b — Gemini functionDeclarations — TAMAMLANDI (2026-07-08)
+- [x] `cloud/gemini.rs`: `tools` (Ollama formatı) → `functionDeclarations`;
+      şemalar Gemini OpenAPI alt kümesine daraltılır (`sanitize_schema` —
+      MCP şemalarındaki additionalProperties/$schema 400 döndürmesin).
+- [x] Yanıt `functionCall` → `tool_call_to_block` ile aynı blok-metin enjeksiyonu
+      (2a deseni; `pub(crate)` + `runtime::ollama` re-export). Çoklu part
+      (text + functionCall) artık kaybolmuyor (eski kod yalnız ilk part'ı alıyordu).
+- [x] `cloud/mod.rs`: chat + chat_stream gemini koluna `req.tools` geçirilir.
+- Canlı doğrulama kullanıcıda: Gemini modeliyle `/agent` veya araçlı sohbet.
 
 ## FAZ 3 — MCP client — TAMAMLANDI (2026-07-04, faz3-mcp branch)
 
