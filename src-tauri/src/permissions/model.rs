@@ -99,7 +99,10 @@ impl Default for PermissionConfig {
         use PermissionLevel::*;
         Self {
             filesystem: FilesystemPermissions {
-                read: ScopedRule::new(Confirm, &["~/Documents", "~/Downloads"]),
+                // Okuma ev dizini içinde varsayılan İZİNLİ — listeleme/okuma gibi
+                // basit işlemler onay kartına takılmasın. Ev dışı yollar kapsam
+                // dışına düştüğü için yine Confirm'e gider (engine davranışı).
+                read: ScopedRule::new(Allowed, &["~"]),
                 write: ScopedRule::new(Confirm, &["~/Documents/axiom-out"]),
                 delete: Blocked,
                 watch: ScopedRule::new(Confirm, &[]),

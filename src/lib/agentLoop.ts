@@ -16,10 +16,13 @@ import {
   executeToolBlock,
   buildToolResultText,
   buildEnabledAppsPrompt,
+  TOOL_SYSTEM_PROMPT,
   type AgentRun,
   type AgentStep,
   type ChatMessage as UiChatMessage,
 } from "../stores/chatStore";
+import { buildMcpToolsPrompt } from "../stores/mcpStore";
+import { envPromptBlock } from "./envInfo";
 import { useModelStore } from "../stores/modelStore";
 import type { ChatMessage as LlmMessage, ToolAction } from "../types";
 
@@ -177,17 +180,22 @@ async function runAgentCore(goal: string, env: AgentEnv): Promise<string> {
   const startedAt = Date.now();
   const timedOut = () => Date.now() - startedAt > TOTAL_TIMEOUT_MS;
 
-  // Sistem promptu: send'inkine paralel — araç talimatları + app araçları.
-  // buildSystemPrompt chatId'ye ihtiyaç duyar ve döküman/kişilik içerir; agent
-  // için sade, hedef-odaklı bir prompt kuruyoruz (araç blok sözdizimi Rust
-  // native dönüşümüyle zaten uyumlu).
+  // Sistem promptu: send'inkine paralel — ARAÇ TARİFİ ŞART. Native tools yolu
+  // olmayan modeller (Gemini vb.) araçları yalnızca bu blok tarifinden öğrenir;
+  // TOOL_SYSTEM_PROMPT olmadan model "araçlara erişimim yok" der. envPromptBlock
+  // gerçek ev/Belgeler yollarını verir (model kullanıcı adı tahmin etmesin).
   const appsPrompt = buildEnabledAppsPrompt();
+  const mcpPrompt = buildMcpToolsPrompt();
+  const envBlock = envPromptBlock();
   const system =
     (env.persona ? `${env.persona}\n\n` : "") +
     "Sen Axiom'un otonom görev ajanısın. Sana bir HEDEF ve bir PLAN verilir; " +
     "her seferinde yalnızca istenen adımı yerine getirirsin. Araç gerekiyorsa " +
     "araç çağrısı yap; araç sonuçları sana geri verilir. Kısa ve öz yaz." +
-    (appsPrompt ? `\n\n${appsPrompt}` : "");
+    `\n\n${TOOL_SYSTEM_PROMPT}` +
+    (envBlock ? `\n\n${envBlock}` : "") +
+    (appsPrompt ? `\n\n${appsPrompt}` : "") +
+    (mcpPrompt ? `\n\n${mcpPrompt}` : "");
 
   const history: LlmMessage[] = [{ role: "system", content: system }];
 
