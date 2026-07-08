@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const tr: typeof en = {
   nav: {
@@ -47,6 +47,17 @@ export const tr: typeof en = {
     aboutTagline: "Yerel yapay zeka asistanın",
     aboutVersion: "Sürüm",
     aboutWebsite: "Web sitesi",
+  },
+  agent: {
+    planning: "Plan yapılıyor…",
+    running: "Adımlar yürütülüyor…",
+    synthesizing: "Rapor yazılıyor…",
+    done: "Tamamlandı",
+    failed: "Başarısız",
+    stopped: "Durduruldu",
+    stop: "Durdur",
+    cmdLabel: "Agent modu",
+    cmdDesc: "Çok adımlı hedefi araçlarla yürüt",
   },
   phoneConnect: {
     title: "Telefonu bağla",

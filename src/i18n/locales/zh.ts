@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const zh: typeof en = {
   nav: {
@@ -47,6 +47,17 @@ export const zh: typeof en = {
     aboutTagline: "你的本地 AI 助手",
     aboutVersion: "版本",
     aboutWebsite: "网站",
+  },
+  agent: {
+    planning: "规划中…",
+    running: "执行步骤中…",
+    synthesizing: "撰写报告中…",
+    done: "已完成",
+    failed: "失败",
+    stopped: "已停止",
+    stop: "停止",
+    cmdLabel: "智能体模式",
+    cmdDesc: "用工具执行多步骤目标",
   },
   phoneConnect: {
     title: "连接手机",

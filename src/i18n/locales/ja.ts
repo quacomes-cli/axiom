@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const ja: typeof en = {
   nav: {
@@ -47,6 +47,17 @@ export const ja: typeof en = {
     aboutTagline: "ローカル AI アシスタント",
     aboutVersion: "バージョン",
     aboutWebsite: "ウェブサイト",
+  },
+  agent: {
+    planning: "計画中…",
+    running: "ステップ実行中…",
+    synthesizing: "レポート作成中…",
+    done: "完了",
+    failed: "失敗",
+    stopped: "停止",
+    stop: "停止",
+    cmdLabel: "エージェントモード",
+    cmdDesc: "ツールで複数ステップの目標を実行",
   },
   phoneConnect: {
     title: "スマホを接続",

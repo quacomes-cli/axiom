@@ -1,4 +1,4 @@
-import type { en } from "./en";
+﻿import type { en } from "./en";
 
 export const pt: typeof en = {
   nav: {
@@ -47,6 +47,17 @@ export const pt: typeof en = {
     aboutTagline: "Seu assistente de IA local",
     aboutVersion: "Versão",
     aboutWebsite: "Site",
+  },
+  agent: {
+    planning: "Planejando…",
+    running: "Executando etapas…",
+    synthesizing: "Escrevendo o relatório…",
+    done: "Concluído",
+    failed: "Falhou",
+    stopped: "Parado",
+    stop: "Parar",
+    cmdLabel: "Modo agente",
+    cmdDesc: "Executa um objetivo de várias etapas com ferramentas",
   },
   phoneConnect: {
     title: "Conectar telefone",

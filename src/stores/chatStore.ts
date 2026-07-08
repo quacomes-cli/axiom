@@ -358,11 +358,31 @@ export interface MessageVersion {
   toolActions?: ToolAction[];
 }
 
+/** Derin agent koşusunun tek adımı (Faz 5). */
+export interface AgentStep {
+  title: string;
+  status: "pending" | "running" | "done" | "failed";
+  /** Adımın kısa sonuç özeti (model metninden). */
+  note?: string;
+  /** Adımda çalışan araçların kartları. */
+  actions?: ToolAction[];
+}
+
+/** Derin agent koşusu — mesaja iliştirilir, AgentRunCard bunu çizer. */
+export interface AgentRun {
+  goal: string;
+  status: "planning" | "running" | "synthesizing" | "done" | "failed" | "stopped";
+  steps: AgentStep[];
+  error?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "agent" | "search" | "card";
   text: string;
   toolActions?: ToolAction[];
+  /** Derin agent koşusu (varsa mesaj AgentRunCard ile çizilir). */
+  agentRun?: AgentRun;
   searchResults?: SearchResult[];
   fromToggle?: boolean;
   cardType?: "weather" | "currency";
@@ -1363,6 +1383,8 @@ export const useChatStore = create<ChatState>()(
       stopGeneration: () => {
         stopRequested = true;
         regenerateStash = null;
+        // Aktif derin-agent koşusu varsa onu da durdur (fire-and-forget import).
+        void import("../lib/agentLoop").then((m) => m.requestAgentStop()).catch(() => {});
         // Bekleyen tool onay kartları varsa reddet — döngü onları beklemesin
         useApprovalStore.getState().denyAll();
         if (streamUnlisten) { streamUnlisten(); streamUnlisten = null; }
@@ -1391,6 +1413,24 @@ export const useChatStore = create<ChatState>()(
         const summaryMatch = text.match(/^\/(summary|özet|compact)\s*$/i);
         if (summaryMatch) {
           await get().compactChat();
+          return;
+        }
+
+        // /agent <hedef> — derin agent modu: planla → araç zinciri → sentez.
+        const agentMatch = text.match(/^\/agent\s+([\s\S]+)$/i);
+        if (agentMatch) {
+          const goal = agentMatch[1].trim();
+          const goalMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", text };
+          set((s) => ({
+            chats: s.chats.map((c) =>
+              c.id === activeChatId ? { ...c, messages: [...c.messages, goalMsg] } : c,
+            ),
+          }));
+          persistById(activeChatId);
+          // Dinamik import: agentLoop ↔ chatStore döngüsel bağımlılığını kırar.
+          const { runAgentInChat } = await import("../lib/agentLoop");
+          await runAgentInChat(goal);
+          persistById(activeChatId);
           return;
         }
 

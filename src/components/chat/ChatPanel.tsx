@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Loader,
   Smartphone,
+  Bot,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -40,6 +41,7 @@ import { useOptimizationStore } from "../../stores/optimizationStore";
 import { useNotificationStore } from "../../stores/notificationStore";
 import { AppVersion } from "../../stores/appStore";
 import { InteractiveHtml, DesigningIndicator, extractNodeText, splitStreamingHtml } from "./InteractiveHtml";
+import { AgentRunCard } from "./AgentRunCard";
 import { Tooltip } from "../shared/Tooltip";
 
 /**
@@ -891,6 +893,7 @@ const MessageBubble = memo(function MessageBubble({
     <div className="group" style={{
       marginBottom: "1rem"
     }}>
+      {msg.agentRun && <AgentRunCard run={msg.agentRun} />}
       {msg.thinkingContent && (
         <ThinkingBlock content={msg.thinkingContent} isStreaming={isStreaming && !msg.text} />
       )}
@@ -970,6 +973,12 @@ function useSlashCommands(): SlashCommand[] {
       label: translate("phoneConnect.cmdLabel"),
       description: translate("phoneConnect.cmdDesc"),
       icon: <Smartphone size={14} strokeWidth={1.6} />,
+    },
+    {
+      command: "/agent",
+      label: translate("agent.cmdLabel"),
+      description: translate("agent.cmdDesc"),
+      icon: <Bot size={14} strokeWidth={1.6} />,
     },
   ];
   const appCommands: SlashCommand[] = apps

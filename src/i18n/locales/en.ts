@@ -1,4 +1,4 @@
-// English — source-of-truth shape. All other locales must match these keys
+﻿// English — source-of-truth shape. All other locales must match these keys
 // (typed as `Dict`), so TypeScript flags any missing/extra key.
 
 export const en = {
@@ -48,6 +48,17 @@ export const en = {
     aboutTagline: "Your local AI assistant",
     aboutVersion: "Version",
     aboutWebsite: "Website",
+  },
+  agent: {
+    planning: "Planning…",
+    running: "Working through steps…",
+    synthesizing: "Writing the report…",
+    done: "Completed",
+    failed: "Failed",
+    stopped: "Stopped",
+    stop: "Stop",
+    cmdLabel: "Agent mode",
+    cmdDesc: "Run a multi-step goal with tools",
   },
   phoneConnect: {
     title: "Connect phone",

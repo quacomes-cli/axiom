@@ -8,18 +8,8 @@ import { useTaskStore, type Task } from "../stores/taskStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useModelStore } from "../stores/modelStore";
 import { useNotificationStore } from "../stores/notificationStore";
-import {
-  TOOL_SYSTEM_PROMPT,
-  parseToolBlocks,
-  executeToolBlock,
-  buildToolResultText,
-  modelSupportsTools,
-  buildEnabledAppsPrompt,
-} from "../stores/chatStore";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { ipc } from "../lib/ipc";
-import { buildNativeTools } from "../lib/toolRegistry";
-import type { AlarmSoundConfig, ChatMessage as IpcChatMessage } from "../types";
+import type { AlarmSoundConfig } from "../types";
 
 let notifReady: boolean | null = null;
 
@@ -158,83 +148,30 @@ async function executeAgentTask(task: Task) {
     return;
   }
 
-  const persona =
-    task.agentPrompt?.trim() ||
-    "Sen Axiom uygulamasının zamanlanmış arka plan ajansısın. Verilen görevi kısa, doğrudan ve özet bir şekilde yerine getir. Türkçe yanıt ver.";
   // Pano görevlerinde (manuel todo) talimat = başlık + açıklama; agent
   // görevlerinde kullanıcının yazdığı actionMessage esastır.
-  const userMsg =
+  const goal =
     task.actionMessage?.trim() ||
     [task.title, task.description].filter((s) => s?.trim()).join("\n");
-  const hasTools = modelSupportsTools(active);
 
-  // System prompt'u: persona + built-in tool tarifi + etkin uygulama tool'ları
-  // (telegram_send_message, gmail_*, spotify_* vb.). Bunlar olmadan agent
-  // mesajda "telegrama at" yazsa bile aracı bilmediği için sadece metin üretir.
-  let systemPrompt = persona;
-  if (hasTools) {
-    systemPrompt += `\n\n${TOOL_SYSTEM_PROMPT}`;
-    const appsPrompt = buildEnabledAppsPrompt();
-    if (appsPrompt) systemPrompt += `\n\n${appsPrompt}`;
-    systemPrompt +=
-      `\n\n# Arka plan görevi davranışı\n` +
-      `Bu konuşma arka planda zamanlanmış bir görevdir; karşında bir kullanıcı yok. ` +
-      `Görevde "telegrama at", "mail at" gibi bir mecra geçiyorsa **mutlaka** ilgili app_tool'u (ör. telegram_send_message) çağırarak çıktıyı gönder. ` +
-      `Sadece düz metin yanıt yetmez — tool çağrısını yap, ardından kısa onay yaz.`;
-  }
-  console.log("[agent] persona:", persona);
-  console.log("[agent] userMsg:", userMsg);
-  console.log("[agent] hasTools:", hasTools, "model:", active.id);
+  // Persona + arka plan davranış talimatı — derin agent döngüsünün (agentLoop)
+  // sistem promptunun başına eklenir. Araç şemaları/blok sözdizimi agentLoop'ta.
+  const persona =
+    (task.agentPrompt?.trim() ||
+      "Sen Axiom uygulamasının zamanlanmış arka plan ajansısın. Verilen görevi kısa, doğrudan ve özet bir şekilde yerine getir. Türkçe yanıt ver.") +
+    `\n\n# Arka plan görevi davranışı\n` +
+    `Bu koşu arka planda zamanlanmış bir görevdir; karşında bir kullanıcı yok. ` +
+    `Görevde "telegrama at", "mail at" gibi bir mecra geçiyorsa **mutlaka** ilgili app_tool'u (ör. telegram_send_message) çağırarak çıktıyı gönder. ` +
+    `Sadece düz metin yanıt yetmez — tool çağrısını yap, ardından kısa onay yaz.`;
 
-  // Tool loop — sohbet akışına benzer küçük bir döngü. Maks 6 adım.
-  const MAX_STEPS = 6;
-  const history: IpcChatMessage[] = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userMsg },
-  ];
+  console.log("[agent] deep-agent goal:", goal, "model:", active.id);
 
   let finalContent = "";
   try {
-    for (let step = 0; step < MAX_STEPS; step++) {
-      const resp = await ipc.modelsChat({
-        modelId: active.id,
-        provider: active.provider,
-        messages: history,
-        temperature: 0.5,
-        maxTokens: 2048,
-        tools: hasTools ? buildNativeTools(active) : undefined,
-      });
-      const out = resp.content.trim();
-      console.log(`[agent] step ${step} model output:`, out.slice(0, 400));
-      history.push({ role: "assistant", content: out });
-
-      // Tool yoksa / model tool desteklemiyorsa → biter.
-      if (!hasTools) {
-        finalContent = out;
-        break;
-      }
-      const blocks = parseToolBlocks(out);
-      console.log(`[agent] step ${step} parsed tool blocks:`, blocks.length, blocks.map((b) => b.kind));
-      if (blocks.length === 0) {
-        finalContent = out;
-        break;
-      }
-
-      // Tool'ları sırayla yürüt. Arka plan bağlamı: onay gerektiren izinler
-      // sorulmaz, otomatik reddedilir (kullanıcı başında değil).
-      const actions = [];
-      for (const b of blocks) {
-        actions.push(await executeToolBlock(b, { interactive: false }));
-      }
-      const resultText = buildToolResultText(actions);
-      console.log(`[agent] step ${step} tool results:`, resultText.slice(0, 400));
-      history.push({ role: "user", content: `[Araç çıktıları]\n${resultText}` });
-
-      // Son adımda hala tool döndürdüyse, sonucu birikmiş çıktıyla bırak.
-      if (step === MAX_STEPS - 1) {
-        finalContent = out + "\n\n" + resultText;
-      }
-    }
+    // Derin agent döngüsü (Faz 5): planla → araç zinciri → sentez.
+    // interactive:false — onay gerektiren araçlar sessizce reddedilir.
+    const { runAgentDetached } = await import("../lib/agentLoop");
+    finalContent = (await runAgentDetached(goal, { persona })).trim();
 
     if (!finalContent) finalContent = "Agent görevi tamamlandı.";
 
