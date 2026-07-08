@@ -252,21 +252,25 @@ yolu SIFIR değişiklikle native calling kazandı.
   çıkar, rapor yaz" tarzı 3+ araçlı `/agent` hedefi — adımlar canlı, durdurulabilir,
   onay kartları çıkar; zamanlanmış agent görevi de yeni yolda çalışmalı.
 
-## FAZ 6 — Canlı sesli asistan (konuşma modu)
-
-Bugün: MicButton tek atımlık STT; TTS mesaj okuma. Hedef: kesintisiz döngü.
+## FAZ 6 — Canlı sesli asistan — KOD TAMAMLANDI (2026-07-08), CANLI TEST KULLANICIDA
 
 ### 6.1 Sessizlik algılama (VAD)
-- [ ] `audio/mod.rs`: kayıt sırasında RMS tabanlı sessizlik tespiti — N ms sessizlik
-      → otomatik stop+transcribe (event: `voice-segment-end`). Eşik/N ayarlardan.
+- [x] `audio/mod.rs`: `start_recording_with_vad` — worker ~100ms tick'te son
+      pencere RMS'i; ~200ms kesintisiz ses → "speech-start", konuşma sonrası
+      `silence_ms` (vars. 1200ms) sessizlik veya 60sn tavan → "segment-end".
+      Kayıt otomatik durmaz — frontend stop/cancel çağırır. Komut:
+      `audio_start_recording_vad` → "voice-vad" event'i {sessionId, kind}.
+      Eşik/süre komut parametreli (ayar UI'si gerekirse sonra).
 
-### 6.2 Konuşma döngüsü (`src/hooks/useVoiceConversation.ts` — yeni)
-- [ ] Mod açıkken: dinle → segment biter → transkript send() → cevap stream biter →
-      TTS oku → tekrar dinle. Barge-in: kullanıcı konuşmaya başlarsa TTS durur.
-- [ ] `VoiceMode.tsx`: kompakt overlay (dalga animasyonu, canlı transkript,
-      son cevap, kapat). ChatPanel'e giriş butonu + kısayol.
-- Kabul: eller serbest 3+ turlu sohbet; barge-in çalışır; araç çağrıları sesli
-  modda da onay kartıyla akar.
+### 6.2 Konuşma döngüsü
+- [x] `useVoiceConversation`: dinle → transkript → send → son agent cevabını
+      TTS oku → tekrar dinle. BARGE-IN: TTS çalarken yeni VAD oturumu açık;
+      speech-start gelince TTS kesilir. Boş segmentte sessizce yeniden dinler.
+- [x] `VoiceMode.tsx`: alt-orta kompakt overlay — faza göre nabız halkası /
+      spinner / konuşan dalga barları; canlı transkript. ChatPanel'de mic
+      yanında AudioLines giriş butonu. i18n voiceMode (9 dil).
+- KABUL TESTİ (kullanıcıda): eller serbest 3+ turlu sohbet; barge-in; araç
+  çağrıları sesli modda onay kartıyla akar. Whisper modeli yüklü olmalı.
 
 ## FAZ 7 — Performans + dağıtım kalitesi
 
