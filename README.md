@@ -1,32 +1,24 @@
-# React + TypeScript + Vite
+# Axiom
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+**Axiom** is a local-first AI agent for your desktop — a second brain that runs on your own machine.
 
-Currently, two official plugins are available:
+Built with **Tauri 2 (Rust)** + **React 19 + TypeScript**, Axiom connects to local models (via Ollama) or cloud providers, and gives them safe, permissioned access to your computer: reading and writing files, running shell commands, browsing the web, and automating multi-step tasks — all under a scoped, user-controlled permission system.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Highlights
 
-## React Compiler
+- **Hardware-aware & permission-based** — every filesystem, network, or shell action is checked against an explicit, scoped permission model. Nothing runs behind your back.
+- **Deep agent mode** — give it a goal, and it plans, chains tool calls, and synthesizes a result, with a live, expandable status view of every step it takes.
+- **Voice assistant** — real-time speech-to-text (Whisper, with live partial transcription) and natural text-to-speech (Piper locally, or Edge TTS for more expressive voices), with barge-in support.
+- **MCP client** — connect to Model Context Protocol servers and use their tools directly from chat.
+- **Local document library (RAG)** — index PDFs, Word/PowerPoint/Excel files, EPUBs, HTML, and more; the assistant retrieves relevant passages automatically or on demand.
+- **App integrations** — GitHub, Telegram, Discord, Notion, and more, with credentials stored securely in the OS credential manager, not in plaintext.
+- **Mobile companion** — pair a phone over a direct, end-to-end P2P connection to view and continue chats on the go.
+- **Multilingual UI** — English, Turkish, Spanish, German, French, Portuguese, Russian, Japanese, and Chinese.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Download
 
-## Expanding the Oxlint configuration
+Prebuilt Windows installers are published under [Releases](../../releases).
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Status
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The source for this project is developed privately. This repository is kept public to host release binaries and update manifests.
