@@ -57,3 +57,23 @@ pub fn delete_provider_key(provider: &str) {
         let _ = entry.delete_credential();
     }
 }
+
+/// Genel amaçlı keyring erişimi — uygulama entegrasyonlarının (Telegram bot
+/// token'ı, Discord bot token'ı vb.) düz metin localStorage yerine Windows
+/// Credential Manager'a yazması için. `key` çağıran taraf tarafından
+/// namespace'lenmiş olmalı (örn. "app.telegram.bot_token").
+pub fn store_secret(key: &str, value: &str) -> Result<(), String> {
+    Entry::new(SERVICE, key)
+        .and_then(|e| e.set_password(value))
+        .map_err(|e| e.to_string())
+}
+
+pub fn read_secret(key: &str) -> Option<String> {
+    Entry::new(SERVICE, key).ok().and_then(|e| e.get_password().ok())
+}
+
+pub fn delete_secret(key: &str) {
+    if let Ok(entry) = Entry::new(SERVICE, key) {
+        let _ = entry.delete_credential();
+    }
+}

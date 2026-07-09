@@ -128,6 +128,10 @@ export interface VoiceConfig {
   model: string;       // "base" | "small" | "medium" | ...
   language: string;    // "auto" | "tr" | "en" | ...
   pushToTalk: boolean;
+  /** VAD: konuşma bittikten sonra beklenecek sessizlik süresi (ms). */
+  vadSilenceMs: number;
+  /** VAD: RMS eşiği — düşürmek mikrofonu daha hassas yapar. */
+  vadThreshold: number;
 }
 
 export interface WhisperModelStatus {

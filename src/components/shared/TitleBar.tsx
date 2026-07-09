@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Search, Camera, Loader2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useUiStore } from "../../stores/uiStore";
@@ -9,7 +9,6 @@ import { useModelStore, modelSupportsVision } from "../../stores/modelStore";
 import { ipc } from "../../lib/ipc";
 import { NotificationCenter } from "./NotificationCenter";
 import { TitleMenu } from "./TitleMenu";
-import { applySavedZoom } from "../../lib/zoom";
 import { useT } from "../../i18n";
 import { motion } from "framer-motion";
 
@@ -105,11 +104,6 @@ export function TitleBar() {
   const visionOk = modelSupportsVision(activeModel);
   const [capturing, setCapturing] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  // Kaydedilmiş yakınlaştırmayı açılışta uygula.
-  useEffect(() => {
-    applySavedZoom();
-  }, []);
 
   async function quickScreenshot() {
     const chatId = useChatStore.getState().activeChatId;

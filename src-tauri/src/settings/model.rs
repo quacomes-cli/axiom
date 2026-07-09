@@ -113,6 +113,20 @@ pub struct VoiceConfig {
     pub model: String,        // "base", "small", "medium", ...
     pub language: String,     // "auto", "tr", "en", ...
     pub push_to_talk: bool,
+    /// VAD: konuşma bittikten sonra beklenecek sessizlik süresi (ms).
+    #[serde(default = "default_vad_silence_ms")]
+    pub vad_silence_ms: u64,
+    /// VAD: RMS eşiği — düşürmek mikrofonu daha hassas yapar (fısıltıyı da
+    /// yakalar, ama arka plan gürültüsünü "konuşma" sanma riski artar).
+    #[serde(default = "default_vad_threshold")]
+    pub vad_threshold: f32,
+}
+
+fn default_vad_silence_ms() -> u64 {
+    1200
+}
+fn default_vad_threshold() -> f32 {
+    0.012
 }
 
 impl Default for VoiceConfig {
@@ -122,6 +136,8 @@ impl Default for VoiceConfig {
             model: "base".to_string(),
             language: "auto".to_string(),
             push_to_talk: false,
+            vad_silence_ms: default_vad_silence_ms(),
+            vad_threshold: default_vad_threshold(),
         }
     }
 }

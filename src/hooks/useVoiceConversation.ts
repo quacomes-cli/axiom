@@ -167,7 +167,7 @@ export function useVoiceConversation(): UseVoiceConversation {
       }
       const sessionId = crypto.randomUUID();
       sessionRef.current = sessionId;
-      await ipc.audioStartRecordingVad(sessionId);
+      await ipc.audioStartRecordingVad(sessionId, voice?.vadSilenceMs, voice?.vadThreshold);
       setTranscript("");
       setPhaseBoth("listening");
       void partialLoop(sessionId);

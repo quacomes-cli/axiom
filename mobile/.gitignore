@@ -1,2 +1,5 @@
 node_modules
 dist
+
+# Firebase yapilandirmasi — gizli anahtar icerir, commit disi.
+google-services.json

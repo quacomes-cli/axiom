@@ -9,6 +9,7 @@ import { AboutDialog } from "./components/shared/AboutDialog";
 import { AgentPanel } from "./components/chat/AgentPanel";
 import { VoiceMode } from "./components/chat/VoiceMode";
 import { initRemoteHost } from "./lib/remoteHost";
+import { hydrateAppSecrets } from "./stores/appStore";
 import { ApprovalPrompt } from "./components/shared/ApprovalPrompt";
 import { AuthModal } from "./components/auth/AuthModal";
 import { MigrationModal } from "./components/auth/MigrationModal";
@@ -81,6 +82,12 @@ export default function App() {
   // Uzak sohbet relay'ini bir kez bağla (telefon ↔ chatStore protokolü).
   useEffect(() => {
     initRemoteHost();
+  }, []);
+
+  // Uygulama entegrasyonu token'larını keyring'den geri yükle (localStorage'a
+  // artık yazılmıyorlar).
+  useEffect(() => {
+    void hydrateAppSecrets();
   }, []);
 
   const [modelsLoaded, setModelsLoaded] = useState(false);

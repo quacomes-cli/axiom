@@ -14,6 +14,20 @@ import {
 
 export const AppVersion: string = "v0.1.5"
 
+// Bu alanlar hassas kimlik bilgisi taşır — localStorage'a düz metin yazılmaz,
+// bunun yerine Windows Credential Manager'a (keyring, IPC üzerinden) gider.
+const SENSITIVE_CONFIG_KEYS = [
+  "access_token",
+  "refresh_token",
+  "personal_access_token",
+  "bot_token",
+  "integration_token",
+] as const;
+
+function secretStoreKey(appId: string, field: string): string {
+  return `app.${appId}.${field}`;
+}
+
 export type AppConnectionType = "api" | "webhook" | "oauth" | "local";
 export type AppConnectionStatus = "disconnected" | "checking" | "connected" | "error";
 
@@ -33,6 +47,7 @@ export interface TelegramUpdate {
 
 export interface AppTool {
   name: string;
+  displayText: string;
   description: string;
   parameters: string;
 }
@@ -61,11 +76,11 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "github",
     connectionStatus: "disconnected",
     tools: [
-      { name: "github_list_repos", description: "Kullanıcının repolarını listele", parameters: "yok" },
-      { name: "github_list_issues", description: "Bir reponun issue'larını listele", parameters: "owner, repo" },
-      { name: "github_create_issue", description: "Yeni issue oluştur", parameters: "owner, repo, title, body" },
-      { name: "github_repo_info", description: "Repo detaylarını getir", parameters: "owner, repo" },
-      { name: "github_get_readme", description: "Bir reponun README dosyasını oku", parameters: "owner, repo" },
+      { name: "github_list_repos", displayText: "List Github repos", description: "Kullanıcının repolarını listele", parameters: "yok" },
+      { name: "github_list_issues", displayText: "List Github issues", description: "Bir reponun issue'larını listele", parameters: "owner, repo" },
+      { name: "github_create_issue", displayText: "Create Github issue", description: "Yeni issue oluştur", parameters: "owner, repo, title, body" },
+      { name: "github_repo_info", displayText: "Getting info from Github repo", description: "Repo detaylarını getir", parameters: "owner, repo" },
+      { name: "github_get_readme", displayText: "Getting README.md from Github", description: "Bir reponun README dosyasını oku", parameters: "owner, repo" },
     ],
   },
   {
@@ -78,8 +93,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "telegram",
     connectionStatus: "disconnected",
     tools: [
-      { name: "telegram_send_message", description: "Mesaj gönder", parameters: "text" },
-      { name: "telegram_get_updates", description: "Botla yapılan son konuşmaları getir (auto mode açıkken hafızadan son 20 mesaj; kapalıysa API'den henüz okunmamış mesajlar)", parameters: "limit (opsiyonel, varsayılan 20)" },
+      { name: "telegram_send_message", displayText: "Sending messages on Telegram", description: "Mesaj gönder", parameters: "text" },
+      { name: "telegram_get_updates", displayText: "Gettings updates from Telegram", description: "Botla yapılan son konuşmaları getir (auto mode açıkken hafızadan son 20 mesaj; kapalıysa API'den henüz okunmamış mesajlar)", parameters: "limit (opsiyonel, varsayılan 20)" },
     ],
   },
   {
@@ -92,8 +107,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "discord",
     connectionStatus: "disconnected",
     tools: [
-      { name: "discord_send_message", description: "Kanala mesaj gönder", parameters: "channel_id, text" },
-      { name: "discord_list_guilds", description: "Botun sunucularını listele", parameters: "yok" },
+      { name: "discord_send_message", displayText: "Sending messages on Discord", description: "Kanala mesaj gönder", parameters: "channel_id, text" },
+      { name: "discord_list_guilds", displayText: "Guilds listing", description: "Botun sunucularını listele", parameters: "yok" },
     ],
   },
   {
@@ -106,8 +121,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "notion",
     connectionStatus: "disconnected",
     tools: [
-      { name: "notion_search", description: "Notion'da sayfa ara", parameters: "query" },
-      { name: "notion_create_page", description: "Yeni sayfa oluştur", parameters: "title, content, parent_id (opsiyonel)" },
+      { name: "notion_search", displayText: "Searching on Notion", description: "Notion'da sayfa ara", parameters: "query" },
+      { name: "notion_create_page", displayText: "Creating page on Notion", description: "Yeni sayfa oluştur", parameters: "title, content, parent_id (opsiyonel)" },
     ],
   },
   {
@@ -120,13 +135,13 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "spotify",
     connectionStatus: "disconnected",
     tools: [
-      { name: "spotify_now_playing", description: "Şu an çalan parçayı getir", parameters: "yok" },
-      { name: "spotify_play", description: "Bir parçayı/sanatçıyı çal (yoksa sıradakine devam et)", parameters: "query (opsiyonel)" },
-      { name: "spotify_pause", description: "Çalmayı duraklat", parameters: "yok" },
-      { name: "spotify_next", description: "Sıradaki parçaya geç", parameters: "yok" },
-      { name: "spotify_prev", description: "Önceki parçaya dön", parameters: "yok" },
-      { name: "spotify_search", description: "Spotify'da ara", parameters: "query, type (opsiyonel: track/artist/album)" },
-      { name: "spotify_queue_add", description: "Sıraya parça ekle", parameters: "query" },
+      { name: "spotify_now_playing", displayText: "Playing on Spotify now", description: "Şu an çalan parçayı getir", parameters: "yok" },
+      { name: "spotify_play", displayText: "Playing on Spotify", description: "Bir parçayı/sanatçıyı çal (yoksa sıradakine devam et)", parameters: "query (opsiyonel)" },
+      { name: "spotify_pause", displayText: "Pausing on Spotify", description: "Çalmayı duraklat", parameters: "yok" },
+      { name: "spotify_next", displayText: "Skip the song currently playing on Spotify", description: "Sıradaki parçaya geç", parameters: "yok" },
+      { name: "spotify_prev", displayText: "The previous song is playing on Spotify", description: "Önceki parçaya dön", parameters: "yok" },
+      { name: "spotify_search", displayText: "Searching on Spotify", description: "Spotify'da ara", parameters: "query, type (opsiyonel: track/artist/album)" },
+      { name: "spotify_queue_add", displayText: "Added to the queue on Spotify", description: "Sıraya parça ekle", parameters: "query" },
     ],
   },
   {
@@ -139,12 +154,12 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "gmail",
     connectionStatus: "disconnected",
     tools: [
-      { name: "gmail_unread_count", description: "Okunmamış mesaj sayısını getir", parameters: "yok" },
-      { name: "gmail_recent", description: "Son N mesajın özetini getir", parameters: "limit (varsayılan 10)" },
-      { name: "gmail_search", description: "Gmail araması (örn. from:x OR subject:y)", parameters: "query, limit (varsayılan 10)" },
-      { name: "gmail_draft", description: "Yeni taslak oluştur (gönderilmez)", parameters: "to, subject, body" },
-      { name: "gmail_send", description: "Doğrudan e-posta gönder", parameters: "to, subject, body" },
-      { name: "gmail_mark_as_read", description: "Maili okundu olarak işaretle veya arşivle", parameters: "messageId, action ('read' veya 'archive')" },
+      { name: "gmail_unread_count", displayText: "Getting unread emails count", description: "Okunmamış mesaj sayısını getir", parameters: "yok" },
+      { name: "gmail_recent", displayText: "Fetching recent emails", description: "Son N mesajın özetini getir", parameters: "limit (varsayılan 10)" },
+      { name: "gmail_search", displayText: "Searching emails on Gmail", description: "Gmail araması (örn. from:x OR subject:y)", parameters: "query, limit (varsayılan 10)" },
+      { name: "gmail_draft", displayText: "Creating email draft", description: "Yeni taslak oluştur (gönderilmez)", parameters: "to, subject, body" },
+      { name: "gmail_send", displayText: "Sending email", description: "Doğrudan e-posta gönder", parameters: "to, subject, body" },
+      { name: "gmail_mark_as_read", displayText: "Updating email status", description: "Maili okundu olarak işaretle veya arşivle", parameters: "messageId, action ('read' veya 'archive')" },
     ],
   },
   {
@@ -157,9 +172,9 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "gcalendar",
     connectionStatus: "disconnected",
     tools: [
-      { name: "calendar_today", description: "Bugünkü etkinlikleri getir", parameters: "yok" },
-      { name: "calendar_upcoming", description: "Yaklaşan etkinlikleri getir", parameters: "days (varsayılan 7)" },
-      { name: "calendar_create_event", description: "Yeni etkinlik oluştur", parameters: "title, start (ISO veya 'HH:MM bugün'), duration_min (opsiyonel 60), description (opsiyonel)" },
+      { name: "calendar_today", displayText: "Fetching today's calendar events", description: "Bugünkü etkinlikleri getir", parameters: "yok" },
+      { name: "calendar_upcoming", displayText: "Fetching upcoming calendar events", description: "Yaklaşan etkinlikleri getir", parameters: "days (varsayılan 7)" },
+      { name: "calendar_create_event", displayText: "Creating calendar event", description: "Yeni etkinlik oluştur", parameters: "title, start (ISO veya 'HH:MM bugün'), duration_min (opsiyonel 60), description (opsiyonel)" },
     ],
   },
   {
@@ -172,8 +187,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "vscode",
     connectionStatus: "disconnected",
     tools: [
-      { name: "vscode_open_path", description: "VS Code'da dosya veya klasör aç", parameters: "path, new_window (opsiyonel)" },
-      { name: "vscode_open_repo", description: "Bir git repo klasörünü yeni pencerede aç", parameters: "path" },
+      { name: "vscode_open_path", displayText: "Opening path in VS Code", description: "VS Code'da dosya veya klasör aç", parameters: "path, new_window (opsiyonel)" },
+      { name: "vscode_open_repo", displayText: "Opening git repository in VS Code", description: "Bir git repo klasörünü yeni pencerede aç", parameters: "path" },
     ],
   },
   {
@@ -186,8 +201,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "chrome",
     connectionStatus: "disconnected",
     tools: [
-      { name: "browser_open_url", description: "Varsayılan tarayıcıda URL aç", parameters: "url" },
-      { name: "browser_search", description: "Google'da arama yap (yeni sekme)", parameters: "query" },
+      { name: "browser_open_url", displayText: "Opening URL in browser", description: "Varsayılan tarayıcıda URL aç", parameters: "url" },
+      { name: "browser_search", displayText: "Searching on Google", description: "Google'da arama yap (yeni sekme)", parameters: "query" },
     ],
   },
   {
@@ -200,7 +215,7 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "wikipedia",
     connectionStatus: "disconnected",
     tools: [
-      { name: "wikipedia_summary", description: "Bir başlığın özetini getir (TR/EN otomatik)", parameters: "query, lang (opsiyonel: tr/en)" },
+      { name: "wikipedia_summary", displayText: "Fetching Wikipedia summary", description: "Bir başlığın özetini getir (TR/EN otomatik)", parameters: "query, lang (opsiyonel: tr/en)" },
     ],
   },
   {
@@ -213,8 +228,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "reddit",
     connectionStatus: "disconnected",
     tools: [
-      { name: "reddit_top", description: "Bir subreddit'in en popüler gönderilerini getir", parameters: "subreddit, limit (varsayılan 10)" },
-      { name: "reddit_search", description: "Reddit'te ara", parameters: "query, limit (varsayılan 10)" },
+      { name: "reddit_top", displayText: "Fetching top posts from Reddit", description: "Bir subreddit'in en popüler gönderilerini getir", parameters: "subreddit, limit (varsayılan 10)" },
+      { name: "reddit_search", displayText: "Searching on Reddit", description: "Reddit'te ara", parameters: "query, limit (varsayılan 10)" },
     ],
   },
   {
@@ -227,8 +242,8 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "hackernews",
     connectionStatus: "disconnected",
     tools: [
-      { name: "hn_top", description: "Top hikayeleri getir", parameters: "limit (varsayılan 10)" },
-      { name: "hn_new", description: "Yeni hikayeleri getir", parameters: "limit (varsayılan 10)" },
+      { name: "hn_top", displayText: "Fetching top stories from Hacker News", description: "Top hikayeleri getir", parameters: "limit (varsayılan 10)" },
+      { name: "hn_new", displayText: "Fetching new stories from Hacker News", description: "Yeni hikayeleri getir", parameters: "limit (varsayılan 10)" },
     ],
   },
   {
@@ -241,9 +256,9 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "obsidian",
     connectionStatus: "disconnected",
     tools: [
-      { name: "obsidian_list", description: "Vault'taki notları listele", parameters: "subdir (opsiyonel)" },
-      { name: "obsidian_read", description: "Bir notun içeriğini oku", parameters: "name" },
-      { name: "obsidian_append", description: "Bir nota satır ekle (yoksa oluştur)", parameters: "name, content" },
+      { name: "obsidian_list", displayText: "Listing Obsidian notes", description: "Vault'taki notları listele", parameters: "subdir (opsiyonel)" },
+      { name: "obsidian_read", displayText: "Reading Obsidian note", description: "Bir notun içeriğini oku", parameters: "name" },
+      { name: "obsidian_append", displayText: "Appending content to Obsidian note", description: "Bir nota satır ekle (yoksa oluştur)", parameters: "name, content" },
     ],
   },
   {
@@ -256,7 +271,7 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "active_window",
     connectionStatus: "disconnected",
     tools: [
-      { name: "active_window_get", description: "Şu an odaktaki pencerenin başlığını ve programını getir", parameters: "yok" },
+      { name: "active_window_get", displayText: "Detecting active window", description: "Şu an odaktaki pencerenin başlığını ve programını getir", parameters: "yok" },
     ],
   },
   {
@@ -269,10 +284,10 @@ const DEFAULT_APPS: AppIntegration[] = [
     icon: "price_tracker",
     connectionStatus: "disconnected",
     tools: [
-      { name: "price_track_add", description: "Bir ürün URL'sini takip listesine ekle. Sayfayı çekip ismini ve fiyatını otomatik bulur.", parameters: "url, target_price (opsiyonel, bu değerin altına düşerse alarm), name (opsiyonel, otomatik bulunur)" },
-      { name: "price_track_list", description: "Takip edilen tüm ürünleri ve mevcut fiyatlarını listele", parameters: "yok" },
-      { name: "price_track_remove", description: "Bir ürünü takipten çıkar", parameters: "id (price_track_list'ten gelen id)" },
-      { name: "price_track_check_now", description: "Bir ürünün fiyatını şimdi yeniden kontrol et", parameters: "id" },
+      { name: "price_track_add", displayText: "Adding product to price tracker", description: "Bir ürün URL'sini takip listesine ekle. Sayfayı çekip ismini ve fiyatını otomatik bulur.", parameters: "url, target_price (opsiyonel, bu değerin altına düşerse alarm), name (opsiyonel, otomatik bulunur)" },
+      { name: "price_track_list", displayText: "Listing tracked products", description: "Takip edilen tüm ürünleri ve mevcut fiyatlarını listele", parameters: "yok" },
+      { name: "price_track_remove", displayText: "Removing product from price tracker", description: "Bir ürünü takipten çıkar", parameters: "id (price_track_list'ten gelen id)" },
+      { name: "price_track_check_now", displayText: "Checking product price now", description: "Bir ürünün fiyatını şimdi yeniden kontrol et", parameters: "id" },
     ],
   },
 ];
@@ -311,6 +326,16 @@ export const useAppStore = create<AppState>()(
             a.id === id ? { ...a, config: { ...a.config, ...config } } : a
           ),
         }));
+        // Hassas alanlar keyring'e gider — boş değer verilirse kayıt silinir.
+        for (const key of SENSITIVE_CONFIG_KEYS) {
+          if (!(key in config)) continue;
+          const value = config[key];
+          if (value) {
+            void ipc.secretSet(secretStoreKey(id, key), value).catch(() => {});
+          } else {
+            void ipc.secretDelete(secretStoreKey(id, key)).catch(() => {});
+          }
+        }
       },
 
       setConnectionStatus: (id, status, error?) => {
@@ -391,7 +416,7 @@ export const useAppStore = create<AppState>()(
         try {
           // GitHub: Device Flow (mevcut, değiştirilmedi)
           if (id === "github") {
-            const clientId = app.config["client_id"];
+            const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
             if (!clientId) {
               get().setConnectionStatus(id, "error", "GitHub OAuth App Client ID gerekli.");
               return null;
@@ -508,7 +533,11 @@ export const useAppStore = create<AppState>()(
       name: "axiom-apps",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        apps: state.apps.map((a) => ({ ...a, connectionStatus: "disconnected" as const, lastError: undefined })),
+        apps: state.apps.map((a) => {
+          const config = { ...a.config };
+          for (const key of SENSITIVE_CONFIG_KEYS) delete config[key];
+          return { ...a, config, connectionStatus: "disconnected" as const, lastError: undefined };
+        }),
       }) as unknown as AppState,
       merge: (persisted, current) => {
         const p = persisted as Partial<AppState> | undefined;
@@ -517,21 +546,15 @@ export const useAppStore = create<AppState>()(
           const saved = p.apps!.find((a) => a.id === def.id);
           if (!saved) return def;
           const config = saved.config || {};
-          // Restart sonrası status'u dürüst yansıt: config'de kullanılabilir bir
-          // kimlik bilgisi varsa "connected" göster (her seferinde "disconnected"
-          // sıfırlaması kullanıcıyı "bağlıyım ama bağlı değil diyor" diye yanıltıyordu).
-          const hasCredential = Boolean(
-            config["access_token"] ||
-            config["refresh_token"] ||
-            config["personal_access_token"] ||
-            config["bot_token"] ||
-            config["integration_token"],
-          );
+          // Hassas alanlar artık localStorage'a yazılmıyor (keyring'de), o yüzden
+          // burada "connected" tespiti yapılamaz — geçici olarak "disconnected"
+          // gösterilir, `hydrateAppSecrets()` (App.tsx açılışta) keyring'den
+          // gerçek kimlik bilgilerini okuyup status'u saniyeler içinde düzeltir.
           return {
             ...def,
             enabled: saved.enabled,
             config,
-            connectionStatus: hasCredential ? ("connected" as const) : ("disconnected" as const),
+            connectionStatus: "disconnected" as const,
           };
         });
         return { ...current, apps: merged };
@@ -539,6 +562,36 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+/**
+ * Açılışta bir kez çağrılır: her app'in hassas alanlarını keyring'den okuyup
+ * in-memory config'e (localStorage'a değil) geri yazar ve gerçek bağlantı
+ * durumunu yansıtır. `updateConfig` KULLANILMAZ — aksi halde keyring'e
+ * gereksizce geri yazılır.
+ */
+export async function hydrateAppSecrets(): Promise<void> {
+  const apps = useAppStore.getState().apps;
+  for (const app of apps) {
+    const found: Record<string, string> = {};
+    for (const key of SENSITIVE_CONFIG_KEYS) {
+      if (app.config[key]) continue;
+      const value = await ipc.secretGet(secretStoreKey(app.id, key)).catch(() => null);
+      if (value) found[key] = value;
+    }
+    if (Object.keys(found).length === 0) continue;
+    useAppStore.setState((s) => ({
+      apps: s.apps.map((a) =>
+        a.id === app.id
+          ? {
+              ...a,
+              config: { ...a.config, ...found },
+              connectionStatus: a.connectionStatus === "connected" ? a.connectionStatus : "connected",
+            }
+          : a
+      ),
+    }));
+  }
+}
 
 // ---- App Tool Execution Engine ----
 

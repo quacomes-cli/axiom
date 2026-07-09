@@ -533,4 +533,16 @@ export const ipc = {
   mcpCall(server: string, tool: string, args: Record<string, unknown>): Promise<string> {
     return invoke("mcp_call", { server, tool, args });
   },
+
+  // ---- Genel amaçlı sır saklama (Windows Credential Manager) ----
+  /** Uygulama entegrasyonu token'larını (bot_token vb.) keyring'e yazar. */
+  secretSet(key: string, value: string): Promise<void> {
+    return invoke("secret_set", { key, value });
+  },
+  secretGet(key: string): Promise<string | null> {
+    return invoke("secret_get", { key });
+  },
+  secretDelete(key: string): Promise<void> {
+    return invoke("secret_delete", { key });
+  },
 };

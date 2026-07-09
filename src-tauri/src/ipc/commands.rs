@@ -308,6 +308,25 @@ pub fn cloud_providers_set(
     crate::settings::save(&settings_state.config_path, &settings)
 }
 
+// ---- Genel amaçlı sır saklama (keyring) ----------------------------------------
+// Uygulama entegrasyonu token'ları (Telegram bot_token vb.) için: frontend
+// bu sır değerlerini localStorage'a değil buraya yazar/okur.
+
+#[tauri::command]
+pub fn secret_set(key: String, value: String) -> Result<(), String> {
+    crate::settings::store_secret(&key, &value)
+}
+
+#[tauri::command]
+pub fn secret_get(key: String) -> Option<String> {
+    crate::settings::read_secret(&key)
+}
+
+#[tauri::command]
+pub fn secret_delete(key: String) {
+    crate::settings::delete_secret(&key)
+}
+
 // ---- Web Search ---------------------------------------------------------------
 
 use crate::search::SearchResult;

@@ -112,6 +112,8 @@ function VoiceSettings() {
     model: "base",
     language: "auto",
     pushToTalk: false,
+    vadSilenceMs: 1200,
+    vadThreshold: 0.012,
   };
 
   useEffect(() => {
@@ -167,6 +169,44 @@ function VoiceSettings() {
           onChange={(v) => update({ voice: { ...voice, language: v } })}
         />
       </SettingRow>
+
+      <div className="rounded-xl bg-surface-2 px-3.5 py-3">
+        <div className="mb-2 flex items-center justify-between text-[0.9286rem] text-text-secondary">
+          <span>{t("settings.voice.vadSilence")}</span>
+          <span className="text-text-faint tabular-nums">{(voice.vadSilenceMs / 1000).toFixed(1)}s</span>
+        </div>
+        <input
+          type="range"
+          min={400}
+          max={3000}
+          step={100}
+          value={voice.vadSilenceMs}
+          onChange={(e) =>
+            update({ voice: { ...voice, vadSilenceMs: parseInt(e.target.value, 10) } })
+          }
+          className="w-full accent-blue-400"
+        />
+        <p className="mt-1 text-[0.7143rem] text-text-faint">{t("settings.voice.vadSilenceHint")}</p>
+      </div>
+
+      <div className="rounded-xl bg-surface-2 px-3.5 py-3">
+        <div className="mb-2 flex items-center justify-between text-[0.9286rem] text-text-secondary">
+          <span>{t("settings.voice.vadSensitivity")}</span>
+          <span className="text-text-faint tabular-nums">{voice.vadThreshold.toFixed(3)}</span>
+        </div>
+        <input
+          type="range"
+          min={0.004}
+          max={0.04}
+          step={0.001}
+          value={voice.vadThreshold}
+          onChange={(e) =>
+            update({ voice: { ...voice, vadThreshold: parseFloat(e.target.value) } })
+          }
+          className="w-full accent-blue-400"
+        />
+        <p className="mt-1 text-[0.7143rem] text-text-faint">{t("settings.voice.vadSensitivityHint")}</p>
+      </div>
 
       <div className="rounded-xl bg-surface-2 px-3.5 py-3">
         <div className="text-[0.9286rem] text-text-secondary mb-2">{t("settings.voice.whisperModel")}</div>

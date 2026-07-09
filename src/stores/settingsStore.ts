@@ -44,6 +44,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     model: "base",
     language: "auto",
     pushToTalk: false,
+    vadSilenceMs: 1200,
+    vadThreshold: 0.012,
   },
   memory: {
     enabled: true,
