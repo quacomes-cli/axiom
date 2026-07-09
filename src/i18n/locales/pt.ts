@@ -49,6 +49,9 @@ export const pt: typeof en = {
     aboutWebsite: "Site",
   },
   voiceMode: {
+    title: "Chat de voz",
+    downloadVoice: "Baixar voz natural (Piper)",
+    downloadingVoice: "Baixando pacote de voz… {{pct}}%",
     listening: "Ouvindo…",
     hearing: "Estou te ouvindo…",
     transcribing: "Transcrevendo…",

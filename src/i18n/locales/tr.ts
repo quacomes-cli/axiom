@@ -49,6 +49,9 @@ export const tr: typeof en = {
     aboutWebsite: "Web sitesi",
   },
   voiceMode: {
+    title: "Sesli sohbet",
+    downloadVoice: "Doğal ses paketini indir (Piper)",
+    downloadingVoice: "Ses paketi indiriliyor… %{{pct}}",
     listening: "Dinliyor…",
     hearing: "Seni duyuyorum…",
     transcribing: "Yazıya döküyor…",

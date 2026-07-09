@@ -49,6 +49,9 @@ export const fr: typeof en = {
     aboutWebsite: "Site web",
   },
   voiceMode: {
+    title: "Chat vocal",
+    downloadVoice: "Télécharger la voix naturelle (Piper)",
+    downloadingVoice: "Téléchargement du pack vocal… {{pct}}%",
     listening: "À l'écoute…",
     hearing: "Je t'entends…",
     transcribing: "Transcription…",

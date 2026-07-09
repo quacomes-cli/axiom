@@ -49,6 +49,9 @@ export const de: typeof en = {
     aboutWebsite: "Webseite",
   },
   voiceMode: {
+    title: "Sprachchat",
+    downloadVoice: "Natürliche Stimme laden (Piper)",
+    downloadingVoice: "Sprachpaket wird geladen… {{pct}}%",
     listening: "Höre zu…",
     hearing: "Ich höre dich…",
     transcribing: "Transkribiere…",

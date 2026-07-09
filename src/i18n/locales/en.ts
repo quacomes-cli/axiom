@@ -50,6 +50,9 @@ export const en = {
     aboutWebsite: "Website",
   },
   voiceMode: {
+    title: "Voice chat",
+    downloadVoice: "Download natural voice (Piper)",
+    downloadingVoice: "Downloading voice pack… {{pct}}%",
     listening: "Listening…",
     hearing: "Hearing you…",
     transcribing: "Transcribing…",

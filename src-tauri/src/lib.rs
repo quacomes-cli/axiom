@@ -11,6 +11,7 @@ mod search;
 mod settings;
 mod shell;
 mod skills;
+mod tts;
 use std::sync::RwLock;
 use tauri::Manager;
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -59,6 +60,16 @@ pub fn run() {
                 .expect("failed to resolve app config dir");
             let engine = PermissionEngine::load(config_dir.join("permissions.json"));
             app.manage(engine);
+
+            // Piper TTS motoru: kuyruk boşalınca frontend'e "tts-idle" düşer
+            // (sesli mod "konuşma bitti → dinlemeye dön" sinyali).
+            {
+                use tauri::Emitter;
+                let handle = app.handle().clone();
+                tts::init(move || {
+                    let _ = handle.emit("tts-idle", ());
+                });
+            }
 
             let settings_path = config_dir.join("settings.json");
             let app_settings = settings::load_or_default(&settings_path);
@@ -246,10 +257,16 @@ pub fn run() {
             ipc::commands::cache_alarm_audio,
             ipc::commands::audio_start_recording,
             ipc::commands::audio_start_recording_vad,
+            ipc::commands::audio_transcribe_snapshot,
             ipc::commands::audio_cancel_recording,
             ipc::commands::audio_stop_and_transcribe,
             ipc::commands::audio_model_status,
             ipc::commands::audio_download_model,
+            ipc::commands::tts_status,
+            ipc::commands::tts_download,
+            ipc::commands::tts_speak,
+            ipc::commands::tts_stop,
+            ipc::commands::tts_is_busy,
             ipc::commands::screen_list_monitors,
             ipc::commands::screen_capture,
             ipc::commands::memory_store,

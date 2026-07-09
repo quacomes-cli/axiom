@@ -49,6 +49,9 @@ export const ja: typeof en = {
     aboutWebsite: "ウェブサイト",
   },
   voiceMode: {
+    title: "ボイスチャット",
+    downloadVoice: "自然な音声をダウンロード (Piper)",
+    downloadingVoice: "音声パックをダウンロード中… {{pct}}%",
     listening: "聞いています…",
     hearing: "聞こえています…",
     transcribing: "文字起こし中…",

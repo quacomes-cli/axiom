@@ -49,6 +49,9 @@ export const zh: typeof en = {
     aboutWebsite: "网站",
   },
   voiceMode: {
+    title: "语音聊天",
+    downloadVoice: "下载自然语音 (Piper)",
+    downloadingVoice: "正在下载语音包… {{pct}}%",
     listening: "聆听中…",
     hearing: "听到你了…",
     transcribing: "转写中…",

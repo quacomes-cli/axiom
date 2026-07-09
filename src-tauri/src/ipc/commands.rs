@@ -1284,6 +1284,28 @@ pub fn audio_cancel_recording(session_id: String) -> Result<(), String> {
     audio::cancel_recording(&session_id).map_err(|e| e.to_string())
 }
 
+/// Kayıt sürerken canlı (partial) transkript — sesli modda anlık yazım.
+/// Ağır iş: async + spawn_blocking (UI thread'i kilitlenmesin).
+#[tauri::command]
+pub async fn audio_transcribe_snapshot(
+    app: tauri::AppHandle,
+    session_id: String,
+    model_name: String,
+    language: Option<String>,
+) -> Result<String, String> {
+    let config_dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dir bulunamadı: {e}"))?;
+    let model = audio::model_path(&config_dir, &model_name);
+    tauri::async_runtime::spawn_blocking(move || {
+        audio::transcribe_snapshot(&session_id, &model, language.as_deref(), 12)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("task hatası: {e}"))?
+}
+
 #[tauri::command]
 pub fn audio_stop_and_transcribe(
     app: tauri::AppHandle,
@@ -1304,6 +1326,172 @@ pub fn audio_stop_and_transcribe(
         sample_count: res.sample_count,
         duration_ms: res.duration_ms,
     })
+}
+
+// ---- Piper TTS (doğal sesler) ------------------------------------------------
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TtsStatus {
+    pub piper_installed: bool,
+    pub voice_installed: bool,
+    pub voice: String,
+}
+
+#[tauri::command]
+pub fn tts_status(app: tauri::AppHandle, voice: Option<String>) -> Result<TtsStatus, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dir bulunamadı: {e}"))?;
+    let voice = voice.unwrap_or_else(|| crate::tts::DEFAULT_VOICE.to_string());
+    let (piper, model) = crate::tts::is_installed(&dir, &voice);
+    Ok(TtsStatus {
+        piper_installed: piper,
+        voice_installed: model,
+        voice,
+    })
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TtsDownloadEvent {
+    pub stage: String, // "piper" | "voice"
+    pub downloaded_bytes: u64,
+    pub total_bytes: u64,
+    pub done: bool,
+    pub error: Option<String>,
+}
+
+async fn download_to(
+    app: &tauri::AppHandle,
+    url: &str,
+    target: &std::path::Path,
+    stage: &str,
+) -> Result<(), String> {
+    use futures_util::StreamExt;
+    use tauri::Emitter;
+    use tokio::io::AsyncWriteExt;
+
+    if let Some(parent) = target.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("dizin oluşturulamadı: {e}"))?;
+    }
+    let tmp = target.with_extension("part");
+    let resp = reqwest::Client::new()
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| format!("indirme başlatılamadı: {e}"))?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {} ({url})", resp.status()));
+    }
+    let total = resp.content_length().unwrap_or(0);
+    let mut file = tokio::fs::File::create(&tmp)
+        .await
+        .map_err(|e| format!("dosya oluşturulamadı: {e}"))?;
+    let mut stream = resp.bytes_stream();
+    let mut downloaded: u64 = 0;
+    let mut last = std::time::Instant::now();
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| format!("indirme hatası: {e}"))?;
+        downloaded += bytes.len() as u64;
+        file.write_all(&bytes).await.map_err(|e| e.to_string())?;
+        if last.elapsed().as_millis() > 200 {
+            let _ = app.emit(
+                "tts-download-progress",
+                TtsDownloadEvent {
+                    stage: stage.to_string(),
+                    downloaded_bytes: downloaded,
+                    total_bytes: total,
+                    done: false,
+                    error: None,
+                },
+            );
+            last = std::time::Instant::now();
+        }
+    }
+    file.flush().await.map_err(|e| e.to_string())?;
+    drop(file);
+    tokio::fs::rename(&tmp, target)
+        .await
+        .map_err(|e| format!("dosya taşınamadı: {e}"))?;
+    Ok(())
+}
+
+/// Piper binary'sini (yoksa) + ses modelini indirir.
+#[tauri::command]
+pub async fn tts_download(app: tauri::AppHandle, voice: Option<String>) -> Result<(), String> {
+    use tauri::Emitter;
+
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dir bulunamadı: {e}"))?;
+    let voice = voice.unwrap_or_else(|| crate::tts::DEFAULT_VOICE.to_string());
+
+    // 1) Piper binary (zip) — yoksa indir + aç.
+    if !crate::tts::piper_exe(&dir).exists() {
+        let zip_path = crate::tts::piper_dir(&dir).join("piper.zip");
+        download_to(&app, crate::tts::piper_zip_url(), &zip_path, "piper").await?;
+
+        let extract_dir = crate::tts::piper_dir(&dir);
+        let zp = zip_path.clone();
+        tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+            let file = std::fs::File::open(&zp).map_err(|e| e.to_string())?;
+            let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+            archive.extract(&extract_dir).map_err(|e| e.to_string())?;
+            Ok(())
+        })
+        .await
+        .map_err(|e| format!("task hatası: {e}"))??;
+        let _ = tokio::fs::remove_file(&zip_path).await;
+    }
+
+    // 2) Ses modeli (.onnx + .onnx.json).
+    let model = crate::tts::voice_model_path(&dir, &voice);
+    if !model.exists() {
+        let onnx_url = crate::tts::voice_download_url(&voice, false)
+            .ok_or_else(|| format!("geçersiz ses adı: {voice}"))?;
+        let json_url = crate::tts::voice_download_url(&voice, true).unwrap();
+        download_to(&app, &json_url, &model.with_extension("onnx.json"), "voice").await?;
+        download_to(&app, &onnx_url, &model, "voice").await?;
+    }
+
+    let _ = app.emit(
+        "tts-download-progress",
+        TtsDownloadEvent {
+            stage: "voice".into(),
+            downloaded_bytes: 0,
+            total_bytes: 0,
+            done: true,
+            error: None,
+        },
+    );
+    Ok(())
+}
+
+/// Cümleyi konuşma kuyruğuna ekler (stream cevap cümle cümle okunur).
+#[tauri::command]
+pub fn tts_speak(app: tauri::AppHandle, text: String, voice: Option<String>) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dir bulunamadı: {e}"))?;
+    let voice = voice.unwrap_or_else(|| crate::tts::DEFAULT_VOICE.to_string());
+    crate::tts::speak(&dir, &voice, &text)
+}
+
+/// Barge-in: kuyruğu ve çalan sesi anında keser.
+#[tauri::command]
+pub fn tts_stop() {
+    crate::tts::stop();
+}
+
+#[tauri::command]
+pub fn tts_is_busy() -> bool {
+    crate::tts::is_busy()
 }
 
 #[tauri::command]

@@ -259,8 +259,44 @@ export const ipc = {
     });
   },
 
+  /** Kayıt SÜRERKEN canlı (partial) transkript — sesli modda anlık yazım. */
+  audioTranscribeSnapshot(
+    sessionId: string,
+    modelName: string,
+    language?: string,
+  ): Promise<string> {
+    return invoke<string>("audio_transcribe_snapshot", {
+      sessionId,
+      modelName,
+      language: language ?? null,
+    });
+  },
+
   audioModelStatus(modelName: string): Promise<import("../types").WhisperModelStatus> {
     return invoke("audio_model_status", { modelName });
+  },
+
+  // ---- Piper TTS (doğal sesler) ---------------------------------------------
+
+  ttsStatus(voice?: string): Promise<{ piperInstalled: boolean; voiceInstalled: boolean; voice: string }> {
+    return invoke("tts_status", { voice: voice ?? null });
+  },
+
+  ttsDownload(voice?: string): Promise<void> {
+    return invoke<void>("tts_download", { voice: voice ?? null });
+  },
+
+  /** Cümleyi Rust'taki Piper kuyruğuna ekler (sıralı çalınır). */
+  ttsSpeak(text: string, voice?: string): Promise<void> {
+    return invoke<void>("tts_speak", { text, voice: voice ?? null });
+  },
+
+  ttsStop(): Promise<void> {
+    return invoke<void>("tts_stop");
+  },
+
+  ttsIsBusy(): Promise<boolean> {
+    return invoke<boolean>("tts_is_busy");
   },
 
   audioDownloadModel(modelName: string): Promise<string> {

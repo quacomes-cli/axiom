@@ -1,10 +1,9 @@
-// Canlı sesli asistan döngüsü (Faz 6):
-//   dinle → (VAD segment-end) → transkript → chatStore.send → cevap bitince
-//   TTS oku → tekrar dinle. Barge-in: TTS çalarken kullanıcı konuşmaya
-//   başlarsa (speech-start) TTS anında susturulur.
-//
-// Kayıt/VAD Rust'ta (audio_start_recording_vad + "voice-vad" event'i);
-// bu hook yalnızca durum makinesi + TTS orkestrasyonu.
+// Canlı sesli asistan döngüsü v2 (Gemini Live tarzı):
+//   dinle (CANLI partial transkript ekranda, düzeltmeler dahil)
+//   → segment biter → final transkript → send()
+//   → cevap STREAM edilirken tamamlanan cümleler ANINDA seslendirilir
+//     (Piper doğal ses — Rust kuyruk; yoksa SpeechSynthesis fallback)
+//   → konuşma biter → tekrar dinle. Barge-in: speech-start → TTS kesilir.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -15,11 +14,11 @@ import { sanitizeForSpeech } from "./useTTS";
 
 export type VoicePhase =
   | "idle"
-  | "listening" // mikrofon açık, konuşma bekleniyor
-  | "hearing" // konuşma algılandı, sürüyor
+  | "listening"
+  | "hearing" // konuşma algılandı, partial yazım akıyor
   | "transcribing"
-  | "responding" // model cevap üretiyor
-  | "speaking" // TTS okuyor
+  | "responding" // model üretiyor (cümleler anlık okunuyor)
+  | "speaking" // üretim bitti, kalan kuyruk okunuyor
   | "error";
 
 interface VadPayload {
@@ -27,47 +26,109 @@ interface VadPayload {
   kind: "speech-start" | "segment-end";
 }
 
+/** Metinden tamamlanmış cümleleri ayırır; kalan (yarım) kısmı döner. */
+function splitSentences(buf: string): { done: string[]; rest: string } {
+  const re = /[^.!?…\n]*[.!?…]+[)\]"'”]*\s*|[^\n]*\n+/g;
+  const done: string[] = [];
+  let consumed = 0;
+  for (const m of buf.matchAll(re)) {
+    if (m.index !== consumed) break; // aradaki boşluk — dur
+    done.push(m[0]);
+    consumed += m[0].length;
+  }
+  return { done, rest: buf.slice(consumed) };
+}
+
 export interface UseVoiceConversation {
   phase: VoicePhase;
-  /** Son tanınan kullanıcı sözü (overlay'de gösterilir). */
-  lastTranscript: string;
+  /** Canlı (partial) veya kesinleşen kullanıcı sözü. */
+  transcript: string;
+  /** Modelin akan cevabı (tool blokları temizlenmiş). */
+  reply: string;
   error: string | null;
+  /** Piper doğal ses paketi durumu. */
+  piperReady: boolean;
+  downloadingPct: number | null;
   start: () => Promise<void>;
   stop: () => Promise<void>;
+  downloadPiper: () => Promise<void>;
 }
 
 export function useVoiceConversation(): UseVoiceConversation {
   const [phase, setPhase] = useState<VoicePhase>("idle");
-  const [lastTranscript, setLastTranscript] = useState("");
+  const [transcript, setTranscript] = useState("");
+  const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [piperReady, setPiperReady] = useState(false);
+  const [downloadingPct, setDownloadingPct] = useState<number | null>(null);
 
-  // Aktiflik/oturum ref'leri — event callback'leri güncel değeri görsün.
   const activeRef = useRef(false);
   const sessionRef = useRef<string | null>(null);
   const phaseRef = useRef<VoicePhase>("idle");
+  const piperRef = useRef(false);
+  /** SpeechSynthesis fallback'te kuyruktaki utterance sayısı. */
+  const fallbackPendingRef = useRef(0);
+  /** Model üretimi bitti mi (tts-idle geldiğinde dinlemeye dönme kararı için). */
+  const generationDoneRef = useRef(true);
+
   const setPhaseBoth = (p: VoicePhase) => {
     phaseRef.current = p;
     setPhase(p);
   };
 
-  const stopTts = () => {
+  // ---- TTS (Piper öncelikli, SpeechSynthesis fallback) -----------------------
+
+  const speakSentence = useCallback((raw: string) => {
+    const text = sanitizeForSpeech(raw).trim();
+    if (!text) return;
+    if (piperRef.current) {
+      void ipc.ttsSpeak(text).catch((e) => console.warn("[voice] tts:", e));
+    } else {
+      const cfg = useSettingsStore.getState().settings?.tts;
+      const u = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      const found = cfg?.voice ? voices.find((v) => v.name === cfg.voice) : undefined;
+      const tr = voices.find((v) => v.lang.toLowerCase().startsWith("tr"));
+      if (found ?? tr) u.voice = (found ?? tr)!;
+      u.rate = Math.max(0.5, Math.min(2.0, cfg?.rate || 1.0));
+      fallbackPendingRef.current += 1;
+      const doneOne = () => {
+        fallbackPendingRef.current -= 1;
+        if (
+          fallbackPendingRef.current <= 0 &&
+          generationDoneRef.current &&
+          activeRef.current &&
+          phaseRef.current === "speaking"
+        ) {
+          void beginListening();
+        }
+      };
+      u.onend = doneOne;
+      u.onerror = doneOne;
+      window.speechSynthesis.speak(u);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const stopTts = useCallback(() => {
+    if (piperRef.current) void ipc.ttsStop().catch(() => {});
     try {
       window.speechSynthesis.cancel();
     } catch {
       /* yok say */
     }
-  };
+    fallbackPendingRef.current = 0;
+  }, []);
 
-  /** Yeni bir dinleme segmenti başlatır (model hazırsa). */
+  // ---- Dinleme ---------------------------------------------------------------
+
   const beginListening = useCallback(async () => {
     if (!activeRef.current) return;
     const voice = useSettingsStore.getState().settings?.voice;
     const modelName = voice?.model ?? "base";
-
     try {
       const status = await ipc.audioModelStatus(modelName);
       if (!status.installed) {
-        // Sesli modda sessizce indirme başlatmak kafa karıştırır — hata göster.
         setError(`Whisper modeli (${modelName}) yüklü değil — Ayarlar → Ses`);
         setPhaseBoth("error");
         activeRef.current = false;
@@ -76,15 +137,42 @@ export function useVoiceConversation(): UseVoiceConversation {
       const sessionId = crypto.randomUUID();
       sessionRef.current = sessionId;
       await ipc.audioStartRecordingVad(sessionId);
+      setTranscript("");
       setPhaseBoth("listening");
+      void partialLoop(sessionId);
     } catch (e) {
       setError(String(e));
       setPhaseBoth("error");
       activeRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /** Segment bitti: transkript → send → TTS → tekrar dinle. */
+  /** Canlı yazım: kayıt sürerken ardışık snapshot transkriptleri. */
+  const partialLoop = useCallback(async (sessionId: string) => {
+    const voice = useSettingsStore.getState().settings?.voice;
+    const modelName = voice?.model ?? "base";
+    const language =
+      voice?.language && voice.language !== "auto" ? voice.language : undefined;
+
+    while (activeRef.current && sessionRef.current === sessionId) {
+      // Yalnızca konuşma varken çöz (boş odada CPU yakma).
+      if (phaseRef.current === "hearing") {
+        try {
+          const text = await ipc.audioTranscribeSnapshot(sessionId, modelName, language);
+          if (sessionRef.current === sessionId && text.trim()) {
+            setTranscript(text.trim());
+          }
+        } catch {
+          /* snapshot hatası önemsiz — bir sonraki turda tekrar */
+        }
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+  }, []);
+
+  // ---- Segment → cevap → konuşma ---------------------------------------------
+
   const handleSegmentEnd = useCallback(async () => {
     const sessionId = sessionRef.current;
     if (!sessionId || !activeRef.current) return;
@@ -103,99 +191,138 @@ export function useVoiceConversation(): UseVoiceConversation {
     } catch (e) {
       console.warn("[voice] transkripsiyon hatası:", e);
     }
-
     if (!activeRef.current) return;
-    // Boş/anlamsız segment → yeniden dinle.
     if (text.length < 2) {
       void beginListening();
       return;
     }
 
-    setLastTranscript(text);
+    setTranscript(text);
+    setReply("");
     setPhaseBoth("responding");
+    generationDoneRef.current = false;
 
     const chat = useChatStore.getState();
     if (!chat.activeChatId) chat.newChat();
+    const chatId = useChatStore.getState().activeChatId;
+
+    // STREAMING KONUŞMA: cevap büyürken tamamlanan cümleleri anında oku.
+    let spokenUpTo = 0;
+    let agentMsgId: string | null = null;
+    const unsub = useChatStore.subscribe((s) => {
+      const c = s.chats.find((cc) => cc.id === chatId);
+      const last = c?.messages[c.messages.length - 1];
+      if (!last || last.role !== "agent") return;
+      if (agentMsgId && last.id !== agentMsgId) return;
+      agentMsgId = last.id;
+
+      const clean = sanitizeForSpeech(last.text);
+      setReply(clean);
+      const fresh = clean.slice(spokenUpTo);
+      const { done } = splitSentences(fresh);
+      for (const sentence of done) {
+        speakSentence(sentence);
+        spokenUpTo += sentence.length;
+      }
+    });
+
     try {
-      await chat.send(text);
+      await useChatStore.getState().send(text);
     } catch (e) {
       console.warn("[voice] send hatası:", e);
+    } finally {
+      unsub();
+      generationDoneRef.current = true;
     }
     if (!activeRef.current) return;
 
-    // Son agent cevabını TTS ile oku; bitince tekrar dinle.
+    // Kalan yarım cümleyi de oku.
     const state = useChatStore.getState();
-    const active = state.chats.find((c) => c.id === state.activeChatId);
-    const lastAgent = [...(active?.messages ?? [])]
-      .reverse()
-      .find((m) => m.role === "agent" && m.text.trim());
-    const spoken = lastAgent ? sanitizeForSpeech(lastAgent.text) : "";
-
-    if (!spoken) {
-      void beginListening();
-      return;
+    const c = state.chats.find((cc) => cc.id === chatId);
+    const last = c?.messages[c.messages.length - 1];
+    if (last && last.role === "agent") {
+      const clean = sanitizeForSpeech(last.text);
+      setReply(clean);
+      const tail = clean.slice(spokenUpTo).trim();
+      if (tail) speakSentence(tail);
     }
 
-    setPhaseBoth("speaking");
-    const cfg = useSettingsStore.getState().settings?.tts;
-    const utter = new SpeechSynthesisUtterance(spoken);
-    const voices = window.speechSynthesis.getVoices();
-    if (cfg?.voice) {
-      const found = voices.find((v) => v.name === cfg.voice);
-      if (found) utter.voice = found;
+    // Hâlâ konuşacak şey var mı? Varsa "speaking" — tts-idle dinlemeye döndürür.
+    const busy = piperRef.current
+      ? await ipc.ttsIsBusy().catch(() => false)
+      : fallbackPendingRef.current > 0;
+    if (busy) {
+      setPhaseBoth("speaking");
     } else {
-      const tr = voices.find((v) => v.lang.toLowerCase().startsWith("tr"));
-      if (tr) utter.voice = tr;
+      void beginListening();
     }
-    utter.rate = Math.max(0.5, Math.min(2.0, cfg?.rate || 1.0));
+  }, [beginListening, speakSentence]);
 
-    // Barge-in: konuşma sırasında da mikrofon dinlemede kalır — speech-start
-    // gelirse TTS kesilir (aşağıdaki event handler). Bu yüzden TTS başlarken
-    // yeni bir VAD oturumu açıyoruz.
-    utter.onend = () => {
-      if (!activeRef.current) return;
-      // TTS bitti; mikrofon zaten açık (barge-in oturumu) → dinlemeye dön.
-      if (phaseRef.current === "speaking") setPhaseBoth("listening");
-    };
-    utter.onerror = utter.onend;
-    stopTts();
-    window.speechSynthesis.speak(utter);
+  // ---- Event köprüleri ---------------------------------------------------------
 
-    // TTS sürerken barge-in için dinlemeyi hemen başlat.
-    void beginListening().then(() => {
-      // beginListening fazı "listening" yapar; TTS hâlâ çalıyorsa "speaking"e çek.
-      if (activeRef.current && window.speechSynthesis.speaking) {
-        setPhaseBoth("speaking");
-      }
-    });
-  }, [beginListening]);
-
-  // VAD event köprüsü.
   useEffect(() => {
-    let unlisten: UnlistenFn | null = null;
+    const unlistens: UnlistenFn[] = [];
     (async () => {
-      unlisten = await listen<VadPayload>("voice-vad", (e) => {
-        if (!activeRef.current) return;
-        if (e.payload.sessionId !== sessionRef.current) return;
-        if (e.payload.kind === "speech-start") {
-          // Barge-in: kullanıcı konuşmaya başladı — TTS'i sustur.
-          stopTts();
-          setPhaseBoth("hearing");
-        } else if (e.payload.kind === "segment-end") {
-          void handleSegmentEnd();
-        }
-      });
+      unlistens.push(
+        await listen<VadPayload>("voice-vad", (e) => {
+          if (!activeRef.current) return;
+          if (e.payload.sessionId !== sessionRef.current) return;
+          if (e.payload.kind === "speech-start") {
+            stopTts(); // barge-in
+            setPhaseBoth("hearing");
+          } else if (e.payload.kind === "segment-end") {
+            void handleSegmentEnd();
+          }
+        }),
+      );
+      unlistens.push(
+        await listen("tts-idle", () => {
+          if (!activeRef.current) return;
+          if (phaseRef.current === "speaking" && generationDoneRef.current) {
+            void beginListening();
+          }
+        }),
+      );
+      unlistens.push(
+        await listen<{ downloadedBytes: number; totalBytes: number; done: boolean }>(
+          "tts-download-progress",
+          (e) => {
+            if (e.payload.done) {
+              setDownloadingPct(null);
+              setPiperReady(true);
+              piperRef.current = true;
+            } else if (e.payload.totalBytes > 0) {
+              setDownloadingPct(
+                Math.round((e.payload.downloadedBytes / e.payload.totalBytes) * 100),
+              );
+            }
+          },
+        ),
+      );
     })();
     return () => {
-      if (unlisten) unlisten();
+      unlistens.forEach((u) => u());
     };
-  }, [handleSegmentEnd]);
+  }, [handleSegmentEnd, beginListening, stopTts]);
+
+  // ---- Kontroller ---------------------------------------------------------------
 
   const start = useCallback(async () => {
     if (activeRef.current) return;
     activeRef.current = true;
     setError(null);
-    setLastTranscript("");
+    setTranscript("");
+    setReply("");
+    generationDoneRef.current = true;
+    try {
+      const st = await ipc.ttsStatus();
+      const ready = st.piperInstalled && st.voiceInstalled;
+      piperRef.current = ready;
+      setPiperReady(ready);
+    } catch {
+      piperRef.current = false;
+      setPiperReady(false);
+    }
     await beginListening();
   }, [beginListening]);
 
@@ -212,9 +339,21 @@ export function useVoiceConversation(): UseVoiceConversation {
       }
     }
     setPhaseBoth("idle");
+  }, [stopTts]);
+
+  const downloadPiper = useCallback(async () => {
+    setDownloadingPct(0);
+    try {
+      await ipc.ttsDownload();
+      piperRef.current = true;
+      setPiperReady(true);
+    } catch (e) {
+      setError(`Ses paketi indirilemedi: ${String(e)}`);
+    } finally {
+      setDownloadingPct(null);
+    }
   }, []);
 
-  // Unmount'ta temizle.
   useEffect(() => {
     return () => {
       void stop();
@@ -222,5 +361,5 @@ export function useVoiceConversation(): UseVoiceConversation {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { phase, lastTranscript, error, start, stop };
+  return { phase, transcript, reply, error, piperReady, downloadingPct, start, stop, downloadPiper };
 }

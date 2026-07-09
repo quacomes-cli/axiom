@@ -49,6 +49,9 @@ export const ru: typeof en = {
     aboutWebsite: "Сайт",
   },
   voiceMode: {
+    title: "Голосовой чат",
+    downloadVoice: "Скачать естественный голос (Piper)",
+    downloadingVoice: "Загрузка голосового пакета… {{pct}}%",
     listening: "Слушаю…",
     hearing: "Слышу вас…",
     transcribing: "Расшифровка…",

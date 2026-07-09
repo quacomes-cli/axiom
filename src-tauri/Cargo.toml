@@ -1,6 +1,6 @@
 [package]
 name = "axiom"
-version = "0.1.77"
+version = "0.1.82"
 description = "Axiom - yerel yapay zeka asistani"
 authors = ["Axiom"]
 edition = "2021"
@@ -47,6 +47,8 @@ globset = "0.4"
 similar = "2"
 cpal = "0.15"
 hound = "3"
+# Piper TTS wav çıktısını çalmak için — decoder'lar kapalı, yalnız wav.
+rodio = { version = "0.19", default-features = false, features = ["wav"] }
 whisper-rs = { version = "0.16", default-features = false }
 uuid = { version = "1", features = ["v4"] }
 parking_lot = "0.12"

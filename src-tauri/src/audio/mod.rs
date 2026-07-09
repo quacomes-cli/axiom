@@ -101,6 +101,8 @@ struct Session {
     tx: mpsc::Sender<WorkerCmd>,
     /// Receiver for the final PCM (mono f32 @ 16 kHz) once the worker exits.
     result_rx: mpsc::Receiver<Vec<f32>>,
+    /// Canlı buffer — kayıt SÜRERKEN snapshot transkript için paylaşılır.
+    buffer: Arc<Mutex<Vec<f32>>>,
     /// Source sample rate (for reference / debugging only).
     source_sample_rate: u32,
     /// Source channel count (1 or 2).
@@ -150,10 +152,16 @@ fn start_recording_inner(
     let (cmd_tx, cmd_rx) = mpsc::channel::<WorkerCmd>();
     let (result_tx, result_rx) = mpsc::channel::<Vec<f32>>();
 
+    // Buffer thread dışında yaratılır: Session'a bir Arc kopyası konur ki kayıt
+    // SÜRERKEN snapshot transkript (canlı yazım) buffer'ı okuyabilsin.
+    let shared_buffer: Arc<Mutex<Vec<f32>>> =
+        Arc::new(Mutex::new(Vec::with_capacity(TARGET_SR as usize * 30)));
+
     // The cpal Stream is !Send on many platforms; build it inside a dedicated
     // worker thread and park there until we get a stop signal.
+    let buffer_for_worker = Arc::clone(&shared_buffer);
     thread::spawn(move || {
-        let buffer: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(TARGET_SR as usize * 30)));
+        let buffer = buffer_for_worker;
 
         let buf_clone = Arc::clone(&buffer);
         let err_fn = |e| eprintln!("[audio] cpal stream error: {e}");
@@ -279,11 +287,40 @@ fn start_recording_inner(
         Session {
             tx: cmd_tx,
             result_rx,
+            buffer: shared_buffer,
             source_sample_rate: source_sr,
             source_channels: source_ch,
         },
     );
     Ok(())
+}
+
+/// Kayıt SÜRERKEN mevcut sesin (son `window_secs` sn) transkriptini döner —
+/// canlı yazım (partial) için. Kayıt durmaz; sonuç geçicidir, segment sonunda
+/// tam transkript yine `stop_recording_and_transcribe` ile alınır.
+pub fn transcribe_snapshot(
+    session_id: &str,
+    model_path: &Path,
+    language: Option<&str>,
+    window_secs: u32,
+) -> Result<String, AudioError> {
+    let pcm: Vec<f32> = {
+        let map = SESSIONS.lock();
+        let session = map
+            .get(session_id)
+            .ok_or_else(|| AudioError::SessionNotFound(session_id.to_string()))?;
+        let buf = session.buffer.lock();
+        let max = (TARGET_SR as usize) * window_secs as usize;
+        let n = buf.len().min(max);
+        if n < TARGET_SR as usize / 2 {
+            return Ok(String::new()); // <0.5sn ses — çözmeye değmez
+        }
+        buf[buf.len() - n..].to_vec()
+    };
+    if !model_path.exists() {
+        return Err(AudioError::ModelMissing(model_path.to_path_buf()));
+    }
+    transcribe_pcm(&pcm, model_path, language)
 }
 
 /// Public: stops a session and returns transcribed text using the given model.
@@ -411,14 +448,36 @@ fn linear_resample(input: &[f32], src_sr: u32, dst_sr: u32) -> Vec<f32> {
     out
 }
 
-fn transcribe_pcm(pcm: &[f32], model_path: &Path, language: Option<&str>) -> Result<String, AudioError> {
-    use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+/// Yüklü whisper modeli cache'i — PERFORMANSIN KALBİ. Eskiden her segmentte
+/// model diskten yeniden yükleniyordu (base ~150MB, small ~500MB) ve "whisper
+/// bazen çok yavaş" şikayetinin kök nedeni buydu. Artık aynı model yolu için
+/// context bir kez yüklenir; her transkript yalnızca hafif bir state açar.
+static WHISPER_CTX: std::sync::LazyLock<Mutex<Option<(PathBuf, Arc<whisper_rs::WhisperContext>)>>> =
+    std::sync::LazyLock::new(|| Mutex::new(None));
 
+fn cached_context(model_path: &Path) -> Result<Arc<whisper_rs::WhisperContext>, AudioError> {
+    use whisper_rs::{WhisperContext, WhisperContextParameters};
+
+    let mut guard = WHISPER_CTX.lock();
+    if let Some((cached_path, ctx)) = guard.as_ref() {
+        if cached_path == model_path {
+            return Ok(Arc::clone(ctx));
+        }
+    }
     let ctx = WhisperContext::new_with_params(
         model_path.to_string_lossy().as_ref(),
         WhisperContextParameters::default(),
     )
     .map_err(|e| AudioError::Whisper(e.to_string()))?;
+    let ctx = Arc::new(ctx);
+    *guard = Some((model_path.to_path_buf(), Arc::clone(&ctx)));
+    Ok(ctx)
+}
+
+fn transcribe_pcm(pcm: &[f32], model_path: &Path, language: Option<&str>) -> Result<String, AudioError> {
+    use whisper_rs::{FullParams, SamplingStrategy};
+
+    let ctx = cached_context(model_path)?;
 
     let mut state = ctx
         .create_state()
