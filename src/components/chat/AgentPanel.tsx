@@ -144,7 +144,7 @@ export function AgentPanel() {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", stiffness: 340, damping: 34 }}
-            className="fixed bottom-[10px] right-[10px] top-[50px] rounded-xl z-[9991] flex w-[320px] flex-col border border-border bg-surface-2 shadow-2xl"
+            className="fixed bottom-0 right-0 top-[40px] z-[9991] flex w-[320px] flex-col border-l border-t rounded-tl-xl border-border bg-base shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Başlık */}

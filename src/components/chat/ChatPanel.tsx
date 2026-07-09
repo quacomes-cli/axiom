@@ -1886,11 +1886,11 @@ export function ChatPanel() {
           >
             {
               runs && (
-                <button className="absolute top-[10px] right-[10px] flex h-6 w-6 items-center justify-center rounded-md text-text-faint hover:bg-surface-3 hover:text-text-secondary" onClick={(e) => {
+                <button className="absolute top-[0px] right-[10px] flex h-7.5 w-7.5 items-center justify-center rounded-md text-text-faint hover:bg-surface-3 hover:text-text-secondary" onClick={(e) => {
                   e.preventDefault();
                   setAgentPanelOpen(true);
                 }}>
-                  <FaTasks size={14} strokeWidth={1.4}/>
+                  <FaTasks size={15} strokeWidth={1.4}/>
                 </button>
               )
             }

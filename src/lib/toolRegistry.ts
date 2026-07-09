@@ -31,6 +31,7 @@ interface NativeTool {
 
 function tool(
   name: string,
+  displayText: string,
   description: string,
   properties: Record<string, { type: string; description: string; enum?: string[] }>,
   required: string[] = [],
@@ -46,59 +47,59 @@ function tool(
 }
 
 const BUILTIN_TOOLS: NativeTool[] = [
-  tool("weather", "Bir şehrin güncel hava durumunu getirir", {
+  tool("weather", "Weather", "Bir şehrin güncel hava durumunu getirir", {
     city: { type: "string", description: "Şehir adı, örn. Istanbul" },
   }, ["city"]),
-  tool("currency", "Güncel döviz kurlarını (TRY bazlı) getirir", {}),
-  tool("web_search", "Web'de arama yapar", {
+  tool("currency", "Currency", "Güncel döviz kurlarını (TRY bazlı) getirir", {}),
+  tool("web_search", "Searching", "Web'de arama yapar", {
     query: { type: "string", description: "Arama sorgusu" },
   }, ["query"]),
-  tool("search_docs", "Kullanıcının belge kütüphanesinde (eklediği PDF/dokümanlar) anlamsal arama yapar", {
+  tool("search_docs", "RAG", "Kullanıcının belge kütüphanesinde (eklediği PDF/dokümanlar) anlamsal arama yapar", {
     query: { type: "string", description: "Arama sorgusu" },
   }, ["query"]),
-  tool("read_file", "Diskten dosya okur", {
+  tool("read_file", "Reading", "Diskten dosya okur", {
     path: { type: "string", description: "Tam dosya yolu" },
   }, ["path"]),
-  tool("write_file", "Diske dosya yazar (üzerine yazar)", {
+  tool("write_file", "Writing", "Diske dosya yazar (üzerine yazar)", {
     path: { type: "string", description: "Tam dosya yolu" },
     content: { type: "string", description: "Dosya içeriği" },
   }, ["path", "content"]),
-  tool("list_dir", "Dizin içeriğini listeler", {
+  tool("list_dir", "Listing", "Dizin içeriğini listeler", {
     path: { type: "string", description: "Dizin yolu" },
   }, ["path"]),
-  tool("create_dir", "Yeni dizin oluşturur", {
+  tool("create_dir", "Creating a direction.", "Yeni dizin oluşturur", {
     path: { type: "string", description: "Oluşturulacak dizin yolu" },
   }, ["path"]),
-  tool("run_command", "Shell komutu çalıştırır", {
+  tool("run_command", "Running", "Shell komutu çalıştırır", {
     command: { type: "string", description: "Çalıştırılacak komut" },
   }, ["command"]),
-  tool("get_settings", "Uygulama ayarlarını okur", {}),
-  tool("change_setting", "Bir uygulama ayarını değiştirir", {
+  tool("get_settings", "Get Settings", "Uygulama ayarlarını okur", {}),
+  tool("change_setting", "Change Settings", "Bir uygulama ayarını değiştirir", {
     key: { type: "string", description: "Ayar adı", enum: ["theme", "fontSize", "fontFamily", "launchAtStartup"] },
     value: { type: "string", description: "Yeni değer" },
   }, ["key", "value"]),
-  tool("create_task", "Görev panosuna yeni görev ekler", {
+  tool("create_task", "Creating a task", "Görev panosuna yeni görev ekler", {
     title: { type: "string", description: "Görev başlığı" },
     description: { type: "string", description: "Görev açıklaması" },
     priority: { type: "string", description: "Öncelik", enum: ["low", "medium", "high"] },
   }, ["title"]),
-  tool("list_tasks", "Görevleri listeler", {
+  tool("list_tasks", "List tasks", "Görevleri listeler", {
     status: { type: "string", description: "Durum filtresi (opsiyonel)" },
   }),
-  tool("update_task", "Var olan bir görevi günceller", {
+  tool("update_task", "Update task", "Var olan bir görevi günceller", {
     id: { type: "string", description: "Görev ID" },
     title: { type: "string", description: "Yeni başlık" },
     description: { type: "string", description: "Yeni açıklama" },
     status: { type: "string", description: "Yeni durum" },
     priority: { type: "string", description: "Yeni öncelik", enum: ["low", "medium", "high"] },
   }, ["id"]),
-  tool("complete_task", "Görevi tamamlandı olarak işaretler", {
+  tool("complete_task", "Task completed", "Görevi tamamlandı olarak işaretler", {
     id: { type: "string", description: "Görev ID" },
   }, ["id"]),
-  tool("delete_task", "Görevi siler", {
+  tool("delete_task", "Task deleted", "Görevi siler", {
     id: { type: "string", description: "Görev ID" },
   }, ["id"]),
-  tool("schedule_task", "Zamanlayıcı/alarm/hatırlatıcı veya zamanlanmış agent görevi kurar", {
+  tool("schedule_task", "Schedule task", "Zamanlayıcı/alarm/hatırlatıcı veya zamanlanmış agent görevi kurar", {
     title: { type: "string", description: "Görev başlığı" },
     delay: { type: "string", description: "Gecikme, örn. '10dk', '2sa' (at yoksa zorunlu)" },
     at: { type: "string", description: "Saat 'HH:MM' veya 'YYYY-MM-DD HH:MM' (delay yoksa zorunlu)" },
@@ -127,7 +128,7 @@ function buildAppTools(): NativeTool[] {
           if (p) props[p] = { type: "string", description: raw.trim() };
         }
       }
-      out.push(tool(t.name, `[${app.name}] ${t.description}`, props));
+      out.push(tool(t.name, t.displayText, `[${app.name}] ${t.description}`, props));
     }
   }
   return out;

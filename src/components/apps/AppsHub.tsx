@@ -43,10 +43,6 @@ const CONFIG_FIELDS: Record<string, ConfigField[]> = {
       hint: "appsCfg.autoModeDesc",
     },
   ],
-  github: [
-    { label: "Client ID (OAuth App)", key: "client_id", placeholder: "Ov23li...", secret: false },
-    { label: "Personal Access Token", key: "personal_access_token", placeholder: "appsCfg.githubPatPh", secret: true },
-  ],
   notion: [
     { label: "Integration Token", key: "integration_token", placeholder: "secret_...", secret: true },
   ],
@@ -443,7 +439,7 @@ function AppConfigDialog({
                         >
                           <span
                             className={`absolute top-0.5 block h-4 w-4 rounded-full bg-text-faint transition-transform duration-200 ${
-                              on ? "translate-x-[18px] bg-accent" : "translate-x-0.5"
+                              on ? "translate-x-4.5 bg-accent" : "translate-x-0.5"
                             }`}
                           />
                         </button>
@@ -471,29 +467,6 @@ function AppConfigDialog({
             ) : (
               <div className="rounded-xl bg-surface-2 py-6 text-center text-xs text-text-faint">
                 {t("appsCfg.noConfigNeeded")}
-              </div>
-            )}
-
-            {app.id === "github" && (
-              <div className="mt-3 flex flex-col">
-                <div className="mb-2 text-[0.7857rem] uppercase tracking-wider text-text-faint">{t("appsCfg.quickConnect")}</div>
-                <div className="space-y-2">
-                  <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    <span className="font-medium text-text-secondary">1.</span> {t("appsCfg.githubStep1")}
-                    <button
-                      onClick={() => openUrl(GUIDE_URLS.github).catch(() => {})}
-                      className="ml-1.5 inline-flex items-center gap-1 text-text-secondary hover:text-text"
-                    >
-                      <ExternalLink size={10} /> {t("appsCfg.open")}
-                    </button>
-                  </div>
-                  <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    <span className="font-medium text-text-secondary">2.</span> {t("appsCfg.githubStep2Before")}<span className="font-medium text-text-secondary">{t("appsCfg.githubStep2Mid")}</span>
-                  </div>
-                  <div className="rounded-lg bg-surface-2 px-3 py-2 text-xs text-text-faint">
-                    {t("appsCfg.githubStep3")}
-                  </div>
-                </div>
               </div>
             )}
             {(app.id === "gmail" || app.id === "gcalendar") && (
