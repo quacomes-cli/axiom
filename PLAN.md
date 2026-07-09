@@ -286,33 +286,38 @@ yolu SIFIR değişiklikle native calling kazandı.
       renkleri), canlı transkript, akan cevap, Piper indirme rozeti.
 - Canlı test kullanıcıda: ilk açılışta "Doğal ses paketini indir" (~80MB).
 
-## FAZ 7 — Performans + dağıtım kalitesi
+## FAZ 7 — Performans + dağıtım kalitesi — KOD TAMAMLANDI (2026-07-09)
 
-- [ ] Code splitting: sayfa bileşenleri `React.lazy` (Models/Apps/Telegram/Price/
-      Settings/Skills/Tasks) + vite `manualChunks` (firebase, highlight.js, markdown
-      ayrı chunk). Hedef: ilk yük < 1MB gzip, açılış TTI ölçülüp günlüğe.
-- [ ] CI (GitHub Actions): push'ta `tsc --noEmit` + `cargo check` + vite build;
-      tag'de release build + updater artifact. Secrets: imzalama anahtarı Actions
-      secret'ına taşınır → **Faz 0.1 rotasyonu burada kapanır** (yeni keypair +
-      köprü sürüm bu pipeline'ın ilk release'i).
-- [ ] Crash görünürlüğü (telemetri YOK): window.onerror/unhandledrejection →
-      yerel log dosyası (`%APPDATA%/logs`), Ayarlar → Hakkında'dan "logları aç";
-      Rust panic hook aynı dosyaya.
-- Kabul: CI yeşil; release tek komut; ilk yük hedefi tutturuldu.
+- [x] Code splitting (29fc80d): ChatPanel hariç tüm sayfalar `React.lazy` +
+      Suspense; vite manualChunks (firebase/highlight/markdown/motion);
+      ToolMessage full highlight.js → lib/common. İlk yük gzip ~940KB → ~655KB.
+- [x] CI (.github/workflows/ci.yml): push/PR'da windows tsc + build + cargo
+      check (rust-cache) + ubuntu mobil. Release (release.yml): v* tag'inde
+      tauri-action → NSIS/MSI + updater imzaları + latest.json (taslak release).
+      **Faz 0.1 rotasyon TALİMATI workflow başında** — KULLANICI AKSİYONU:
+      yeni keypair üret → pubkey conf'a → secrets'a → köprü sürüm.
+- [x] Crash görünürlüğü: Rust panic hook → logs/crash.log; frontend
+      onerror/unhandledrejection → logs/frontend.log; Hakkında → "klasörü aç"
+      (opener:allow-open-path $APPCONFIG/logs). Telemetri YOK.
+- Kabul testleri kullanıcıda: repoya push → CI yeşil; ilk tag → release taslağı.
 
-## FAZ 8 — Belge kütüphanesi / RAG
+## FAZ 8 — Belge kütüphanesi / RAG — KOD TAMAMLANDI (2026-07-09)
 
-- [ ] Şema (memory.db): `documents(id,path,title,mime,added_at,status)` +
-      `doc_chunks(id,doc_id,seq,text,embedding BLOB)` + FTS tablosu.
-- [ ] Rust: `docs_add(paths)` — mevcut `documents/` parser'larıyla metin çıkar,
-      chunk'la (~800 token), mevcut embedding yolu (nomic-embed-text) ile vektörle;
-      `docs_list/docs_remove/docs_search(query)` hibrit skor (vektör + FTS).
-- [ ] UI: "Kütüphane" sayfası (nav'a eklenir) — dosya/klasör ekle, indeks durumu,
-      kaldır. i18n anahtarlarıyla.
-- [ ] Sohbet entegrasyonu: `search_docs` aracı registry'ye; memory recall desenine
-      paralel otomatik bağlam (ayardan aç/kapa, top-k/eşik).
-- Kabul: 50+ sayfalık PDF eklenir, "belgeme göre X nedir?" doğru pasajla cevaplanır;
-  indeksleme UI kilitlmez (arka plan + ilerleme).
+- [x] Şema (memory.db, `memory/docs.rs`): documents + doc_chunks (+FTS5 +
+      trigger'lar); chunk_text ~1400 kar. paragraf/cümle sınırlı, 200 örtüşme.
+- [x] Rust: `docs_add` (parse→chunk→embed_ollama→tek transaction; ilerleme
+      "docs-index-progress" event'i, UI kilitlenmez), docs_list/remove/count/
+      search (hibrit: kosinüs + FTS bm25 eşleşmesine +0.15 bonus).
+      `parse_for_index`: **PDF desteği eklendi (pdf-extract)** + 400K limit
+      (sohbet ekinin 50K kırpması indekse uygulanmaz); resim reddedilir.
+- [x] UI: Kütüphane sayfası (nav + launchpad + lazy) — çoklu dosya ekleme,
+      canlı indeks ilerlemesi, liste/kaldır. i18n 9 dil.
+- [x] Sohbet: `search_docs` aracı (registry şeması + prompt tarifi + parser +
+      yürütme; yerel olduğundan izin kapısı yok; native ad ham-query eşlenir).
+      Otomatik bağlam: kütüphane doluysa send() top-3 pasajı (skor≥0.35)
+      [KÜTÜPHANE] sistem notu olarak enjekte eder — kaynak belirtilir.
+- Kabul testi kullanıcıda: PDF ekle (nomic-embed-text Ollama'da kurulu olmalı) →
+  "belgeme göre X nedir?" doğru pasajla + kaynakla cevaplanmalı.
 
 ## Çalışma kuralları (tüm fazlar)
 
