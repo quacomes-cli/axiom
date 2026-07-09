@@ -230,3 +230,18 @@ button {
 .prose li::marker {
     color: var(--color-text-faint);
 }
+/* Sesli mod ikonu dalga animasyonu — VoiceWaveIcon.tsx.
+   transform-box: fill-box şart: SVG rect'lerde scaleY kendi merkezinden
+   çalışsın (yoksa viewBox köşesinden ölçeklenir). */
+.voice-wave-bar {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.voice-mode-btn:hover .voice-wave-bar,
+.voice-mode-btn.active .voice-wave-bar {
+    animation: voice-wave 0.9s ease-in-out infinite;
+}
+@keyframes voice-wave {
+    0%, 100% { transform: scaleY(1); }
+    50% { transform: scaleY(0.3); }
+}

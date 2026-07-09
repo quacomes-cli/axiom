@@ -27,7 +27,6 @@ import {
   Loader,
   Smartphone,
   Bot,
-  AudioLines,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { open as dialogOpen } from "@tauri-apps/plugin-dialog";
@@ -43,6 +42,7 @@ import { useNotificationStore } from "../../stores/notificationStore";
 import { AppVersion } from "../../stores/appStore";
 import { InteractiveHtml, DesigningIndicator, extractNodeText, splitStreamingHtml } from "./InteractiveHtml";
 import { AgentRunCard } from "./AgentRunCard";
+import { VoiceWaveIcon } from "../shared/VoiceWaveIcon";
 import { Tooltip } from "../shared/Tooltip";
 
 /**
@@ -1785,16 +1785,16 @@ export function ChatPanel() {
             }
             disabled={thinking || !activeModel}
           />
-          {/* Canlı sesli asistan modu (Faz 6) */}
+          {/* Canlı sesli asistan modu (Faz 6) — hover/aktifte çubuklar dalgalanır */}
           <Tooltip label={t("voiceMode.enter")}>
             <button
               onClick={() => setVoiceModeOpen(true)}
               disabled={!activeModel}
-              className={`flex items-center justify-center rounded-lg px-1.5 py-1 transition-colors disabled:opacity-40 ${
-                voiceModeOpen ? "text-success" : "text-text-faint hover:text-text-secondary"
+              className={`voice-mode-btn flex items-center justify-center rounded-lg px-1.5 py-1 transition-colors disabled:opacity-40 ${
+                voiceModeOpen ? "active text-success" : "text-text-faint hover:text-text-secondary"
               }`}
             >
-              <AudioLines size={16} strokeWidth={1.6} />
+              <VoiceWaveIcon size={16} />
             </button>
           </Tooltip>
           {modelSupportsVision(activeModel) && chatId && (
