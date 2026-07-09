@@ -1,0 +1,74 @@
+[package]
+name = "axiom"
+version = "0.1.82"
+description = "Axiom - yerel yapay zeka asistani"
+authors = ["Axiom"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "axiom_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["image-png", "tray-icon", "protocol-asset"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sysinfo = "0.33"
+thiserror = "2"
+dirs = "5"
+tauri-plugin-autostart = "2.5.1"
+reqwest = { version = "0.13.4", features = ["json", "stream", "form"] }
+async-trait = "0.1.89"
+futures-util = "0.3"
+tokio = { version = "1", features = ["sync"] }
+scraper = "0.22"
+base64 = "0.22"
+urlencoding = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2.3.3"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+window-vibrancy = "0.5"
+zip = "8.6.0"
+ignore = "0.4"
+regex = "1"
+globset = "0.4"
+similar = "2"
+cpal = "0.15"
+hound = "3"
+# TTS çalma: Piper ham PCM (wav feature'ı SamplesBuffer için değil, güvence)
+# + Edge TTS mp3 çözümü için symphonia-mp3.
+rodio = { version = "0.19", default-features = false, features = ["wav", "symphonia-mp3"] }
+# Edge TTS WebSocket'i (Microsoft neural sesler) + DRM token imzası.
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+sha2 = "0.10"
+chrono = "0.4"
+whisper-rs = { version = "0.16", default-features = false }
+# Belge kütüphanesi (RAG): PDF + Excel metin çıkarımı (docx/pptx/epub
+# mevcut zip+regex ile, html mevcut scraper ile çözülür).
+pdf-extract = "0.7"
+calamine = "0.26"
+uuid = { version = "1", features = ["v4"] }
+parking_lot = "0.12"
+xcap = "0.0.14"
+image = { version = "0.25", features = ["png"] }
+rusqlite = { version = "0.31", features = ["bundled", "blob"] }
+keyring = { version = "3", features = ["windows-native"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_ProcessStatus", "Win32_System_Threading"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+

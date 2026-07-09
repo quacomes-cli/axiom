@@ -1,0 +1,11 @@
+{
+  "version": "0.1.82",
+  "notes": "MCP de ilerlemeler kaydedildi, Model WinGet e çıkartıldı.",
+  "pub_date": "2026-07-03T23:31:21Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUY0pZYjRuSVpCN2Y4c1dTOXNFRVc4cCtoVXpPSU1mRjgrVldpRlBNcTQ3M0ZxRXV1ZkVXTFllM3lyQUIvYzBnNVFINm5xRncvUDhvbjU5SHhFaDBtdTlQa3dJSzRUbndnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgzMTEwNjgxCWZpbGU6QXhpb21fMC4xLjgyX3g2NC1zZXR1cC5leGUKbzg2OCtSSE9UbmRnVWhzSUVnWkZpN2tVdEtPUm1FS0NsY0xMR1BoTUVoNzMwQnlPT1ExajRiWEZhcHE5SEU2ZkgvZXhBZ0lJN2JXWTkvVUtRT1JBQWc9PQo=",
+      "url": "https://github.com/quacomes-cli/axiom/releases/download/v0.1.82/Axiom_0.1.82_x64-setup.exe"
+    }
+  }
+}
