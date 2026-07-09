@@ -3,7 +3,9 @@ import { ChevronDown, ChevronUp, Wrench } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { ToolAction } from "../../types";
 import { t as translate } from "../../i18n";
-import hljs from "highlight.js";
+// Full "highlight.js" importu TÜM dilleri (~1.1MB) bundle'a gömüyordu —
+// common seti (~40 yaygın dil) kod aracı için fazlasıyla yeterli.
+import hljs from "highlight.js/lib/common";
 import "highlight.js/styles/atom-one-dark.css";
 
 function basename(path?: string): string {
