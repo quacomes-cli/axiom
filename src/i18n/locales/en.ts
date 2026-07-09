@@ -47,6 +47,8 @@ export const en = {
     launchpadHint: "Jump to any page",
     aboutTagline: "Your local AI assistant",
     aboutVersion: "Version",
+    aboutLogs: "Logs",
+    aboutOpenLogs: "open folder",
     aboutWebsite: "Website",
   },
   voiceMode: {

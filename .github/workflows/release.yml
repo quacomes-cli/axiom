@@ -1,0 +1,57 @@
+# Release — `v*` tag'i push edilince Windows kurulumlarını (NSIS + MSI) derler,
+# updater imzalarını üretir ve taslak GitHub Release'e yükler (latest.json dahil).
+#
+# ── ANAHTAR ROTASYONU (Faz 0.1 kapanışı) — TEK SEFERLİK KURULUM ──────────────
+# Eski imzalama parolası git geçmişine sızmıştı; bu pipeline YENİ anahtarla çalışır:
+#   1) Yeni keypair üret:
+#        npm run tauri signer generate -- -w $env:USERPROFILE\.tauri\axiom-v2.key
+#   2) Çıkan PUBLIC key'i src-tauri/tauri.conf.json → plugins.updater.pubkey'e yaz.
+#   3) GitHub repo → Settings → Secrets and variables → Actions:
+#        TAURI_SIGNING_PRIVATE_KEY            = axiom-v2.key dosyasının İÇERİĞİ
+#        TAURI_SIGNING_PRIVATE_KEY_PASSWORD   = yeni parola
+#   4) KÖPRÜ SÜRÜM: eski anahtarla İMZALANMIŞ ama yeni pubkey'i TAŞIYAN son bir
+#      sürümü yerelden yayınla (eski kurulumlar güncellemeyi doğrulayabilsin);
+#      sonraki tüm sürümler bu workflow'dan yeni anahtarla çıkar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Frontend deps
+        run: npm ci
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build + publish (draft release)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Axiom ${{ github.ref_name }}"
+          releaseBody: "Sürüm notları için commit geçmişine bakın."
+          releaseDraft: true
+          includeUpdaterJson: true

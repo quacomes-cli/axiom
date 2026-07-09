@@ -46,6 +46,8 @@ export const tr: typeof en = {
     launchpadHint: "Herhangi bir sayfaya geç",
     aboutTagline: "Yerel yapay zeka asistanın",
     aboutVersion: "Sürüm",
+    aboutLogs: "Günlükler",
+    aboutOpenLogs: "klasörü aç",
     aboutWebsite: "Web sitesi",
   },
   voiceMode: {

@@ -46,6 +46,8 @@ export const es: typeof en = {
     launchpadHint: "Ir a cualquier página",
     aboutTagline: "Tu asistente de IA local",
     aboutVersion: "Versión",
+    aboutLogs: "Registros",
+    aboutOpenLogs: "abrir carpeta",
     aboutWebsite: "Sitio web",
   },
   voiceMode: {

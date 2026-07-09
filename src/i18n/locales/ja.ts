@@ -46,6 +46,8 @@ export const ja: typeof en = {
     launchpadHint: "任意のページへ移動",
     aboutTagline: "ローカル AI アシスタント",
     aboutVersion: "バージョン",
+    aboutLogs: "ログ",
+    aboutOpenLogs: "フォルダを開く",
     aboutWebsite: "ウェブサイト",
   },
   voiceMode: {

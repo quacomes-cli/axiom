@@ -46,6 +46,8 @@ export const de: typeof en = {
     launchpadHint: "Zu einer Seite springen",
     aboutTagline: "Dein lokaler KI-Assistent",
     aboutVersion: "Version",
+    aboutLogs: "Protokolle",
+    aboutOpenLogs: "Ordner öffnen",
     aboutWebsite: "Webseite",
   },
   voiceMode: {

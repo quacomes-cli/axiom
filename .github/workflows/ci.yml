@@ -1,0 +1,67 @@
+# CI — her push/PR'da: frontend tip + build, Rust check, mobil tip.
+# Windows runner şart: cargo check windows-özel bağımlılıkları
+# (keyring windows-native, whisper-rs CMake, xcap) derler.
+
+name: CI
+
+on:
+  push:
+    branches: ["main", "faz*"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Frontend deps
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Vite build
+        run: npx vite build
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Cargo check
+        working-directory: src-tauri
+        run: cargo check
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Mobile deps
+        working-directory: mobile
+        run: npm ci
+
+      - name: Mobile TypeScript check
+        working-directory: mobile
+        run: npx tsc --noEmit
+
+      - name: Mobile build
+        working-directory: mobile
+        run: npm run build

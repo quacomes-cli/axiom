@@ -46,6 +46,8 @@ export const ru: typeof en = {
     launchpadHint: "Перейти на любую страницу",
     aboutTagline: "Ваш локальный ИИ-ассистент",
     aboutVersion: "Версия",
+    aboutLogs: "Журналы",
+    aboutOpenLogs: "открыть папку",
     aboutWebsite: "Сайт",
   },
   voiceMode: {

@@ -276,6 +276,16 @@ export const ipc = {
     return invoke("audio_model_status", { modelName });
   },
 
+  // ---- Crash / hata günlüğü ---------------------------------------------------
+
+  logFrontendError(message: string): Promise<void> {
+    return invoke<void>("log_frontend_error", { message });
+  },
+
+  logsDir(): Promise<string> {
+    return invoke<string>("logs_dir");
+  },
+
   // ---- Piper TTS (doğal sesler) ---------------------------------------------
 
   ttsStatus(voice?: string): Promise<{ piperInstalled: boolean; voiceInstalled: boolean; voice: string }> {

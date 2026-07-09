@@ -46,6 +46,8 @@ export const zh: typeof en = {
     launchpadHint: "跳转到任意页面",
     aboutTagline: "你的本地 AI 助手",
     aboutVersion: "版本",
+    aboutLogs: "日志",
+    aboutOpenLogs: "打开文件夹",
     aboutWebsite: "网站",
   },
   voiceMode: {

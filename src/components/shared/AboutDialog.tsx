@@ -84,6 +84,21 @@ export function AboutDialog() {
               axiom.quacomes.com
             </button>
           </div>
+          <div className="flex justify-between">
+            <span className="text-text-faint">{t("menu.aboutLogs")}</span>
+            <button
+              onClick={() => {
+                // Crash/hata günlükleri klasörünü dosya yöneticisinde aç.
+                void import("../../lib/ipc")
+                  .then(({ ipc }) => ipc.logsDir())
+                  .then((dir) => import("@tauri-apps/plugin-opener").then((m) => m.openPath(dir)))
+                  .catch(() => {});
+              }}
+              className="font-mono text-accent hover:underline"
+            >
+              {t("menu.aboutOpenLogs")}
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

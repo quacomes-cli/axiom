@@ -1328,6 +1328,50 @@ pub fn audio_stop_and_transcribe(
     })
 }
 
+// ---- Crash / hata günlüğü (telemetri YOK — yalnızca yerel dosya) ---------------
+
+pub fn logs_dir_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("config dir bulunamadı: {e}"))?
+        .join("logs");
+    std::fs::create_dir_all(&dir).map_err(|e| format!("logs dizini oluşturulamadı: {e}"))?;
+    Ok(dir)
+}
+
+pub fn append_log(app: &tauri::AppHandle, file: &str, line: &str) {
+    if let Ok(dir) = logs_dir_path(app) {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let entry = format!("[{stamp}] {line}\n");
+        use std::io::Write;
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(dir.join(file))
+        {
+            let _ = f.write_all(entry.as_bytes());
+        }
+    }
+}
+
+/// Frontend window.onerror / unhandledrejection buraya düşer.
+#[tauri::command]
+pub fn log_frontend_error(app: tauri::AppHandle, message: String) {
+    // Tek satıra indirger; dosya şişmesin diye 2KB kırpılır.
+    let line: String = message.replace(['\r', '\n'], " | ").chars().take(2048).collect();
+    append_log(&app, "frontend.log", &line);
+}
+
+/// Hakkında → "logları aç" için dizin yolu.
+#[tauri::command]
+pub fn logs_dir(app: tauri::AppHandle) -> Result<String, String> {
+    logs_dir_path(&app).map(|p| p.to_string_lossy().to_string())
+}
+
 // ---- Piper TTS (doğal sesler) ------------------------------------------------
 
 #[derive(Debug, Serialize)]

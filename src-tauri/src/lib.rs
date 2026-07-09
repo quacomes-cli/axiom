@@ -61,6 +61,31 @@ pub fn run() {
             let engine = PermissionEngine::load(config_dir.join("permissions.json"));
             app.manage(engine);
 
+            // Crash görünürlüğü (telemetri YOK): Rust panic'leri yerel
+            // logs/crash.log dosyasına düşer — Hakkında'dan "logları aç".
+            {
+                let handle = app.handle().clone();
+                let default_hook = std::panic::take_hook();
+                std::panic::set_hook(Box::new(move |info| {
+                    let location = info
+                        .location()
+                        .map(|l| format!("{}:{}", l.file(), l.line()))
+                        .unwrap_or_else(|| "?".into());
+                    let msg = info
+                        .payload()
+                        .downcast_ref::<&str>()
+                        .map(|s| s.to_string())
+                        .or_else(|| info.payload().downcast_ref::<String>().cloned())
+                        .unwrap_or_else(|| "panic".into());
+                    ipc::commands::append_log(
+                        &handle,
+                        "crash.log",
+                        &format!("PANIC at {location}: {msg}"),
+                    );
+                    default_hook(info);
+                }));
+            }
+
             // Piper TTS motoru: kuyruk boşalınca "tts-idle" (dinlemeye dön),
             // çalma sırasında "tts-level" (parçacık görselleştirme spektrumu).
             {
@@ -270,6 +295,8 @@ pub fn run() {
             ipc::commands::audio_stop_and_transcribe,
             ipc::commands::audio_model_status,
             ipc::commands::audio_download_model,
+            ipc::commands::log_frontend_error,
+            ipc::commands::logs_dir,
             ipc::commands::tts_status,
             ipc::commands::tts_download,
             ipc::commands::tts_speak,
