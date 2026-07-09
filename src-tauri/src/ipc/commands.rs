@@ -1473,14 +1473,21 @@ pub async fn tts_download(app: tauri::AppHandle, voice: Option<String>) -> Resul
 }
 
 /// Cümleyi konuşma kuyruğuna ekler (stream cevap cümle cümle okunur).
+/// `edge_voice` doluysa (örn. "tr-TR-EmelNeural") önce Edge neural ses
+/// denenir; hata/offline'da Piper'a düşülür.
 #[tauri::command]
-pub fn tts_speak(app: tauri::AppHandle, text: String, voice: Option<String>) -> Result<(), String> {
+pub fn tts_speak(
+    app: tauri::AppHandle,
+    text: String,
+    voice: Option<String>,
+    edge_voice: Option<String>,
+) -> Result<(), String> {
     let dir = app
         .path()
         .app_config_dir()
         .map_err(|e| format!("config dir bulunamadı: {e}"))?;
     let voice = voice.unwrap_or_else(|| crate::tts::DEFAULT_VOICE.to_string());
-    crate::tts::speak(&dir, &voice, &text)
+    crate::tts::speak(&dir, &voice, &text, edge_voice.as_deref())
 }
 
 /// Barge-in: kuyruğu ve çalan sesi anında keser.

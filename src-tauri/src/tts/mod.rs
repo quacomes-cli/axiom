@@ -14,6 +14,8 @@
 // (Goertzel) enerjisi `TtsEvent::Level` ile yayınlanır (görselleştirme);
 // kuyruk boşalınca `TtsEvent::Idle` gelir.
 
+mod edge;
+
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -86,6 +88,34 @@ struct Job {
     text: String,
     exe: PathBuf,
     model: PathBuf,
+    /// Doluysa önce Edge TTS (Microsoft neural — duygulu) denenir;
+    /// hata/offline'da yereldeki Piper'a düşülür.
+    edge_voice: Option<String>,
+}
+
+/// Sentez sonucu — hangi motordan gelirse gelsin ortak çalma yolu.
+struct Synth {
+    samples: Vec<i16>,
+    sample_rate: u32,
+    channels: u16,
+}
+
+/// Edge mp3'ünü örneklere çözer (rodio symphonia-mp3).
+fn decode_mp3(mp3: Vec<u8>) -> Result<Synth, String> {
+    use rodio::Source;
+    let decoder = rodio::Decoder::new(std::io::Cursor::new(mp3))
+        .map_err(|e| format!("mp3 çözülemedi: {e}"))?;
+    let sample_rate = decoder.sample_rate();
+    let channels = decoder.channels();
+    let samples: Vec<i16> = decoder.collect();
+    if samples.is_empty() {
+        return Err("mp3 boş".into());
+    }
+    Ok(Synth {
+        samples,
+        sample_rate,
+        channels,
+    })
 }
 
 /// Ses modelinin örnek hızı (.onnx.json → audio.sample_rate). Yol bazlı cache.
@@ -180,12 +210,50 @@ pub fn init(on_event: impl Fn(TtsEvent) + Send + 'static) {
                 continue;
             }
 
-            match synth_raw(&job.exe, &job.model, &job.text) {
-                Ok(samples) if !stale() && !samples.is_empty() => {
-                    let sr = model_sample_rate(&job.model);
-                    // Analiz için f32 kopya (çalınan i16'nın normalize hali).
-                    let mono: Vec<f32> =
-                        samples.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
+            // Motor zinciri: Edge (duygulu, bulut) → Piper (yerel) → hata.
+            let synth: Result<Synth, String> = {
+                let edge_result = job
+                    .edge_voice
+                    .as_deref()
+                    .map(|v| edge::synth_mp3(&job.text, v).and_then(decode_mp3));
+                match edge_result {
+                    Some(Ok(s)) => Ok(s),
+                    other => {
+                        if let Some(Err(e)) = other {
+                            eprintln!("[tts] edge başarısız, piper'a düşülüyor: {e}");
+                        }
+                        if job.exe.exists() && job.model.exists() {
+                            synth_raw(&job.exe, &job.model, &job.text).map(|samples| Synth {
+                                sample_rate: model_sample_rate(&job.model),
+                                channels: 1,
+                                samples,
+                            })
+                        } else {
+                            Err("hiçbir tts motoru kullanılamıyor".into())
+                        }
+                    }
+                }
+            };
+
+            match synth {
+                Ok(synth) if !stale() && !synth.samples.is_empty() => {
+                    let Synth {
+                        samples,
+                        sample_rate: sr,
+                        channels,
+                    } = synth;
+                    // Analiz için mono f32 kopya (çok kanallıysa downmix).
+                    let mono: Vec<f32> = if channels <= 1 {
+                        samples.iter().map(|&s| s as f32 / i16::MAX as f32).collect()
+                    } else {
+                        samples
+                            .chunks(channels as usize)
+                            .map(|fr| {
+                                fr.iter().map(|&s| s as f32).sum::<f32>()
+                                    / (channels as f32 * i16::MAX as f32)
+                            })
+                            .collect()
+                    };
 
                     let sink = match rodio::Sink::try_new(&handle) {
                         Ok(s) => s,
@@ -198,7 +266,7 @@ pub fn init(on_event: impl Fn(TtsEvent) + Send + 'static) {
                             continue;
                         }
                     };
-                    sink.append(rodio::buffer::SamplesBuffer::new(1, sr, samples));
+                    sink.append(rodio::buffer::SamplesBuffer::new(channels, sr, samples));
                     *sink_w.lock() = Some(sink);
 
                     // Çalma boyunca dilim analizi yayınla; stale'de kes.
@@ -255,8 +323,14 @@ pub fn init(on_event: impl Fn(TtsEvent) + Send + 'static) {
     });
 }
 
-/// Cümleyi kuyruğa ekler (init edilmediyse sessizce yok sayar).
-pub fn speak(app_config_dir: &Path, voice: &str, text: &str) -> Result<(), String> {
+/// Cümleyi kuyruğa ekler. `edge_voice` doluysa önce Edge (duygulu) denenir —
+/// bu durumda Piper'ın yüklü olması ŞART değildir (yalnız fallback).
+pub fn speak(
+    app_config_dir: &Path,
+    voice: &str,
+    text: &str,
+    edge_voice: Option<&str>,
+) -> Result<(), String> {
     let text = text.trim();
     if text.is_empty() {
         return Ok(());
@@ -266,11 +340,9 @@ pub fn speak(app_config_dir: &Path, voice: &str, text: &str) -> Result<(), Strin
 
     let exe = piper_exe(app_config_dir);
     let model = voice_model_path(app_config_dir, voice);
-    if !exe.exists() {
-        return Err("piper yüklü değil".into());
-    }
-    if !model.exists() {
-        return Err(format!("ses modeli yüklü değil: {voice}"));
+    let piper_ready = exe.exists() && model.exists();
+    if edge_voice.is_none() && !piper_ready {
+        return Err("hiçbir tts motoru yüklü değil".into());
     }
 
     engine.pending.fetch_add(1, Ordering::SeqCst);
@@ -281,6 +353,7 @@ pub fn speak(app_config_dir: &Path, voice: &str, text: &str) -> Result<(), Strin
             text: text.to_string(),
             exe,
             model,
+            edge_voice: edge_voice.map(|s| s.to_string()),
         })
         .map_err(|e| format!("kuyruk hatası: {e}"))
 }
@@ -313,6 +386,14 @@ fn synth_raw(exe: &Path, model: &Path, text: &str) -> Result<Vec<i16>, String> {
     cmd.arg("--model")
         .arg(model)
         .arg("--output-raw")
+        // Monotonluğu kıran canlılık ayarları: noise_scale tonlama varyasyonu,
+        // noise_w hece süresi dalgalanması, sentence_silence nefes payı.
+        .arg("--noise_scale")
+        .arg("0.8")
+        .arg("--noise_w")
+        .arg("1.0")
+        .arg("--sentence_silence")
+        .arg("0.25")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());

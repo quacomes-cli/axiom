@@ -47,8 +47,13 @@ globset = "0.4"
 similar = "2"
 cpal = "0.15"
 hound = "3"
-# Piper TTS wav çıktısını çalmak için — decoder'lar kapalı, yalnız wav.
-rodio = { version = "0.19", default-features = false, features = ["wav"] }
+# TTS çalma: Piper ham PCM (wav feature'ı SamplesBuffer için değil, güvence)
+# + Edge TTS mp3 çözümü için symphonia-mp3.
+rodio = { version = "0.19", default-features = false, features = ["wav", "symphonia-mp3"] }
+# Edge TTS WebSocket'i (Microsoft neural sesler) + DRM token imzası.
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+sha2 = "0.10"
+chrono = "0.4"
 whisper-rs = { version = "0.16", default-features = false }
 uuid = { version = "1", features = ["v4"] }
 parking_lot = "0.12"

@@ -11,6 +11,24 @@ import { ipc } from "../lib/ipc";
 import { useChatStore } from "../stores/chatStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { sanitizeForSpeech } from "./useTTS";
+import { getLocale } from "../i18n";
+
+/** Uygulama diline uygun Edge neural sesi (duygulu, bulut). */
+const EDGE_VOICES: Record<string, string> = {
+  tr: "tr-TR-EmelNeural",
+  en: "en-US-AriaNeural",
+  es: "es-ES-ElviraNeural",
+  de: "de-DE-KatjaNeural",
+  fr: "fr-FR-DeniseNeural",
+  pt: "pt-BR-FranciscaNeural",
+  ru: "ru-RU-SvetlanaNeural",
+  ja: "ja-JP-NanamiNeural",
+  zh: "zh-CN-XiaoxiaoNeural",
+};
+
+function edgeVoiceForLocale(): string {
+  return EDGE_VOICES[getLocale()] ?? EDGE_VOICES.en;
+}
 
 export type VoicePhase =
   | "idle"
@@ -65,6 +83,8 @@ export function useVoiceConversation(): UseVoiceConversation {
   const activeRef = useRef(false);
   const sessionRef = useRef<string | null>(null);
   const phaseRef = useRef<VoicePhase>("idle");
+  /** Rust TTS kullanılabilir mi (Piper yüklü VEYA Edge için çevrimiçi). */
+  const rustTtsRef = useRef(false);
   const piperRef = useRef(false);
   /** SpeechSynthesis fallback'te kuyruktaki utterance sayısı. */
   const fallbackPendingRef = useRef(0);
@@ -81,11 +101,10 @@ export function useVoiceConversation(): UseVoiceConversation {
   const speakSentence = useCallback((raw: string) => {
     const text = sanitizeForSpeech(raw).trim();
     if (!text) return;
-    if (piperRef.current) {
-      void ipc.ttsSpeak(text).catch((e) => console.warn("[voice] tts:", e));
-    } else {
+
+    const speakViaSynthesis = (t: string) => {
       const cfg = useSettingsStore.getState().settings?.tts;
-      const u = new SpeechSynthesisUtterance(text);
+      const u = new SpeechSynthesisUtterance(t);
       const voices = window.speechSynthesis.getVoices();
       const found = cfg?.voice ? voices.find((v) => v.name === cfg.voice) : undefined;
       const tr = voices.find((v) => v.lang.toLowerCase().startsWith("tr"));
@@ -106,12 +125,24 @@ export function useVoiceConversation(): UseVoiceConversation {
       u.onend = doneOne;
       u.onerror = doneOne;
       window.speechSynthesis.speak(u);
+    };
+
+    if (rustTtsRef.current) {
+      // Edge (duygulu) → Piper zinciri Rust'ta; ikisi de düşerse tarayıcı sesi.
+      const edge = navigator.onLine ? edgeVoiceForLocale() : undefined;
+      void ipc.ttsSpeak(text, undefined, edge).catch((e) => {
+        console.warn("[voice] rust tts başarısız, tarayıcı sesine düşülüyor:", e);
+        rustTtsRef.current = false;
+        speakViaSynthesis(text);
+      });
+    } else {
+      speakViaSynthesis(text);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const stopTts = useCallback(() => {
-    if (piperRef.current) void ipc.ttsStop().catch(() => {});
+    if (rustTtsRef.current) void ipc.ttsStop().catch(() => {});
     try {
       window.speechSynthesis.cancel();
     } catch {
@@ -248,7 +279,7 @@ export function useVoiceConversation(): UseVoiceConversation {
     }
 
     // Hâlâ konuşacak şey var mı? Varsa "speaking" — tts-idle dinlemeye döndürür.
-    const busy = piperRef.current
+    const busy = rustTtsRef.current
       ? await ipc.ttsIsBusy().catch(() => false)
       : fallbackPendingRef.current > 0;
     if (busy) {
@@ -291,6 +322,8 @@ export function useVoiceConversation(): UseVoiceConversation {
               setDownloadingPct(null);
               setPiperReady(true);
               piperRef.current = true;
+      rustTtsRef.current = true;
+              rustTtsRef.current = true;
             } else if (e.payload.totalBytes > 0) {
               setDownloadingPct(
                 Math.round((e.payload.downloadedBytes / e.payload.totalBytes) * 100),
@@ -319,9 +352,12 @@ export function useVoiceConversation(): UseVoiceConversation {
       const ready = st.piperInstalled && st.voiceInstalled;
       piperRef.current = ready;
       setPiperReady(ready);
+      // Rust TTS: Piper yüklüyse VEYA Edge için çevrimiçiysek kullanılır.
+      rustTtsRef.current = ready || navigator.onLine;
     } catch {
       piperRef.current = false;
       setPiperReady(false);
+      rustTtsRef.current = navigator.onLine;
     }
     await beginListening();
   }, [beginListening]);

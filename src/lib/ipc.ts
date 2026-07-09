@@ -286,9 +286,14 @@ export const ipc = {
     return invoke<void>("tts_download", { voice: voice ?? null });
   },
 
-  /** Cümleyi Rust'taki Piper kuyruğuna ekler (sıralı çalınır). */
-  ttsSpeak(text: string, voice?: string): Promise<void> {
-    return invoke<void>("tts_speak", { text, voice: voice ?? null });
+  /** Cümleyi Rust'taki TTS kuyruğuna ekler (sıralı çalınır).
+      edgeVoice doluysa önce Edge neural (duygulu) denenir, Piper fallback. */
+  ttsSpeak(text: string, voice?: string, edgeVoice?: string): Promise<void> {
+    return invoke<void>("tts_speak", {
+      text,
+      voice: voice ?? null,
+      edgeVoice: edgeVoice ?? null,
+    });
   },
 
   ttsStop(): Promise<void> {
