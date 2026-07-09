@@ -61,13 +61,21 @@ pub fn run() {
             let engine = PermissionEngine::load(config_dir.join("permissions.json"));
             app.manage(engine);
 
-            // Piper TTS motoru: kuyruk boşalınca frontend'e "tts-idle" düşer
-            // (sesli mod "konuşma bitti → dinlemeye dön" sinyali).
+            // Piper TTS motoru: kuyruk boşalınca "tts-idle" (dinlemeye dön),
+            // çalma sırasında "tts-level" (parçacık görselleştirme spektrumu).
             {
                 use tauri::Emitter;
                 let handle = app.handle().clone();
-                tts::init(move || {
-                    let _ = handle.emit("tts-idle", ());
+                tts::init(move |event| match event {
+                    tts::TtsEvent::Idle => {
+                        let _ = handle.emit("tts-idle", ());
+                    }
+                    tts::TtsEvent::Level { level, bands } => {
+                        let _ = handle.emit(
+                            "tts-level",
+                            serde_json::json!({ "level": level, "bands": bands }),
+                        );
+                    }
                 });
             }
 

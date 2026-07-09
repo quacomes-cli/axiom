@@ -5,9 +5,14 @@
 // dizinine indirilir (whisper model deseniyle aynı).
 //
 // Mimari: tek kalıcı worker thread + cümle kuyruğu. `speak(text)` kuyruğa
-// ekler; worker her cümle için piper subprocess'i çalıştırır (wav stdout) ve
-// rodio ile çalar. `stop()` nesli (generation) artırır — kuyruktaki eski işler
-// ve çalan ses anında düşer (barge-in). Kuyruk boşalınca `on_idle` çağrılır.
+// ekler; worker her cümle için piper subprocess'i çalıştırır (--output-raw:
+// ham i16 PCM — WAV stdout'u kullanılmaz çünkü stream'e seek olmadığından
+// RIFF boyut alanları bozuk kalıp cızırtıya yol açıyordu) ve rodio
+// SamplesBuffer ile çalar. Örnek hızı ses modelinin .onnx.json'ından okunur.
+// `stop()` nesli (generation) artırır — kuyruktaki eski işler ve çalan ses
+// anında düşer (barge-in). Çalma sırasında ~80ms dilimlerin RMS + 4 bant
+// (Goertzel) enerjisi `TtsEvent::Level` ile yayınlanır (görselleştirme);
+// kuyruk boşalınca `TtsEvent::Idle` gelir.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -68,11 +73,56 @@ pub fn is_installed(app_config_dir: &Path, voice: &str) -> (bool, bool) {
 
 // ---- Çalma motoru ------------------------------------------------------------
 
+/// Motor olayları — init callback'ine verilir (frontend'e event olarak düşer).
+pub enum TtsEvent {
+    /// Kuyruk boşaldı (son cümle çalınıp bitti).
+    Idle,
+    /// Çalma sırasında anlık ses düzeyi + kaba spektrum (görselleştirme).
+    Level { level: f32, bands: [f32; 4] },
+}
+
 struct Job {
     generation: u64,
     text: String,
     exe: PathBuf,
     model: PathBuf,
+}
+
+/// Ses modelinin örnek hızı (.onnx.json → audio.sample_rate). Yol bazlı cache.
+fn model_sample_rate(model: &Path) -> u32 {
+    static CACHE: Mutex<Option<(PathBuf, u32)>> = Mutex::new(None);
+    let mut guard = CACHE.lock();
+    if let Some((p, sr)) = guard.as_ref() {
+        if p == model {
+            return *sr;
+        }
+    }
+    let sr = std::fs::read_to_string(model.with_extension("onnx.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|v| v.pointer("/audio/sample_rate").and_then(|x| x.as_u64()))
+        .map(|x| x as u32)
+        .unwrap_or(22_050);
+    *guard = Some((model.to_path_buf(), sr));
+    sr
+}
+
+/// Tek frekans için Goertzel enerjisi (normalize edilmiş, kabaca 0..1).
+fn goertzel(samples: &[f32], sample_rate: u32, freq: f32) -> f32 {
+    if samples.is_empty() {
+        return 0.0;
+    }
+    let k = (0.5 + samples.len() as f32 * freq / sample_rate as f32).floor();
+    let w = 2.0 * std::f32::consts::PI * k / samples.len() as f32;
+    let coeff = 2.0 * w.cos();
+    let (mut s1, mut s2) = (0.0f32, 0.0f32);
+    for &x in samples {
+        let s0 = x + coeff * s1 - s2;
+        s2 = s1;
+        s1 = s0;
+    }
+    let power = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+    (power.max(0.0).sqrt() / samples.len() as f32 * 8.0).min(1.0)
 }
 
 struct Engine {
@@ -87,9 +137,9 @@ struct Engine {
 
 static ENGINE: Mutex<Option<Engine>> = Mutex::new(None);
 
-/// Motoru bir kez kurar. `on_idle` kuyruk boşaldığında (son cümle çalınıp
-/// bittiğinde) çağrılır — frontend "konuşma bitti" sinyali olarak dinler.
-pub fn init(on_idle: impl Fn() + Send + 'static) {
+/// Motoru bir kez kurar. `on_event`: Idle (kuyruk bitti) + Level (çalma
+/// sırasında düzey/spektrum — parçacık görselleştirmesi bununla oynar).
+pub fn init(on_event: impl Fn(TtsEvent) + Send + 'static) {
     let mut guard = ENGINE.lock();
     if guard.is_some() {
         return;
@@ -119,6 +169,10 @@ pub fn init(on_idle: impl Fn() + Send + 'static) {
             }
         };
 
+        const TICK_MS: u64 = 80;
+        // Analiz bantları: konuşma enerjisinin ana bölgeleri (Hz).
+        const BANDS: [f32; 4] = [200.0, 500.0, 1200.0, 2800.0];
+
         for job in rx.iter() {
             let stale = || job.generation != gen_w.load(Ordering::SeqCst);
             if stale() {
@@ -126,42 +180,69 @@ pub fn init(on_idle: impl Fn() + Send + 'static) {
                 continue;
             }
 
-            match synth_wav(&job.exe, &job.model, &job.text) {
-                Ok(wav) if !stale() => {
-                    let cursor = std::io::Cursor::new(wav);
-                    match handle.play_once(cursor) {
-                        Ok(sink) => {
-                            *sink_w.lock() = Some(sink);
-                            // Bitene veya nesil değişene kadar bekle.
-                            loop {
-                                thread::sleep(std::time::Duration::from_millis(50));
-                                let done = sink_w
-                                    .lock()
-                                    .as_ref()
-                                    .map(|s| s.empty())
-                                    .unwrap_or(true);
-                                if done {
-                                    break;
-                                }
-                                if stale() {
-                                    if let Some(s) = sink_w.lock().take() {
-                                        s.stop();
-                                    }
-                                    break;
-                                }
+            match synth_raw(&job.exe, &job.model, &job.text) {
+                Ok(samples) if !stale() && !samples.is_empty() => {
+                    let sr = model_sample_rate(&job.model);
+                    // Analiz için f32 kopya (çalınan i16'nın normalize hali).
+                    let mono: Vec<f32> =
+                        samples.iter().map(|&s| s as f32 / i16::MAX as f32).collect();
+
+                    let sink = match rodio::Sink::try_new(&handle) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("[tts] sink hatası: {e}");
+                            let left = pending_w.fetch_sub(1, Ordering::SeqCst) - 1;
+                            if left == 0 {
+                                on_event(TtsEvent::Idle);
                             }
-                            *sink_w.lock() = None;
+                            continue;
                         }
-                        Err(e) => eprintln!("[tts] çalma hatası: {e}"),
+                    };
+                    sink.append(rodio::buffer::SamplesBuffer::new(1, sr, samples));
+                    *sink_w.lock() = Some(sink);
+
+                    // Çalma boyunca dilim analizi yayınla; stale'de kes.
+                    let started = std::time::Instant::now();
+                    let win = (sr as u64 * TICK_MS / 1000) as usize;
+                    loop {
+                        thread::sleep(std::time::Duration::from_millis(TICK_MS));
+                        let done = sink_w.lock().as_ref().map(|s| s.empty()).unwrap_or(true);
+                        if done {
+                            break;
+                        }
+                        if stale() {
+                            if let Some(s) = sink_w.lock().take() {
+                                s.stop();
+                            }
+                            break;
+                        }
+                        let pos =
+                            (started.elapsed().as_millis() as u64 * sr as u64 / 1000) as usize;
+                        if pos < mono.len() {
+                            let end = (pos + win).min(mono.len());
+                            let slice = &mono[pos..end];
+                            let rms = (slice.iter().map(|x| x * x).sum::<f32>()
+                                / slice.len().max(1) as f32)
+                                .sqrt();
+                            let level = (rms * 6.0).min(1.0);
+                            let bands = [
+                                goertzel(slice, sr, BANDS[0]),
+                                goertzel(slice, sr, BANDS[1]),
+                                goertzel(slice, sr, BANDS[2]),
+                                goertzel(slice, sr, BANDS[3]),
+                            ];
+                            on_event(TtsEvent::Level { level, bands });
+                        }
                     }
+                    *sink_w.lock() = None;
                 }
-                Ok(_) => {} // stale — çalma
+                Ok(_) => {} // stale/boş — çalma
                 Err(e) => eprintln!("[tts] sentez hatası: {e}"),
             }
 
             let left = pending_w.fetch_sub(1, Ordering::SeqCst) - 1;
             if left == 0 {
-                on_idle();
+                on_event(TtsEvent::Idle);
             }
         }
     });
@@ -224,13 +305,14 @@ pub fn is_busy() -> bool {
         .unwrap_or(false)
 }
 
-/// Piper subprocess: stdin'e metin, stdout'tan WAV.
-fn synth_wav(exe: &Path, model: &Path, text: &str) -> Result<Vec<u8>, String> {
+/// Piper subprocess: stdin'e metin, stdout'tan HAM i16 PCM (--output-raw).
+/// WAV stdout'u KULLANILMAZ: stream'e seek olmadığından RIFF boyut alanları
+/// bozuk kalıyor ve decoder cızırtı üretiyordu.
+fn synth_raw(exe: &Path, model: &Path, text: &str) -> Result<Vec<i16>, String> {
     let mut cmd = Command::new(exe);
     cmd.arg("--model")
         .arg(model)
-        .arg("--output_file")
-        .arg("-")
+        .arg("--output-raw")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null());
@@ -258,8 +340,15 @@ fn synth_wav(exe: &Path, model: &Path, text: &str) -> Result<Vec<u8>, String> {
     if !out.status.success() {
         return Err(format!("piper çıkış kodu: {:?}", out.status.code()));
     }
-    if out.stdout.len() < 44 {
-        return Err("piper boş wav döndürdü".into());
+
+    // i16 LE mono — bayt çiftlerini örneklere çevir.
+    let bytes = out.stdout;
+    if bytes.len() < 2 {
+        return Err("piper boş ses döndürdü".into());
     }
-    Ok(out.stdout)
+    let samples: Vec<i16> = bytes
+        .chunks_exact(2)
+        .map(|c| i16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    Ok(samples)
 }
