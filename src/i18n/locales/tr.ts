@@ -8,6 +8,7 @@ export const tr: typeof en = {
     skills: "Yetenekler",
     telegram: "Telegram",
     priceTracker: "Fiyat Takibi",
+    library: "Kütüphane",
     tasks: "Görevler",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const tr: typeof en = {
     stop: "Durdur",
     cmdLabel: "Agent modu",
     cmdDesc: "Çok adımlı hedefi araçlarla yürüt",
+  },
+  library: {
+    title: "Kütüphane",
+    subtitle: "Belge ekle — yapay zeka onlardan cevaplar ve kaynağı belirtir. Her şey yerelde kalır.",
+    addFiles: "Belge ekle",
+    indexing: "{{title}} indeksleniyor ({{current}}/{{total}})…",
+    empty: "Henüz belge yok. PDF, Markdown veya metin dosyaları ekle; sohbet ilgili pasajları otomatik kullanır.",
+    chunks: "{{n}} parça",
+    remove: "Kaldır",
   },
   phoneConnect: {
     title: "Telefonu bağla",

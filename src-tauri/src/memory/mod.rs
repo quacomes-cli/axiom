@@ -23,7 +23,9 @@
 //   - chat_id, created_at (for per-chat clear + recency-weighted recall)
 
 mod chats;
+mod docs;
 pub use chats::StoredChat;
+pub use docs::{chunk_text, DocHit, DocMeta};
 
 use std::path::Path;
 use std::sync::Mutex;
@@ -157,6 +159,7 @@ impl MemoryStore {
             "#,
         )?;
         chats::init_tables(&conn)?;
+        docs::init_tables(&conn)?;
         Ok(Self { conn: Mutex::new(conn) })
     }
 

@@ -9,6 +9,7 @@ export const en = {
     skills: "Skills",
     telegram: "Telegram",
     priceTracker: "Price Tracker",
+    library: "Library",
     tasks: "Tasks",
   },
   sidebar: {
@@ -81,6 +82,15 @@ export const en = {
     stop: "Stop",
     cmdLabel: "Agent mode",
     cmdDesc: "Run a multi-step goal with tools",
+  },
+  library: {
+    title: "Library",
+    subtitle: "Add documents — the AI answers from them and cites the source. Everything stays local.",
+    addFiles: "Add documents",
+    indexing: "Indexing {{title}} ({{current}}/{{total}})…",
+    empty: "No documents yet. Add PDF, Markdown or text files; chat will automatically use relevant passages.",
+    chunks: "{{n}} chunks",
+    remove: "Remove",
   },
   phoneConnect: {
     title: "Connect phone",

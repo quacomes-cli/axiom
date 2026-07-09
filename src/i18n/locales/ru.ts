@@ -8,6 +8,7 @@ export const ru: typeof en = {
     skills: "Навыки",
     telegram: "Telegram",
     priceTracker: "Отслеживание цен",
+    library: "Библиотека",
     tasks: "Задачи",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const ru: typeof en = {
     stop: "Стоп",
     cmdLabel: "Режим агента",
     cmdDesc: "Выполнить многошаговую цель с инструментами",
+  },
+  library: {
+    title: "Библиотека",
+    subtitle: "Добавьте документы — ИИ отвечает по ним с указанием источника. Всё остаётся локально.",
+    addFiles: "Добавить документы",
+    indexing: "Индексация {{title}} ({{current}}/{{total}})…",
+    empty: "Документов пока нет. Добавьте PDF, Markdown или текст; чат будет использовать релевантные фрагменты.",
+    chunks: "{{n}} фрагм.",
+    remove: "Удалить",
   },
   phoneConnect: {
     title: "Подключить телефон",

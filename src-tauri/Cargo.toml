@@ -55,6 +55,8 @@ tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
 sha2 = "0.10"
 chrono = "0.4"
 whisper-rs = { version = "0.16", default-features = false }
+# Belge kütüphanesi (RAG): PDF metin çıkarımı.
+pdf-extract = "0.7"
 uuid = { version = "1", features = ["v4"] }
 parking_lot = "0.12"
 xcap = "0.0.14"

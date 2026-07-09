@@ -30,7 +30,7 @@ pub(crate) fn tool_call_to_block(name: &str, args: &serde_json::Value) -> String
     }
 
     let body = match name {
-        "web_search" => arg_str(args, "query"),
+        "web_search" | "search_docs" => arg_str(args, "query"),
         "run_command" => arg_str(args, "command"),
         "write_file" => format!("path: {}\n---\n{}", arg_str(args, "path"), arg_str(args, "content")),
         _ => args

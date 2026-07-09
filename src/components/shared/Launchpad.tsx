@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   MessageCircle,
   Box,
+  BookOpen,
   LayoutGrid,
   Sparkles,
   Send,
@@ -20,6 +21,7 @@ import type { ViewId } from "../../types";
 
 const TILES: { id: ViewId; labelKey: string; icon: LucideIcon }[] = [
   { id: "chat", labelKey: "nav.chat", icon: MessageCircle },
+  { id: "library", labelKey: "nav.library", icon: BookOpen },
   { id: "models", labelKey: "nav.models", icon: Box },
   { id: "apps", labelKey: "nav.apps", icon: LayoutGrid },
   { id: "skills", labelKey: "nav.skills", icon: Sparkles },

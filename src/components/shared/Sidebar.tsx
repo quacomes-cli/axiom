@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   MessageCircle,
   Box,
+  BookOpen,
   type LucideIcon,
   LayoutGrid,
   SquareCheckBig,
@@ -35,6 +36,7 @@ import type { ViewId } from "../../types";
 const NAV: { id: ViewId; labelKey: string; icon: LucideIcon }[] = [
   { id: "chat", labelKey: "nav.chat", icon: MessageCircle },
   // { id: "code", labelKey: "nav.code", icon: Terminal },
+  { id: "library", labelKey: "nav.library", icon: BookOpen },
   { id: "models", labelKey: "nav.models", icon: Box },
   { id: "apps", labelKey: "nav.apps", icon: LayoutGrid },
   { id: "skills", labelKey: "nav.skills", icon: Sparkles },

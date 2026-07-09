@@ -8,6 +8,7 @@ export const zh: typeof en = {
     skills: "技能",
     telegram: "Telegram",
     priceTracker: "价格追踪",
+    library: "文库",
     tasks: "任务",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const zh: typeof en = {
     stop: "停止",
     cmdLabel: "智能体模式",
     cmdDesc: "用工具执行多步骤目标",
+  },
+  library: {
+    title: "文库",
+    subtitle: "添加文档 — AI 会据此回答并注明来源。全部保存在本地。",
+    addFiles: "添加文档",
+    indexing: "正在索引 {{title}} ({{current}}/{{total}})…",
+    empty: "暂无文档。添加 PDF、Markdown 或文本文件，聊天会自动使用相关段落。",
+    chunks: "{{n}} 个片段",
+    remove: "移除",
   },
   phoneConnect: {
     title: "连接手机",

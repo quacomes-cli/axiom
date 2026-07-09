@@ -8,6 +8,7 @@ export const ja: typeof en = {
     skills: "スキル",
     telegram: "Telegram",
     priceTracker: "価格トラッカー",
+    library: "ライブラリ",
     tasks: "タスク",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const ja: typeof en = {
     stop: "停止",
     cmdLabel: "エージェントモード",
     cmdDesc: "ツールで複数ステップの目標を実行",
+  },
+  library: {
+    title: "ライブラリ",
+    subtitle: "ドキュメントを追加 — AI が出典付きで回答します。すべてローカルに保存。",
+    addFiles: "ドキュメントを追加",
+    indexing: "{{title}} をインデックス中 ({{current}}/{{total}})…",
+    empty: "まだドキュメントがありません。PDF・Markdown・テキストを追加すると、チャットが関連箇所を自動で使います。",
+    chunks: "{{n}} チャンク",
+    remove: "削除",
   },
   phoneConnect: {
     title: "スマホを接続",

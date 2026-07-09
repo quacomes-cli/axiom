@@ -1328,6 +1328,146 @@ pub fn audio_stop_and_transcribe(
     })
 }
 
+// ---- Belge kütüphanesi (RAG, Faz 8) --------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocsIndexEvent {
+    pub path: String,
+    pub title: String,
+    pub current: usize,
+    pub total: usize,
+    pub done: bool,
+    pub error: Option<String>,
+}
+
+/// Dosyaları kütüphaneye ekler: parse → chunk → embed → SQLite.
+/// İlerleme "docs-index-progress" event'iyle akar (UI kilitlenmez).
+#[tauri::command]
+pub async fn docs_add(
+    app: tauri::AppHandle,
+    registry: State<'_, ModelRegistry>,
+    memory: State<'_, MemoryState>,
+    paths: Vec<String>,
+    embedding_model: String,
+) -> Result<usize, String> {
+    use tauri::Emitter;
+
+    let total = paths.len();
+    let mut added = 0usize;
+
+    for (i, path) in paths.iter().enumerate() {
+        let title = std::path::Path::new(path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.clone());
+        let emit = |done: bool, error: Option<String>| {
+            let _ = app.emit(
+                "docs-index-progress",
+                DocsIndexEvent {
+                    path: path.clone(),
+                    title: title.clone(),
+                    current: i + 1,
+                    total,
+                    done,
+                    error,
+                },
+            );
+        };
+        emit(false, None);
+
+        // Parse (bloklayan) — ayrı thread'de.
+        let p = path.clone();
+        let parsed = match tauri::async_runtime::spawn_blocking(move || {
+            crate::documents::parse_for_index(&p)
+        })
+        .await
+        .map_err(|e| format!("task hatası: {e}"))?
+        {
+            Ok(d) => d,
+            Err(e) => {
+                emit(true, Some(e));
+                continue;
+            }
+        };
+
+        let chunks_text = crate::memory::chunk_text(&parsed.extracted_text, 1400, 200);
+        if chunks_text.is_empty() {
+            emit(true, Some("Belgeden metin çıkarılamadı".into()));
+            continue;
+        }
+
+        // Her parçayı embed'le (yerel ollama).
+        let mut chunks: Vec<(String, Vec<f32>)> = Vec::with_capacity(chunks_text.len());
+        let mut failed = false;
+        for text in chunks_text {
+            match registry.embed_ollama(&embedding_model, &text).await {
+                Ok(emb) => chunks.push((text, emb)),
+                Err(e) => {
+                    emit(true, Some(format!("Embedding hatası: {e}")));
+                    failed = true;
+                    break;
+                }
+            }
+        }
+        if failed {
+            continue;
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = memory.store.doc_insert(
+            &id,
+            path,
+            &title,
+            &parsed.mime_type,
+            parsed.size_bytes as i64,
+            &embedding_model,
+            &chunks,
+        ) {
+            emit(true, Some(format!("Kayıt hatası: {e}")));
+            continue;
+        }
+        added += 1;
+        emit(true, None);
+    }
+
+    Ok(added)
+}
+
+#[tauri::command]
+pub fn docs_list(memory: State<'_, MemoryState>) -> Result<Vec<crate::memory::DocMeta>, String> {
+    memory.store.docs_list().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn docs_remove(memory: State<'_, MemoryState>, id: String) -> Result<(), String> {
+    memory.store.doc_remove(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn docs_count(memory: State<'_, MemoryState>) -> Result<i64, String> {
+    memory.store.docs_count().map_err(|e| e.to_string())
+}
+
+/// Kütüphanede hibrit arama (kosinüs + FTS bonusu).
+#[tauri::command]
+pub async fn docs_search(
+    registry: State<'_, ModelRegistry>,
+    memory: State<'_, MemoryState>,
+    query: String,
+    embedding_model: String,
+    top_k: Option<usize>,
+) -> Result<Vec<crate::memory::DocHit>, String> {
+    let emb = registry
+        .embed_ollama(&embedding_model, &query)
+        .await
+        .map_err(|e| e.to_string())?;
+    memory
+        .store
+        .docs_search(&emb, &query, top_k.unwrap_or(5))
+        .map_err(|e| e.to_string())
+}
+
 // ---- Crash / hata günlüğü (telemetri YOK — yalnızca yerel dosya) ---------------
 
 pub fn logs_dir_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {

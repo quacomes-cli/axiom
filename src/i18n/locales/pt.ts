@@ -8,6 +8,7 @@ export const pt: typeof en = {
     skills: "Habilidades",
     telegram: "Telegram",
     priceTracker: "Monitor de preços",
+    library: "Biblioteca",
     tasks: "Tarefas",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const pt: typeof en = {
     stop: "Parar",
     cmdLabel: "Modo agente",
     cmdDesc: "Executa um objetivo de várias etapas com ferramentas",
+  },
+  library: {
+    title: "Biblioteca",
+    subtitle: "Adicione documentos — a IA responde a partir deles citando a fonte. Tudo fica local.",
+    addFiles: "Adicionar documentos",
+    indexing: "Indexando {{title}} ({{current}}/{{total}})…",
+    empty: "Ainda sem documentos. Adicione PDF, Markdown ou texto; o chat usará trechos relevantes.",
+    chunks: "{{n}} trechos",
+    remove: "Remover",
   },
   phoneConnect: {
     title: "Conectar telefone",

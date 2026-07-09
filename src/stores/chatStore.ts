@@ -35,6 +35,7 @@ KRİTİK KURAL: Bir araç gerekiyorsa ÖNCE tool bloğunu yaz, SONRA kısa açı
 - Hava durumu → weather
 - Döviz/kur → currency
 - Bilgi arama / kişi / konu → web_search
+- Kullanıcının belge kütüphanesi (eklediği PDF/doküman içeriği) → search_docs
 - Dosya okuma → read_file
 - Dosya yazma → write_file
 - Dizin listeleme → list_dir
@@ -60,6 +61,10 @@ city: Istanbul
 
 \`\`\`tool:web_search
 arama sorgusu
+\`\`\`
+
+\`\`\`tool:search_docs
+belge kütüphanesinde aranacak sorgu
 \`\`\`
 
 \`\`\`tool:read_file
@@ -559,7 +564,7 @@ function formatScheduleLabel(epoch: number): string {
 }
 
 type ToolBlock = {
-  kind: "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "mcp_call";
+  kind: "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "search_docs" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "mcp_call";
   path?: string;
   content?: string;
   command?: string;
@@ -612,7 +617,7 @@ function rewriteAppToolBlocks(text: string): string {
       // Bilinen built-in kindler ve app_tool aynen kalsın
       const builtin = new Set([
         "read_file", "write_file", "run_command", "list_dir", "create_dir",
-        "web_search", "app_tool", "get_settings", "change_setting",
+        "web_search", "search_docs", "app_tool", "get_settings", "change_setting",
         "weather", "currency",
         "create_task", "list_tasks", "update_task", "complete_task",
         "delete_task", "schedule_task", "mcp_call",
@@ -629,7 +634,7 @@ function rewriteAppToolBlocks(text: string): string {
 export function parseToolBlocks(text: string): ToolBlock[] {
   const blocks: ToolBlock[] = [];
   const normalized = rewriteAppToolBlocks(text);
-  const regex = /```tool:(read_file|write_file|run_command|list_dir|create_dir|web_search|app_tool|get_settings|change_setting|weather|currency|create_task|list_tasks|update_task|complete_task|delete_task|schedule_task|mcp_call)\n([\s\S]*?)```/g;
+  const regex = /```tool:(read_file|write_file|run_command|list_dir|create_dir|web_search|search_docs|app_tool|get_settings|change_setting|weather|currency|create_task|list_tasks|update_task|complete_task|delete_task|schedule_task|mcp_call)\n([\s\S]*?)```/g;
   let match;
   while ((match = regex.exec(normalized)) !== null) {
     const kind = match[1] as ToolBlock["kind"];
@@ -645,7 +650,7 @@ export function parseToolBlocks(text: string): ToolBlock[] {
       }
     } else if (kind === "run_command") {
       blocks.push({ kind, command: body });
-    } else if (kind === "web_search") {
+    } else if (kind === "web_search" || kind === "search_docs") {
       blocks.push({ kind, query: body });
     } else if (kind === "weather") {
       const cityMatch = body.match(/^city:\s*(.+)/m);
@@ -893,6 +898,28 @@ export async function executeToolBlock(
           .map((r) => `${r.code}: ${r.rate} TRY`)
           .join("\n");
         return { kind: "currency", content: summary || "Kur verisi alınamadı.", collapsed: true, cardType: "currency", cardData: data };
+      }
+      case "search_docs": {
+        // Yerel kütüphane araması — dışarı veri gitmez, izin kapısı gerekmez
+        // (memory recall ile aynı sınıf).
+        const query = block.query?.trim();
+        if (!query) {
+          return { kind: "search_docs", content: "Hata: arama sorgusu boş.", collapsed: false };
+        }
+        const memoryCfg = useSettingsStore.getState().settings?.memory;
+        const embeddingModel = memoryCfg?.embeddingModel || "nomic-embed-text";
+        try {
+          const hits = await ipc.docsSearch(query, embeddingModel, 5);
+          if (hits.length === 0) {
+            return { kind: "search_docs", command: query, content: "Kütüphanede eşleşen içerik bulunamadı.", collapsed: true };
+          }
+          const content = hits
+            .map((h, i) => `[${i + 1}] ${h.title} (bölüm ${h.seq + 1}, skor ${h.score.toFixed(2)})\n${h.text}`)
+            .join("\n\n---\n\n");
+          return { kind: "search_docs", command: query, content, collapsed: true };
+        } catch (e) {
+          return { kind: "search_docs", command: query, content: `Arama hatası: ${String(e)}`, collapsed: false };
+        }
       }
       case "app_tool": {
         if (!block.appId || !block.appToolName) {
@@ -1624,6 +1651,36 @@ export const useChatStore = create<ChatState>()(
             }
           } catch (e) {
             console.warn("memory recall failed:", e);
+          }
+        }
+        // ---- Belge kütüphanesi otomatik bağlamı --------------------------------
+        // Kullanıcı kütüphaneye belge eklediyse (niyet beyanı), soruyla ilgili
+        // pasajlar sisteme enjekte edilir — ayrıca modelin search_docs aracı da
+        // var (derin arama için). Hatalar sohbeti bozmasın diye yutulur.
+        if (!appCommand && text.trim().length > 0) {
+          try {
+            const docCount = await ipc.docsCount();
+            if (docCount > 0) {
+              const embeddingModel =
+                useSettingsStore.getState().settings?.memory?.embeddingModel ||
+                "nomic-embed-text";
+              const hits = await ipc.docsSearch(text, embeddingModel, 3);
+              const relevant = hits.filter((h) => h.score >= 0.35);
+              if (relevant.length > 0) {
+                const lines = relevant
+                  .map((h, i) => `${i + 1}. [${h.title} · bölüm ${h.seq + 1}] ${h.text.slice(0, 500)}`)
+                  .join("\n");
+                conversationHistory.unshift({
+                  role: "system",
+                  content:
+                    "[KÜTÜPHANE] Kullanıcının belge kütüphanesinden soruyla ilgili pasajlar. " +
+                    "Yalnızca alakalıysa kullan; kaynağı (belge adı) belirt.\n" +
+                    lines,
+                });
+              }
+            }
+          } catch {
+            /* kütüphane erişilemedi — sohbet normal akar */
           }
         }
         // ----------------------------------------------------------------------

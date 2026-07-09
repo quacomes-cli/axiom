@@ -109,18 +109,59 @@ pub fn parse_file(file_path: &str) -> Result<ParsedDocument, String> {
 
 fn read_text(path: &Path) -> Result<String, String> {
     let content = std::fs::read_to_string(path).map_err(|e| format!("Dosya okunamadı: {e}"))?;
+    Ok(truncate_chars(content, MAX_TEXT_CHARS))
+}
 
-    if content.len() > MAX_TEXT_CHARS {
-        let mut truncated = String::with_capacity(MAX_TEXT_CHARS + 50);
-        for (i, ch) in content.chars().enumerate() {
-            if i >= MAX_TEXT_CHARS {
-                break;
-            }
-            truncated.push(ch);
-        }
-        truncated.push_str("\n\n[... İçerik çok uzun olduğu için kısaltıldı]");
-        Ok(truncated)
-    } else {
-        Ok(content)
+fn truncate_chars(content: String, max: usize) -> String {
+    if content.len() <= max {
+        return content;
     }
+    let mut truncated = String::with_capacity(max + 50);
+    for (i, ch) in content.chars().enumerate() {
+        if i >= max {
+            break;
+        }
+        truncated.push(ch);
+    }
+    truncated.push_str("\n\n[... İçerik çok uzun olduğu için kısaltıldı]");
+    truncated
+}
+
+/// Kütüphane indeksi (RAG) için parse: sohbet ekinden farklı olarak PDF
+/// desteklenir ve limit çok daha geniştir (uzun belgeler parçalanarak
+/// indekslendiği için 50K kırpması anlamsız olurdu). Resimler indekslenmez.
+pub fn parse_for_index(file_path: &str) -> Result<ParsedDocument, String> {
+    const MAX_INDEX_CHARS: usize = 400_000;
+    let path = Path::new(file_path);
+    let ext = path
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+
+    if ext == "pdf" {
+        let metadata =
+            std::fs::metadata(path).map_err(|e| format!("Dosya bilgisi okunamadı: {e}"))?;
+        let text = pdf_extract::extract_text(path)
+            .map_err(|e| format!("PDF metni çıkarılamadı: {e}"))?;
+        return Ok(ParsedDocument {
+            filename: path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default(),
+            mime_type: "application/pdf".into(),
+            extracted_text: truncate_chars(text, MAX_INDEX_CHARS),
+            size_bytes: metadata.len(),
+            base64_data: None,
+        });
+    }
+
+    let mut doc = parse_file(file_path)?;
+    if doc.base64_data.is_some() {
+        return Err("Resim dosyaları kütüphaneye indekslenemez.".into());
+    }
+    // parse_file 50K kırpar — indeks için dosyayı geniş limitle yeniden oku.
+    if let Ok(full) = std::fs::read_to_string(path) {
+        doc.extracted_text = truncate_chars(full, MAX_INDEX_CHARS);
+    }
+    Ok(doc)
 }

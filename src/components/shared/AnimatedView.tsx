@@ -33,6 +33,9 @@ const TelegramInbox = lazy(() =>
 const PriceTrackerPage = lazy(() =>
   import("../price/PriceTrackerPage").then((m) => ({ default: m.PriceTrackerPage })),
 );
+const LibraryPage = lazy(() =>
+  import("../library/LibraryPage").then((m) => ({ default: m.LibraryPage })),
+);
 const SettingsPage = lazy(() =>
   import("../settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
 );
@@ -40,6 +43,7 @@ const SettingsPage = lazy(() =>
 const VIEWS: Record<ViewId, React.FC> = {
   chat: ChatPanel,
   code: CodeToolPage,
+  library: LibraryPage,
   models: ModelExplore,
   "models-manage": ModelManage,
   accelerate: AcceleratePage,

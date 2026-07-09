@@ -53,6 +53,9 @@ const BUILTIN_TOOLS: NativeTool[] = [
   tool("web_search", "Web'de arama yapar", {
     query: { type: "string", description: "Arama sorgusu" },
   }, ["query"]),
+  tool("search_docs", "Kullanıcının belge kütüphanesinde (eklediği PDF/dokümanlar) anlamsal arama yapar", {
+    query: { type: "string", description: "Arama sorgusu" },
+  }, ["query"]),
   tool("read_file", "Diskten dosya okur", {
     path: { type: "string", description: "Tam dosya yolu" },
   }, ["path"]),

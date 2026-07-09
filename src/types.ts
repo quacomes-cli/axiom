@@ -17,9 +17,9 @@ export interface AppInfo {
   version: string;
 }
 
-export type ViewId = "chat" | "tasks" | "models" | "models-manage" | "accelerate" | "code" | "skills" | "apps" | "telegram" | "price-tracker" | "settings";
+export type ViewId = "chat" | "library" | "tasks" | "models" | "models-manage" | "accelerate" | "code" | "skills" | "apps" | "telegram" | "price-tracker" | "settings";
 
-export const VIEW_ORDER: ViewId[] = ["chat", "code", "models", "models-manage", "accelerate", "apps",  "skills", "telegram", "price-tracker", "tasks", "settings"];
+export const VIEW_ORDER: ViewId[] = ["chat", "code", "library", "models", "models-manage", "accelerate", "apps",  "skills", "telegram", "price-tracker", "tasks", "settings"];
 
 // ---- Permissions (mirror src-tauri/src/permissions/model.rs) ----
 
@@ -382,7 +382,7 @@ export interface UserProfile {
 
 // ---- Code Tool ----
 
-export type ToolActionKind = "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "edit_file" | "search" | "glob" | "delete_file" | "rename_file" | "mcp_call";
+export type ToolActionKind = "read_file" | "write_file" | "run_command" | "list_dir" | "create_dir" | "web_search" | "search_docs" | "app_tool" | "get_settings" | "change_setting" | "weather" | "currency" | "create_task" | "list_tasks" | "update_task" | "complete_task" | "delete_task" | "schedule_task" | "edit_file" | "search" | "glob" | "delete_file" | "rename_file" | "mcp_call";
 
 // ---- MCP (Model Context Protocol) ----
 
@@ -503,4 +503,33 @@ export interface CurrencyRate {
   name: string;
   rate: number;
   symbol: string;
+}
+
+// ---- Belge kütüphanesi (RAG) — mirror src-tauri/src/memory/docs.rs ----
+
+export interface DocMeta {
+  id: string;
+  path: string;
+  title: string;
+  mime: string;
+  sizeBytes: number;
+  chunkCount: number;
+  addedAt: number;
+}
+
+export interface DocHit {
+  docId: string;
+  title: string;
+  seq: number;
+  text: string;
+  score: number;
+}
+
+export interface DocsIndexEvent {
+  path: string;
+  title: string;
+  current: number;
+  total: number;
+  done: boolean;
+  error: string | null;
 }

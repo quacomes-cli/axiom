@@ -276,6 +276,32 @@ export const ipc = {
     return invoke("audio_model_status", { modelName });
   },
 
+  // ---- Belge kütüphanesi (RAG) -------------------------------------------------
+
+  docsAdd(paths: string[], embeddingModel: string): Promise<number> {
+    return invoke<number>("docs_add", { paths, embeddingModel });
+  },
+
+  docsList(): Promise<import("../types").DocMeta[]> {
+    return invoke("docs_list");
+  },
+
+  docsRemove(id: string): Promise<void> {
+    return invoke<void>("docs_remove", { id });
+  },
+
+  docsCount(): Promise<number> {
+    return invoke<number>("docs_count");
+  },
+
+  docsSearch(
+    query: string,
+    embeddingModel: string,
+    topK?: number,
+  ): Promise<import("../types").DocHit[]> {
+    return invoke("docs_search", { query, embeddingModel, topK: topK ?? null });
+  },
+
   // ---- Crash / hata günlüğü ---------------------------------------------------
 
   logFrontendError(message: string): Promise<void> {

@@ -8,6 +8,7 @@ export const de: typeof en = {
     skills: "Fähigkeiten",
     telegram: "Telegram",
     priceTracker: "Preisverfolgung",
+    library: "Bibliothek",
     tasks: "Aufgaben",
   },
   sidebar: {
@@ -80,6 +81,15 @@ export const de: typeof en = {
     stop: "Stopp",
     cmdLabel: "Agentenmodus",
     cmdDesc: "Mehrstufiges Ziel mit Werkzeugen ausführen",
+  },
+  library: {
+    title: "Bibliothek",
+    subtitle: "Füge Dokumente hinzu — die KI antwortet daraus und nennt die Quelle. Alles bleibt lokal.",
+    addFiles: "Dokumente hinzufügen",
+    indexing: "Indexiere {{title}} ({{current}}/{{total}})…",
+    empty: "Noch keine Dokumente. Füge PDF, Markdown oder Text hinzu; der Chat nutzt relevante Passagen automatisch.",
+    chunks: "{{n}} Abschnitte",
+    remove: "Entfernen",
   },
   phoneConnect: {
     title: "Telefon verbinden",
