@@ -64,9 +64,14 @@ export function LibraryPage() {
       multiple: true,
       filters: [
         {
-          name: "Documents",
-          extensions: ["pdf", "txt", "md", "docx", "html", "json", "csv", "log"],
+          name: "Belgeler",
+          extensions: [
+            "pdf", "docx", "pptx", "xlsx", "xls", "ods", "epub", "rtf",
+            "txt", "md", "html", "htm", "json", "csv", "log", "xml",
+            "yaml", "yml", "toml",
+          ],
         },
+        { name: "Tümü", extensions: ["*"] },
       ],
     });
     if (!selected) return;
