@@ -272,6 +272,20 @@ yolu SIFIR değişiklikle native calling kazandı.
 - KABUL TESTİ (kullanıcıda): eller serbest 3+ turlu sohbet; barge-in; araç
   çağrıları sesli modda onay kartıyla akar. Whisper modeli yüklü olmalı.
 
+### 6.3 v2 — Gemini Live tarzı (2026-07-09, kullanıcı isteği, commit 5afed6f)
+- [x] Whisper KÖK FIX: WhisperContext cache — model her segmentte diskten
+      yeniden yükleniyordu ("bazen çok yavaş"ın nedeni); artık tek yükleme.
+- [x] Canlı yazım: `transcribe_snapshot` (kayıt sürerken son 12sn partial) —
+      konuşurken 600ms'de bir ekranda düzeltilen transkript.
+- [x] Piper TTS (`src-tauri/src/tts`): doğal ses; piper.exe + tr_TR-dfki-medium
+      indirme; cümle kuyruğu + rodio; stop=nesil (barge-in); "tts-idle" event.
+      Fallback: Piper yoksa SpeechSynthesis.
+- [x] STREAMING KONUŞMA: cevap stream edilirken tamamlanan cümleler anında
+      seslendirilir (spokenUpTo ofseti) — model yazarken konuşur.
+- [x] VoiceMode = TAM EKRAN sesli sohbet (blob değil): nefes alan orb (faz
+      renkleri), canlı transkript, akan cevap, Piper indirme rozeti.
+- Canlı test kullanıcıda: ilk açılışta "Doğal ses paketini indir" (~80MB).
+
 ## FAZ 7 — Performans + dağıtım kalitesi
 
 - [ ] Code splitting: sayfa bileşenleri `React.lazy` (Models/Apps/Telegram/Price/
